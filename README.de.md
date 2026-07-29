@@ -51,7 +51,11 @@ soll auch so bleiben.
 
 ## Loslegen
 
+Entweder die portable `aura.exe` nehmen oder den Installer, ganz wie du magst.
+
 1. `aura.exe` herunterladen und hinlegen, wo du willst — Desktop, Tools-Ordner, USB-Stick.
+   Der Installer legt sie stattdessen unter Programme ab, bietet Autostart und eine
+   Desktop-Verknüpfung an und braucht keine .NET-Runtime, weil er den Standalone-Build enthält.
 2. Doppelklick. Ein kleines Fenster mit einem großen Knopf, der den Zustand zugleich anzeigt
    und umschaltet — solange die Beleuchtung an ist, animiert der Knopf den laufenden Effekt.
 3. Darunter den Effekt aus der Liste wählen, er wird sofort gesetzt. Effekte mit Farbe zeigen
@@ -59,6 +63,9 @@ soll auch so bleiben.
 
 Das Zahnrad oben rechts enthält vier Einstellungen: mit Windows starten, minimiert starten,
 beim Schließen nur minimieren, und welcher Zustand beim Start gesetzt wird.
+
+Minimieren schickt das Fenster in den Infobereich der Taskleiste. Rechtsklick auf das Symbol
+dort öffnet ein kleines Menü zum Umschalten, Öffnen und Beenden.
 
 Mehr Einrichtung gibt es nicht.
 
@@ -185,6 +192,13 @@ Ergebnis ist `dist\aura.exe`. Für eine Variante ohne installierte .NET-Runtime:
 
 ```bat
 build.bat standalone
+```
+
+Und für den Installer, dafür wird [Inno Setup 6](https://jrsoftware.org/isinfo.php) gebraucht:
+
+```bat
+build.bat installer
+build.bat installer win-arm64
 ```
 
 In `tests\` liegt eine Regressionssuite. Sie schaltet die Beleuchtung während des Laufs und

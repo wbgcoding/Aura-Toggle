@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace AuraToggle;
@@ -15,16 +16,37 @@ internal static class Program
     [DllImport("kernel32.dll")]
     private static extern bool AttachConsole(int processId);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint RegisterWindowMessage(string message);
+
+    [DllImport("user32.dll")]
+    private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
+    private static readonly IntPtr Broadcast = new(0xFFFF);
+
+    /// <summary>Asks an already running window to come back from the notification area.</summary>
+    public static readonly uint ShowWindowMessage = RegisterWindowMessage("AuraToggle.Show");
+
     [STAThread]
     private static int Main(string[] args)
     {
         if (args.Length == 0)
         {
+            // A second start hands over to the instance already running, which may be sitting
+            // in the notification area with no window to click.
+            using var single = new Mutex(initiallyOwned: true, "AuraToggle.SingleInstance", out bool first);
+            if (!first)
+            {
+                PostMessage(Broadcast, ShowWindowMessage, IntPtr.Zero, IntPtr.Zero);
+                return 0;
+            }
+
             ApplicationConfiguration.Initialize();
 #pragma warning disable WFO5001 // colour mode support is still marked experimental
             Application.SetColorMode(SystemColorMode.System);
 #pragma warning restore WFO5001
             Application.Run(new ToggleForm());
+            GC.KeepAlive(single);
             return 0;
         }
 

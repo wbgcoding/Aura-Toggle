@@ -16,7 +16,13 @@ All notable changes to this project are documented here. The format follows
   Choosing one applies it straight away.
 - Colour chips plus a free colour picker for the effects that use a colour.
 - Settings behind the gear: start with Windows, start minimised, minimise instead of closing,
-  and the lighting state to apply at start.
+  and the lighting state to apply at start. The panel is not modal, so a click anywhere else
+  dismisses it.
+- Notification area icon with a themed menu that toggles the lighting, reopens the window or
+  quits. Minimising and, optionally, closing send the window there.
+- Starting the tool a second time brings the running one back instead of opening a window.
+- An installer for x64 and ARM64 alongside the portable executable, installing per machine
+  into Program Files with optional autostart and desktop shortcut.
 - The title bar names the controller firmware and channel count read from the device.
 - Nine built-in effects selectable by name: static, breathing, flashing, spectrum-cycle,
   rainbow, rainbow-breathing, chase-fade, chase and wave.

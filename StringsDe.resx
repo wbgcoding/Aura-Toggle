@@ -125,4 +125,13 @@
   <data name="StartActionOff" xml:space="preserve">
     <value>Ausschalten</value>
   </data>
+  <data name="StatusChannels" xml:space="preserve">
+    <value>{0} Kan&#228;le</value>
+  </data>
+  <data name="TrayOpen" xml:space="preserve">
+    <value>&#214;ffnen</value>
+  </data>
+  <data name="TrayExit" xml:space="preserve">
+    <value>Beenden</value>
+  </data>
 </root>

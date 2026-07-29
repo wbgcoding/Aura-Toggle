@@ -32,7 +32,7 @@ internal sealed class SettingsPopup : Form
         Font = new Font("Segoe UI", 9F);
         DoubleBuffered = true;
         Padding = new Padding(14, 12, 14, 14);
-        ClientSize = new Size(268, 206);
+        ClientSize = new Size(272, 184);
 
         var layout = new Layout
         {
@@ -63,7 +63,8 @@ internal sealed class SettingsPopup : Form
         layout.Controls.Add(startLabel, 0, 3);
         layout.SetColumnSpan(startLabel, 2);
 
-        _startAction.Dock = DockStyle.Fill;
+        _startAction.Dock = DockStyle.Top;
+        _startAction.Height = 32;
         _startAction.Margin = new Padding(0);
         _startAction.BackColor = Theme.Surface;
         _startAction.SetItems(StartActions());
@@ -86,6 +87,9 @@ internal sealed class SettingsPopup : Form
     }
 
     public AuraSettings Settings { get; private set; }
+
+    /// <summary>Raised whenever a switch is flipped, because there is no OK button.</summary>
+    public event EventHandler<AuraSettings>? Changed;
 
     protected override CreateParams CreateParams
     {
@@ -137,18 +141,22 @@ internal sealed class SettingsPopup : Form
         };
 
         Settings.Save();
+        Changed?.Invoke(this, Settings);
     }
 
-    /// <summary>Opens the panel below the gear and returns once it is dismissed.</summary>
-    public AuraSettings Open(Point at)
+    /// <summary>
+    /// Opens the panel below the gear. It is deliberately not modal: clicking anywhere else,
+    /// including the window behind it, dismisses it.
+    /// </summary>
+    public void Open(Point at, IWin32Window owner)
     {
         Rectangle screen = Screen.FromPoint(at).WorkingArea;
         Location = new Point(
             Math.Clamp(at.X - Width, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - Width - 4)),
             Math.Clamp(at.Y, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - Height - 4)));
 
-        ShowDialog();
-        return Settings;
+        Show(owner);
+        Activate();
     }
 
     protected override void OnShown(EventArgs e)

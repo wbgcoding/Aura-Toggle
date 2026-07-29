@@ -35,7 +35,11 @@ internal static class Strings
 
     public static string PresetAccessibleName => Get("PresetAccessibleName");
 
-    public static string StatusController => Get("StatusController");
+    public static string StatusChannels => Get("StatusChannels");
+
+    public static string TrayOpen => Get("TrayOpen");
+
+    public static string TrayExit => Get("TrayExit");
 
     public static string StatusControllerMissing => Get("StatusControllerMissing");
 

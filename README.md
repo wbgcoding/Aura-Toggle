@@ -48,7 +48,11 @@ sets its colour. That is the whole feature list, and it is meant to stay that wa
 
 ## Getting started
 
+Either take the portable `aura.exe` or run the installer, whichever suits you.
+
 1. Download `aura.exe` and put it anywhere you like — Desktop, a tools folder, a USB stick.
+   The installer instead puts it into Program Files, offers autostart and a desktop shortcut,
+   and needs no .NET runtime because it ships a self contained build.
 2. Double click it. A small window opens with one big button that both shows and switches the
    state - while the lighting is on, the button animates the effect that is actually running.
 3. Below it, pick an effect from the list; it applies immediately. Effects that use a colour
@@ -56,6 +60,9 @@ sets its colour. That is the whole feature list, and it is meant to stay that wa
 
 The gear in the top right holds four settings: start with Windows, start minimised, minimise
 instead of closing, and which lighting state to apply when the tool starts.
+
+Minimising sends the window to the notification area. Right click the icon there for a small
+menu that toggles the lighting, reopens the window or quits.
 
 That is the entire setup.
 
@@ -177,6 +184,13 @@ The result is `dist\aura.exe`. For a build that runs without the .NET runtime in
 
 ```bat
 build.bat standalone
+```
+
+And for the installer, which needs [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+
+```bat
+build.bat installer
+build.bat installer win-arm64
 ```
 
 There is a regression suite in `tests\`. It switches the lighting while it runs and leaves it

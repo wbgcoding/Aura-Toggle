@@ -426,24 +426,24 @@ internal sealed class ColourStrip : FlatControl
     private static readonly Color[] Palette =
     {
         Color.FromArgb(255, 255, 255),
-        Color.FromArgb(255, 45, 45),
-        Color.FromArgb(255, 140, 20),
-        Color.FromArgb(255, 220, 40),
-        Color.FromArgb(60, 210, 90),
-        Color.FromArgb(40, 210, 210),
-        Color.FromArgb(60, 120, 255),
-        Color.FromArgb(200, 70, 235),
+        Color.FromArgb(255, 56, 56),
+        Color.FromArgb(255, 146, 30),
+        Color.FromArgb(255, 214, 40),
+        Color.FromArgb(60, 210, 96),
+        Color.FromArgb(40, 208, 208),
+        Color.FromArgb(64, 124, 255),
+        Color.FromArgb(198, 76, 236),
     };
 
-    private const int Chip = 22;
-    private const int Gap = 8;
+    private const int Chip = 24;
+    private const int Gap = 9;
 
     private int _hoveredChip = -1;
 
     public ColourStrip()
     {
-        Height = Chip + 2;
-        Width = (Palette.Length + 1) * (Chip + Gap);
+        Height = Chip + 8;
+        Width = ((Palette.Length + 1) * (Chip + Gap)) - Gap;
     }
 
     public event EventHandler? ColourPicked;
@@ -451,14 +451,28 @@ internal sealed class ColourStrip : FlatControl
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color Colour { get; set; } = Color.White;
 
+    private Rectangle ChipAt(int index) => new(index * (Chip + Gap), 4, Chip, Chip);
+
+    private int IndexAt(Point point)
+    {
+        for (int i = 0; i <= Palette.Length; i++)
+        {
+            if (Rectangle.Inflate(ChipAt(i), 2, 2).Contains(point))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
-        int index = e.X / (Chip + Gap);
-        int hovered = index >= 0 && index <= Palette.Length && (e.X % (Chip + Gap)) <= Chip ? index : -1;
-
+        int hovered = IndexAt(e.Location);
         if (hovered != _hoveredChip)
         {
             _hoveredChip = hovered;
+            Cursor = hovered >= 0 ? Cursors.Hand : Cursors.Default;
             Invalidate();
         }
 
@@ -468,6 +482,7 @@ internal sealed class ColourStrip : FlatControl
     protected override void OnMouseLeave(EventArgs e)
     {
         _hoveredChip = -1;
+        Cursor = Cursors.Default;
         base.OnMouseLeave(e);
     }
 
@@ -505,44 +520,61 @@ internal sealed class ColourStrip : FlatControl
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(BackColor);
 
+        bool custom = !Array.Exists(Palette, entry => Same(entry, Colour));
+
         for (int i = 0; i <= Palette.Length; i++)
         {
-            var box = new Rectangle(i * (Chip + Gap), 1, Chip, Chip);
-            bool custom = i == Palette.Length;
-            Color colour = custom ? Colour : Palette[i];
-            bool active = !custom && SameColour(colour, Colour);
+            Rectangle box = ChipAt(i);
+            bool isCustomChip = i == Palette.Length;
+            bool active = isCustomChip ? custom : Same(Palette[i], Colour);
 
-            if (custom)
+            if (i == _hoveredChip || active)
             {
-                PaintCustomChip(g, box);
+                using var ring = new Pen(active ? Theme.Accent : Color.FromArgb(120, Theme.Accent), 2f);
+                g.DrawEllipse(ring, Rectangle.Inflate(box, 3, 3));
+            }
+
+            if (isCustomChip)
+            {
+                PaintCustomChip(g, box, custom ? Colour : Color.Empty);
             }
             else
             {
-                using var brush = new SolidBrush(colour);
+                using var brush = new SolidBrush(Palette[i]);
                 g.FillEllipse(brush, box);
             }
 
-            using var outline = new Pen(active ? Theme.Accent : Theme.Border, active ? 2f : 1f);
+            // Pale chips need a firmer outline, otherwise white vanishes on a light window.
+            Color chip = isCustomChip ? Colour : Palette[i];
+            double luminance = ((chip.R * 0.299) + (chip.G * 0.587) + (chip.B * 0.114)) / 255.0;
+            using var outline = new Pen(Color.FromArgb(luminance > 0.75 ? 120 : 52, 0, 0, 0));
             g.DrawEllipse(outline, box);
 
-            if (i == _hoveredChip)
+            if (active)
             {
-                using var hover = new Pen(Color.FromArgb(150, Theme.Accent), 2f);
-                g.DrawEllipse(hover, Rectangle.Inflate(box, 2, 2));
+                PaintTick(g, box, isCustomChip ? Colour : Palette[i]);
             }
         }
     }
 
-    private static void PaintCustomChip(Graphics g, Rectangle box)
+    /// <summary>The free choice chip: a spectrum, or the picked colour once one is set.</summary>
+    private static void PaintCustomChip(Graphics g, Rectangle box, Color picked)
     {
+        if (picked != Color.Empty)
+        {
+            using var solid = new SolidBrush(picked);
+            g.FillEllipse(solid, box);
+            return;
+        }
+
         using var brush = new LinearGradientBrush(box, Color.Red, Color.Red, LinearGradientMode.ForwardDiagonal)
         {
             InterpolationColors = new ColorBlend
             {
                 Colors = new[]
                 {
-                    Color.FromArgb(255, 0, 0), Color.FromArgb(255, 255, 0), Color.FromArgb(0, 255, 0),
-                    Color.FromArgb(0, 255, 255), Color.FromArgb(0, 0, 255), Color.FromArgb(255, 0, 255),
+                    Color.FromArgb(255, 0, 0), Color.FromArgb(255, 220, 0), Color.FromArgb(0, 220, 90),
+                    Color.FromArgb(0, 190, 255), Color.FromArgb(90, 80, 255), Color.FromArgb(230, 60, 220),
                 },
                 Positions = new[] { 0f, 0.2f, 0.4f, 0.6f, 0.8f, 1f },
             },
@@ -551,16 +583,36 @@ internal sealed class ColourStrip : FlatControl
         g.FillEllipse(brush, box);
     }
 
-    private static bool SameColour(Color a, Color b) => a.R == b.R && a.G == b.G && a.B == b.B;
+    /// <summary>Tick in whichever of black or white stays readable on the chip.</summary>
+    private static void PaintTick(Graphics g, Rectangle box, Color background)
+    {
+        double luminance = ((background.R * 0.299) + (background.G * 0.587) + (background.B * 0.114)) / 255.0;
+        using var pen = new Pen(luminance > 0.6 ? Color.FromArgb(30, 32, 36) : Color.White, 2f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+        };
+
+        float x = box.X + (box.Width * 0.28f);
+        float y = box.Y + (box.Height * 0.52f);
+        g.DrawLines(pen, new[]
+        {
+            new PointF(x, y),
+            new PointF(x + (box.Width * 0.15f), y + (box.Height * 0.18f)),
+            new PointF(x + (box.Width * 0.44f), y - (box.Height * 0.22f)),
+        });
+    }
+
+    private static bool Same(Color a, Color b) => a.R == b.R && a.G == b.G && a.B == b.B;
 }
 
-/// <summary>Small square button carrying a glyph, used for the settings gear.</summary>
+/// <summary>Small square button carrying the settings gear.</summary>
 internal sealed class GlyphButton : FlatControl
 {
     public GlyphButton()
     {
         Radius = 8;
-        Size = new Size(28, 28);
+        Size = new Size(30, 30);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -579,26 +631,11 @@ internal sealed class GlyphButton : FlatControl
         }
 
         DrawFocusRing(g, path);
-        PaintGear(g, new PointF(Width / 2f, Height / 2f), Math.Min(Width, Height) * 0.26f,
-            Hovered ? Theme.Text : Theme.TextMuted);
-    }
 
-    private static void PaintGear(Graphics g, PointF centre, float radius, Color colour)
-    {
-        using var pen = new Pen(colour, 1.5f);
-
-        // Eight teeth as short spokes plus a ring: crisp at small sizes, no icon file needed.
-        for (int i = 0; i < 8; i++)
-        {
-            double angle = i * Math.PI / 4;
-            float cos = (float)Math.Cos(angle);
-            float sin = (float)Math.Sin(angle);
-            g.DrawLine(pen,
-                centre.X + (cos * radius * 0.95f), centre.Y + (sin * radius * 0.95f),
-                centre.X + (cos * radius * 1.55f), centre.Y + (sin * radius * 1.55f));
-        }
-
-        g.DrawEllipse(pen, centre.X - radius, centre.Y - radius, radius * 2, radius * 2);
+        using GraphicsPath gear = EffectPainter.GearPath(
+            new PointF(Width / 2f, Height / 2f), Math.Min(Width, Height) * 0.32f);
+        using var ink = new SolidBrush(Hovered ? Theme.Text : Theme.TextMuted);
+        g.FillPath(ink, gear);
     }
 }
 

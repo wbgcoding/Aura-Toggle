@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -93,6 +94,13 @@ internal static class Theme
 /// </summary>
 internal static class EffectPainter
 {
+    private static readonly Color[] SpectrumStops =
+    {
+        Color.FromArgb(255, 0, 0), Color.FromArgb(255, 200, 0), Color.FromArgb(120, 255, 0),
+        Color.FromArgb(0, 255, 140), Color.FromArgb(0, 200, 255), Color.FromArgb(60, 90, 255),
+        Color.FromArgb(190, 60, 255), Color.FromArgb(255, 0, 160), Color.FromArgb(255, 0, 0),
+    };
+
     /// <summary>Fills a shape with the effect as it looks at <paramref name="seconds"/>.</summary>
     public static void Paint(Graphics g, GraphicsPath shape, RectangleF bounds, byte mode, Color colour, double seconds)
     {
@@ -110,7 +118,7 @@ internal static class EffectPainter
                 break;
 
             case 3: // flashing
-                Fill(g, bounds, Theme.Scale(colour, (seconds % 1.1) < 0.55 ? 1.0 : 0.16));
+                Fill(g, bounds, Theme.Scale(colour, (seconds % 1.1) < 0.55 ? 1.0 : 0.14));
                 break;
 
             case 4: // spectrum cycle
@@ -118,7 +126,7 @@ internal static class EffectPainter
                 break;
 
             case 5: // rainbow
-                Spectrum(g, bounds, seconds * 70, 1.0);
+                Spectrum(g, bounds, seconds / 3.0, cycles: 1f);
                 break;
 
             case 6: // rainbow breathing
@@ -126,15 +134,15 @@ internal static class EffectPainter
                 break;
 
             case 7: // chase fade
-                Chase(g, bounds, colour, seconds, fade: true);
+                Chase(g, bounds, colour, seconds, tail: 0.42f);
                 break;
 
             case 9: // chase
-                Chase(g, bounds, colour, seconds, fade: false);
+                Chase(g, bounds, colour, seconds, tail: 0.16f);
                 break;
 
-            case 11: // wave
-                Spectrum(g, bounds, seconds * 45, 2.0);
+            case 11: // wave: the same spectrum, drifting slowly across the whole strip
+                Spectrum(g, bounds, seconds / 7.0, cycles: 1f);
                 break;
 
             default: // off and anything the controller may know that this tool does not
@@ -146,7 +154,7 @@ internal static class EffectPainter
     }
 
     private static double Breath(double seconds, double period) =>
-        0.25 + (0.75 * ((Math.Sin(seconds / period * 2 * Math.PI) * 0.5) + 0.5));
+        0.22 + (0.78 * ((Math.Sin(seconds / period * 2 * Math.PI) * 0.5) + 0.5));
 
     private static void Fill(Graphics g, RectangleF bounds, Color colour)
     {
@@ -154,46 +162,65 @@ internal static class EffectPainter
         g.FillRectangle(brush, bounds);
     }
 
-    /// <summary>Moving spectrum. <paramref name="cycles"/> is how often it repeats across the width.</summary>
-    private static void Spectrum(Graphics g, RectangleF bounds, double offsetDegrees, double cycles)
+    /// <summary>
+    /// A seamless spectrum that scrolls. The gradient is tiled and shifted rather than drawn
+    /// in steps, so there is no banding and no seam where it wraps.
+    /// </summary>
+    private static void Spectrum(Graphics g, RectangleF bounds, double phase, float cycles)
     {
-        const int steps = 24;
-        float width = bounds.Width / steps;
+        float period = Math.Max(bounds.Width / cycles, 4f);
+        var strip = new RectangleF(bounds.X, bounds.Y, period, bounds.Height);
 
-        for (int i = 0; i < steps; i++)
+        using var brush = new LinearGradientBrush(strip, SpectrumStops[0], SpectrumStops[^1],
+            LinearGradientMode.Horizontal)
         {
-            Color colour = Theme.Hue((i * 360.0 * cycles / steps) - offsetDegrees);
-            using var brush = new SolidBrush(colour);
+            WrapMode = WrapMode.Tile,
+            InterpolationColors = Blend(SpectrumStops),
+        };
 
-            // One pixel of overlap, otherwise the seams show as thin dark lines.
-            g.FillRectangle(brush, bounds.X + (i * width), bounds.Y, width + 1, bounds.Height);
-        }
+        double shift = ((phase % 1.0) + 1.0) % 1.0;
+        brush.TranslateTransform((float)(shift * period) - period, 0);
+
+        g.FillRectangle(brush, bounds);
     }
 
-    private static void Chase(Graphics g, RectangleF bounds, Color colour, double seconds, bool fade)
+    private static ColorBlend Blend(Color[] colours)
     {
-        Fill(g, bounds, Theme.Scale(colour, 0.12));
-
-        float band = Math.Max(bounds.Width / 5f, 12f);
-        float travel = bounds.Width + band;
-        float head = (float)((seconds * travel / 2.2) % travel) - band;
-
-        if (!fade)
+        var positions = new float[colours.Length];
+        for (int i = 0; i < colours.Length; i++)
         {
-            using var brush = new SolidBrush(colour);
-            g.FillRectangle(brush, bounds.X + head, bounds.Y, band, bounds.Height);
-            return;
+            positions[i] = (float)i / (colours.Length - 1);
         }
 
-        var tail = new RectangleF(bounds.X + head - band, bounds.Y, band * 2, bounds.Height);
-        if (tail.Width <= 0)
-        {
-            return;
-        }
+        return new ColorBlend { Colors = colours, Positions = positions };
+    }
 
-        using var gradient = new LinearGradientBrush(tail, Theme.Scale(colour, 0.12), colour,
-            LinearGradientMode.Horizontal);
-        g.FillRectangle(gradient, tail);
+    /// <summary>
+    /// A lit segment travelling along the strip, with a tail that fades out behind it. The
+    /// tail is drawn as a gradient into the dim base colour, so nothing smears past it.
+    /// </summary>
+    private static void Chase(Graphics g, RectangleF bounds, Color colour, double seconds, float tail)
+    {
+        Color dim = Theme.Scale(colour, 0.10);
+        Fill(g, bounds, dim);
+
+        float tailWidth = Math.Max(bounds.Width * tail, 10f);
+        float head = (float)(((seconds / 2.4) % 1.0) * (bounds.Width + tailWidth)) - tailWidth;
+
+        // Drawn twice so the comet re-enters on the left exactly as it leaves on the right.
+        foreach (float offset in new[] { head, head - bounds.Width - tailWidth })
+        {
+            var band = new RectangleF(bounds.X + offset, bounds.Y, tailWidth, bounds.Height);
+            if (band.Right < bounds.X || band.X > bounds.Right)
+            {
+                continue;
+            }
+
+            using var comet = new LinearGradientBrush(
+                new RectangleF(band.X - 1, band.Y, band.Width + 2, band.Height), dim, colour,
+                LinearGradientMode.Horizontal);
+            g.FillRectangle(comet, band);
+        }
     }
 
     /// <summary>Small round icon for the effect list.</summary>
@@ -203,11 +230,47 @@ internal static class EffectPainter
         using GraphicsPath shape = Theme.RoundedRectangle(bounds, bounds.Height / 2f);
 
         // A fixed moment in time that shows each effect at its most recognisable.
-        Paint(g, shape, bounds, mode, colour, seconds: mode == 3 ? 0.1 : 0.55);
+        Paint(g, shape, bounds, mode, colour, seconds: mode switch
+        {
+            3 => 0.1,
+            7 or 9 => 1.55,
+            _ => 0.55,
+        });
 
         using var pen = new Pen(Color.FromArgb(46, 0, 0, 0));
         g.DrawPath(pen, shape);
     }
+
+    /// <summary>An ordinary gear: eight teeth around a ring with an open centre.</summary>
+    public static GraphicsPath GearPath(PointF centre, float radius)
+    {
+        const int teeth = 8;
+        double step = Math.PI * 2 / teeth;
+        float root = radius * 0.74f;
+        float hole = radius * 0.34f;
+
+        var path = new GraphicsPath();
+        var points = new List<PointF>(teeth * 4);
+
+        for (int i = 0; i < teeth; i++)
+        {
+            double centreAngle = i * step;
+            points.Add(At(centre, centreAngle - (step * 0.19), radius));
+            points.Add(At(centre, centreAngle + (step * 0.19), radius));
+            points.Add(At(centre, centreAngle + (step * 0.31), root));
+            points.Add(At(centre, centreAngle + (step * 0.69), root));
+        }
+
+        path.AddPolygon(points.ToArray());
+        path.AddEllipse(centre.X - hole, centre.Y - hole, hole * 2, hole * 2);
+        path.FillMode = FillMode.Alternate;
+
+        return path;
+    }
+
+    private static PointF At(PointF centre, double angle, float radius) => new(
+        centre.X + (float)(Math.Cos(angle) * radius),
+        centre.Y + (float)(Math.Sin(angle) * radius));
 }
 
 /// <summary>Double buffered container, so resizing and repainting never flicker.</summary>
@@ -299,7 +362,9 @@ internal abstract class FlatControl : Control
 
     protected void DrawFocusRing(Graphics g, GraphicsPath path)
     {
-        if (!Focused)
+        // ShowFocusCues is false until the user navigates by keyboard, so a mouse click does
+        // not leave a ring behind.
+        if (!Focused || !ShowFocusCues)
         {
             return;
         }

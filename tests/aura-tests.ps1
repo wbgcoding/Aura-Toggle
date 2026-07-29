@@ -9,7 +9,24 @@ param(
 
 $ErrorActionPreference = "Stop"
 $state = Join-Path $env:LOCALAPPDATA "aura-toggle\state.json"
+$settings = Join-Path $env:LOCALAPPDATA "aura-toggle\settings.json"
 $failed = 0
+
+# The suite must not depend on, or destroy, the settings in use on this machine.
+$settingsBackup = "$settings.testbak"
+if (Test-Path $settings) { Copy-Item $settings $settingsBackup -Force }
+New-Item -ItemType Directory -Force (Split-Path $settings) | Out-Null
+Set-Content -Path $settings -Encoding ascii `
+    -Value '{"startMinimised":false,"minimiseOnClose":false,"startAction":""}'
+
+function Restore-Settings {
+    if (Test-Path $settingsBackup) {
+        Move-Item $settingsBackup $settings -Force
+    }
+    else {
+        Remove-Item $settings -ErrorAction SilentlyContinue
+    }
+}
 
 function Invoke-Aura {
     param([string[]]$Arguments)
@@ -201,8 +218,9 @@ Test-Case "window opens, closes and leaves no process behind" {
     Assert-Equal 0 $leftover.Count "leftover processes"
 }
 
-# Leave the machine on the default effect, switched on.
+# Leave the machine on the default effect, switched on, with the real settings back.
 [void](Invoke-Aura @("-preset", "rainbow"))
+Restore-Settings
 
 Write-Host ""
 if ($failed -gt 0) {
