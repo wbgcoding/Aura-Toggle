@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Aura</value>
+  </data>
+  <data name="ButtonStateOn" xml:space="preserve">
+    <value>LEDs: AN</value>
+  </data>
+  <data name="ButtonStateOff" xml:space="preserve">
+    <value>LEDs: AUS</value>
+  </data>
+  <data name="ButtonAccessibleName" xml:space="preserve">
+    <value>Mainboard-Beleuchtung ein- oder ausschalten</value>
+  </data>
+  <data name="UsageLine" xml:space="preserve">
+    <value>Aufruf: aura [-on | -off | -preset &lt;Name&gt;]   (ohne Argument öffnet sich das Umschaltfenster)</value>
+  </data>
+  <data name="UsagePresets" xml:space="preserve">
+    <value>Voreinstellungen: {0}</value>
+  </data>
+  <data name="ButtonSet" xml:space="preserve">
+    <value>Setzen</value>
+  </data>
+  <data name="PresetAccessibleName" xml:space="preserve">
+    <value>Beleuchtungseffekt</value>
+  </data>
+  <data name="PresetStatic" xml:space="preserve">
+    <value>Statisch</value>
+  </data>
+  <data name="PresetBreathing" xml:space="preserve">
+    <value>Atmen</value>
+  </data>
+  <data name="PresetFlashing" xml:space="preserve">
+    <value>Blinken</value>
+  </data>
+  <data name="PresetSpectrumCycle" xml:space="preserve">
+    <value>Farbwechsel</value>
+  </data>
+  <data name="PresetRainbow" xml:space="preserve">
+    <value>Regenbogen</value>
+  </data>
+  <data name="PresetRainbowBreathing" xml:space="preserve">
+    <value>Regenbogen-Atmen</value>
+  </data>
+  <data name="PresetChaseFade" xml:space="preserve">
+    <value>Lauflicht mit Ausblenden</value>
+  </data>
+  <data name="PresetChase" xml:space="preserve">
+    <value>Lauflicht</value>
+  </data>
+  <data name="PresetWave" xml:space="preserve">
+    <value>Welle</value>
+  </data>
+  <data name="ErrorControllerNotFound" xml:space="preserve">
+    <value>Kein AURA-LED-Controller gefunden (USB VID 0B05). Dieses Tool funktioniert nur auf ASUS-Mainboards mit Aura-USB-Beleuchtung.</value>
+  </data>
+  <data name="ErrorControllerBusy" xml:space="preserve">
+    <value>Der AURA-LED-Controller wird von einem anderen Programm belegt (Armoury Crate, OpenRGB, SignalRGB). Bitte beenden und erneut versuchen.</value>
+  </data>
+  <data name="ErrorWriteFailed" xml:space="preserve">
+    <value>Schreiben an den AURA-Controller fehlgeschlagen (Befehl 0x{0}): {1}</value>
+  </data>
+</root>
