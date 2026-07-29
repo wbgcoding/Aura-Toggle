@@ -10,142 +10,78 @@ using System.Windows.Forms;
 namespace AuraToggle;
 
 /// <summary>
-/// The whole user interface: a status line, a large button that switches the lighting, and a
-/// drop down with the available effects plus the button that applies the selected one.
-/// Switching runs off the UI thread, so the window stays responsive while it happens.
+/// The window: one animated button that both shows and switches the state, the effect list
+/// below it, and colour chips for the effects that use a colour. Everything that talks to the
+/// controller runs off the UI thread.
 /// </summary>
 internal sealed class ToggleForm : Form
 {
-    private readonly StatusPill _status;
-    private readonly RoundedButton _toggle;
-    private readonly RoundedButton _apply;
-    private readonly ComboBox _presets;
-    private readonly Label _effectLabel;
-    private readonly Label _controllerText;
+    private readonly EffectButton _toggle = new();
+    private readonly Select _effects = new();
+    private readonly ColourStrip _colours = new();
+    private readonly GlyphButton _gear = new();
+    private readonly Layout _layout = new();
 
     private AuraState _state;
+    private AuraSettings _settings;
     private bool _busy;
 
     public ToggleForm()
     {
         _state = AuraState.Load();
+        _settings = AuraSettings.Load();
 
         Text = Strings.WindowTitle;
         Icon = LoadIcon();
-        ClientSize = new Size(360, 268);
+        ClientSize = new Size(324, 232);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
-        MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Theme.Background;
         ForeColor = Theme.Text;
         Font = new Font("Segoe UI", 9F);
-        Padding = new Padding(20, 18, 20, 16);
+        Padding = new Padding(16, 10, 16, 14);
         DoubleBuffered = true;
 
-        _status = new StatusPill
-        {
-            Dock = DockStyle.Fill,
-            Height = 34,
-            Font = new Font(Font.FontFamily, 9.75F, FontStyle.Bold),
-            Margin = new Padding(0, 0, 0, 18),
-        };
+        _gear.AccessibleName = Strings.SettingsAccessibleName;
+        _gear.Anchor = AnchorStyles.Right;
+        _gear.Margin = new Padding(0, 0, 0, 6);
+        _gear.Click += OnSettingsClick;
 
-        _toggle = new RoundedButton
-        {
-            Dock = DockStyle.Fill,
-            Font = new Font(Font.FontFamily, 15F, FontStyle.Bold),
-            Radius = 16,
-            AccessibleName = Strings.ButtonAccessibleName,
-            Margin = new Padding(0, 0, 0, 20),
-        };
+        _toggle.Dock = DockStyle.Fill;
+        _toggle.Font = new Font(Font.FontFamily, 16F, FontStyle.Bold);
+        _toggle.AccessibleName = Strings.ButtonAccessibleName;
+        _toggle.Margin = new Padding(0, 0, 0, 14);
         _toggle.Click += OnToggleClick;
 
-        _effectLabel = new Label
-        {
-            AutoSize = true,
-            Text = Strings.LabelEffect,
-            ForeColor = Theme.TextMuted,
-            Font = new Font(Font.FontFamily, 8.25F, FontStyle.Bold),
-            Margin = new Padding(2, 0, 0, 6),
-        };
+        _effects.Dock = DockStyle.Fill;
+        _effects.AccessibleName = Strings.PresetAccessibleName;
+        _effects.Margin = new Padding(0);
+        _effects.SetItems(AuraPresets.All.Select(preset =>
+            new SelectItem(preset.Key, preset.DisplayName, preset.Mode)));
+        _effects.SelectionChanged += OnEffectChosen;
 
-        _presets = new ComboBox
-        {
-            Dock = DockStyle.Fill,
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            FlatStyle = FlatStyle.Flat,
-            DrawMode = DrawMode.OwnerDrawFixed,
-            BackColor = Theme.Surface,
-            ForeColor = Theme.Text,
-            ItemHeight = 26,
-            AccessibleName = Strings.PresetAccessibleName,
-            Margin = new Padding(0, 0, 10, 0),
-        };
-        _presets.Items.AddRange(AuraPresets.All.ToArray());
-        _presets.DrawItem += OnDrawPresetItem;
+        _colours.Anchor = AnchorStyles.Left;
+        _colours.Margin = new Padding(1, 12, 0, 0);
+        _colours.ColourPicked += OnColourPicked;
 
-        _apply = new RoundedButton
-        {
-            Dock = DockStyle.Fill,
-            Text = Strings.ButtonSet,
-            Font = new Font(Font.FontFamily, 9.25F, FontStyle.Bold),
-            Radius = 9,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(16, 0, 16, 0),
-            Fill = Theme.AccentSoft,
-            FillHover = Theme.AccentSoftHover,
-            FillPressed = Theme.AccentSoftPressed,
-            Label = Theme.Accent,
-            Margin = new Padding(0),
-            MinimumSize = new Size(0, 32),
-        };
-        _apply.Click += OnApplyClick;
+        _layout.Dock = DockStyle.Fill;
+        _layout.ColumnCount = 1;
+        _layout.RowCount = 4;
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // gear
+        _layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // toggle
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // effect list
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // colours
+        _layout.Controls.Add(_gear, 0, 0);
+        _layout.Controls.Add(_toggle, 0, 1);
+        _layout.Controls.Add(_effects, 0, 2);
+        _layout.Controls.Add(_colours, 0, 3);
+        Controls.Add(_layout);
 
-        _controllerText = new Label
-        {
-            AutoSize = true,
-            ForeColor = Theme.TextMuted,
-            Font = new Font(Font.FontFamily, 8.25F),
-            Margin = new Padding(2, 16, 0, 0),
-        };
-
-        var effectRow = new Layout
-        {
-            Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 2,
-            RowCount = 1,
-            Margin = new Padding(0),
-        };
-        effectRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        effectRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        effectRow.Controls.Add(_presets, 0, 0);
-        effectRow.Controls.Add(_apply, 1, 0);
-
-        var layout = new Layout
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 5,
-        };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));  // status plus its margin
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));  // toggle
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // effect label
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // effect row
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // controller footer
-        layout.Controls.Add(_status, 0, 0);
-        layout.Controls.Add(_toggle, 0, 1);
-        layout.Controls.Add(_effectLabel, 0, 2);
-        layout.Controls.Add(effectRow, 0, 3);
-        layout.Controls.Add(_controllerText, 0, 4);
-        Controls.Add(layout);
-
-        _presets.SelectedItem = AuraPresets.ByMode(_state.Mode) ?? AuraPresets.All[0];
         Render();
         Shown += OnShown;
+        FormClosing += OnFormClosing;
+        Resize += (_, _) => _toggle.Paused = WindowState == FormWindowState.Minimized;
     }
 
     /// <summary>The application icon, embedded so the window matches the executable.</summary>
@@ -158,54 +94,87 @@ internal sealed class ToggleForm : Form
     /// <summary>Talking to the controller happens after the window is up, never before.</summary>
     private async void OnShown(object? sender, EventArgs e)
     {
+        if (_settings.StartMinimised)
+        {
+            WindowState = FormWindowState.Minimized;
+        }
+
         (string Firmware, int Channels)? controller = await Task.Run(AuraDevice.TryDescribe);
 
         if (controller == null)
         {
-            _controllerText.Text = Strings.StatusControllerMissing;
+            Text = $"{Strings.WindowTitle}  —  {Strings.StatusControllerMissing}";
             _toggle.Enabled = false;
-            _apply.Enabled = false;
-            _presets.Enabled = false;
+            _effects.Enabled = false;
+            _colours.Enabled = false;
             return;
         }
 
-        _controllerText.Text = string.Format(CultureInfo.CurrentCulture, Strings.StatusController,
-            controller.Value.Firmware, controller.Value.Channels);
+        // The controller belongs in the title bar: it is reference information, not a control.
+        Text = $"{Strings.WindowTitle}  —  " + string.Format(CultureInfo.CurrentCulture,
+            Strings.StatusController, controller.Value.Firmware, controller.Value.Channels);
+
+        await ApplyStartAction();
     }
 
-    private void OnDrawPresetItem(object? sender, DrawItemEventArgs e)
+    /// <summary>Puts the lighting into the state chosen in the settings, once per start.</summary>
+    private async Task ApplyStartAction()
     {
-        if (e.Index < 0 || _presets.Items[e.Index] is not AuraPreset preset)
+        string action = _settings.StartAction;
+        if (action == AuraSettings.StartActionNone)
         {
             return;
         }
 
-        bool selected = e.State.HasFlag(DrawItemState.Selected);
-        using (var background = new SolidBrush(selected ? Theme.AccentSoft : Theme.Surface))
+        if (action == AuraSettings.StartActionOff)
         {
-            e.Graphics.FillRectangle(background, e.Bounds);
+            await Run(() => Program.Switch(on: false));
+            return;
         }
 
-        var swatch = new Rectangle(e.Bounds.X + 8, e.Bounds.Y + ((e.Bounds.Height - 11) / 2), 15, 11);
-        Theme.PaintSwatch(e.Graphics, swatch,
-            Color.FromArgb(_state.Red, _state.Green, _state.Blue), !preset.UsesColour);
-
-        var text = new Rectangle(swatch.Right + 9, e.Bounds.Y, e.Bounds.Width - swatch.Right - 9, e.Bounds.Height);
-        TextRenderer.DrawText(e.Graphics, preset.DisplayName, e.Font ?? Font, text, Theme.Text,
-            TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        if (AuraPresets.Find(action) is AuraPreset preset)
+        {
+            await Run(() => Program.ApplyPreset(preset, CurrentColour));
+        }
     }
+
+    private Color CurrentColour => Color.FromArgb(_state.Red, _state.Green, _state.Blue);
 
     private void OnToggleClick(object? sender, EventArgs e)
     {
         bool target = !_state.On;
-        Run(() => Program.Switch(target));
+        _ = Run(() => Program.Switch(target));
     }
 
-    private void OnApplyClick(object? sender, EventArgs e)
+    private void OnEffectChosen(object? sender, EventArgs e)
     {
-        if (_presets.SelectedItem is AuraPreset preset)
+        if (_effects.Selected != null && AuraPresets.Find(_effects.Selected.Key) is AuraPreset preset)
         {
-            Run(() => Program.ApplyPreset(preset));
+            _ = Run(() => Program.ApplyPreset(preset, CurrentColour));
+        }
+    }
+
+    private void OnColourPicked(object? sender, EventArgs e)
+    {
+        if (AuraPresets.ByMode(_state.Mode) is AuraPreset preset && preset.UsesColour)
+        {
+            Color colour = _colours.Colour;
+            _ = Run(() => Program.ApplyPreset(preset, colour));
+        }
+    }
+
+    private void OnSettingsClick(object? sender, EventArgs e)
+    {
+        using var popup = new SettingsPopup(_settings);
+        _settings = popup.Open(_gear.PointToScreen(new Point(_gear.Width, _gear.Height + 4)));
+    }
+
+    private void OnFormClosing(object? sender, FormClosingEventArgs e)
+    {
+        if (e.CloseReason == CloseReason.UserClosing && _settings.MinimiseOnClose)
+        {
+            e.Cancel = true;
+            WindowState = FormWindowState.Minimized;
         }
     }
 
@@ -213,7 +182,7 @@ internal sealed class ToggleForm : Form
     /// Runs one switching action on a worker thread. Talking to the controller takes a moment,
     /// and doing it here instead of on the UI thread keeps the window painting and responsive.
     /// </summary>
-    private async void Run(Func<AuraState> action)
+    private async Task Run(Func<AuraState> action)
     {
         if (_busy)
         {
@@ -240,34 +209,31 @@ internal sealed class ToggleForm : Form
     {
         _busy = busy;
         _toggle.Busy = busy;
-        _apply.Busy = busy;
-        _presets.Enabled = !busy;
+        _effects.Enabled = !busy;
+        _colours.Enabled = !busy;
         UseWaitCursor = busy;
-
-        if (busy)
-        {
-            _status.Show(Strings.StatusBusy, Theme.TextMuted, Theme.NeutralSoft, Theme.TextMuted);
-        }
     }
 
     private void Render()
     {
         AuraPreset preset = AuraPresets.ByMode(_state.Mode) ?? AuraPresets.All[0];
+        Color colour = CurrentColour;
 
         _toggle.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
-        _toggle.Fill = _state.On ? Theme.Accent : Theme.Neutral;
-        _toggle.FillHover = _state.On ? Theme.AccentHover : Theme.NeutralHover;
-        _toggle.FillPressed = _state.On ? Theme.AccentPressed : Theme.NeutralPressed;
-        _toggle.Invalidate();
+        _toggle.Show(_state.On, _state.Mode, colour);
 
-        _status.Show(
-            _state.On
-                ? $"{Strings.StatusOn}  ·  {preset.DisplayName}"
-                : Strings.StatusOff,
-            _state.On ? Theme.Accent : Theme.TextMuted,
-            _state.On ? Theme.AccentSoft : Theme.NeutralSoft,
-            _state.On ? Theme.Text : Theme.TextMuted);
+        _effects.Colour = colour;
+        _effects.ShowSelection(preset.Key);
 
-        _presets.Invalidate();
+        _colours.Colour = colour;
+        _colours.Visible = preset.UsesColour;
+        _colours.Invalidate();
+
+        // The window only reserves room for the chips when an effect actually uses them.
+        int wanted = preset.UsesColour ? 234 : 200;
+        if (ClientSize.Height != wanted)
+        {
+            ClientSize = new Size(ClientSize.Width, wanted);
+        }
     }
 }

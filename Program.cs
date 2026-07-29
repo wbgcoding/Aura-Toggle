@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -53,7 +54,7 @@ internal static class Program
             return 0;
         }
 
-        if (args.Length == 2 && command == "preset")
+        if (command == "preset" && args.Length is 2 or 3)
         {
             AuraPreset? preset = AuraPresets.Find(args[1]);
             if (preset == null)
@@ -61,11 +62,37 @@ internal static class Program
                 return Usage();
             }
 
-            ApplyPreset(preset);
+            Color? colour = null;
+            if (args.Length == 3)
+            {
+                if (!TryParseColour(args[2], out Color parsed))
+                {
+                    return Usage();
+                }
+
+                colour = parsed;
+            }
+
+            ApplyPreset(preset, colour);
             return 0;
         }
 
         return Usage();
+    }
+
+    /// <summary>Accepts #RRGGBB, RRGGBB and the common colour names.</summary>
+    private static bool TryParseColour(string value, out Color colour)
+    {
+        string text = value.Trim().TrimStart('#');
+
+        if (text.Length == 6 && int.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int rgb))
+        {
+            colour = Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+            return true;
+        }
+
+        colour = Color.FromName(value.Trim());
+        return colour.IsKnownColor;
     }
 
     private static int Usage()
@@ -93,9 +120,15 @@ internal static class Program
     }
 
     /// <summary>Switches to a lighting effect and remembers it as the state to restore.</summary>
-    public static AuraState ApplyPreset(AuraPreset preset)
+    public static AuraState ApplyPreset(AuraPreset preset, Color? colour = null)
     {
         AuraState state = AuraState.Load() with { On = true, Mode = preset.Mode };
+
+        if (colour is Color chosen)
+        {
+            state = state with { Red = chosen.R, Green = chosen.G, Blue = chosen.B };
+        }
+
         Send(preset.Mode, state);
         state.Save();
         return state;

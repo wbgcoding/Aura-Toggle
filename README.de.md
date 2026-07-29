@@ -44,18 +44,21 @@ ganzes Softwarepaket"* — genau dafür ist das hier.
 
 ## Was es bewusst nicht macht
 
-Keine Farbauswahl, keine eigenen Animationen, keine Profile, kein Tray-Icon, kein Autostart,
-kein Updater, keine Telemetrie, überhaupt kein Netzwerkzugriff. Es schaltet die Beleuchtung und
-wählt einen der Effekte, die der Controller ohnehin schon kann. Das ist der komplette
-Funktionsumfang, und das soll auch so bleiben.
+Keine eigenen Animationen, keine Profile, kein Tray-Icon, kein Updater, keine Telemetrie,
+überhaupt kein Netzwerkzugriff. Es schaltet die Beleuchtung, wählt einen der Effekte, die der
+Controller ohnehin kann, und setzt dessen Farbe. Das ist der komplette Funktionsumfang, und das
+soll auch so bleiben.
 
 ## Loslegen
 
 1. `aura.exe` herunterladen und hinlegen, wo du willst — Desktop, Tools-Ordner, USB-Stick.
-2. Doppelklick. Ein kleines Fenster zeigt oben den aktuellen Zustand, den laufenden Effekt und
-   den gefundenen Controller, darunter einen großen Schaltknopf und eine Auswahlliste mit den
-   verfügbaren Effekten samt **Setzen**-Knopf.
-3. Großer Knopf schaltet die Beleuchtung. Effekt auswählen und **Setzen** drücken wechselt ihn.
+2. Doppelklick. Ein kleines Fenster mit einem großen Knopf, der den Zustand zugleich anzeigt
+   und umschaltet — solange die Beleuchtung an ist, animiert der Knopf den laufenden Effekt.
+3. Darunter den Effekt aus der Liste wählen, er wird sofort gesetzt. Effekte mit Farbe zeigen
+   darunter Farbfelder, inklusive freier Farbwahl über den Farbdialog.
+
+Das Zahnrad oben rechts enthält vier Einstellungen: mit Windows starten, minimiert starten,
+beim Schließen nur minimieren, und welcher Zustand beim Start gesetzt wird.
 
 Mehr Einrichtung gibt es nicht.
 
@@ -67,6 +70,7 @@ Mehr Einrichtung gibt es nicht.
 | `aura -off` | Beleuchtung aus |
 | `aura -on` | Beleuchtung zurück auf den zuletzt gesetzten Effekt |
 | `aura -preset <Name>` | Wechselt auf diesen Effekt und schaltet die Beleuchtung ein |
+| `aura -preset <Name> <Farbe>` | Dasselbe mit Farbe, als `#RRGGBB` oder Farbname |
 
 `-on`, `--on`, `/on` und einfach `on` funktionieren alle, Groß- und Kleinschreibung egal.
 Ebenso bei `off` und `preset`.
@@ -90,8 +94,11 @@ sind egal, also funktionieren `spectrum-cycle`, `"Spectrum Cycle"` und `spectrum
 gleichermaßen. Die übersetzten Namen aus dem Fenster werden ebenfalls akzeptiert. Ein
 unbekannter Name gibt die vollständige Liste aus.
 
-Die mit „nutzt Farbe" markierten Effekte laufen in Weiß. Es gibt keine Farbauswahl — dieses
-Tool schaltet Beleuchtung, es gestaltet sie nicht.
+Die mit „nutzt Farbe" markierten Effekte nehmen die Farbe, die du im Fenster wählst oder auf
+der Kommandozeile übergibst; die anderen ignorieren sie und laufen im Spektrum des Controllers.
+
+Geschwindigkeit oder Richtung gibt es nicht, weil dieser Controller das nicht kann: Der
+Effektbefehl trägt einen Kanal und einen Modus, sonst nichts.
 
 Exit-Codes: `0` Erfolg, `2` unbekanntes Argument, `3` kein Controller gefunden, `4` Controller
 von einem anderen Programm belegt, `5` Kommunikationsfehler. Fehler gehen nach stderr, damit
@@ -209,3 +216,8 @@ weder unterstützt noch empfohlen. „ASUS", „ROG", „TUF" und „Aura" sind 
 Inhaber und werden hier ausschließlich zur Beschreibung der angesprochenen Hardware verwendet.
 Es wird keine ASUS-Software, kein Treiber und keine Bibliothek verwendet, mitgeliefert oder
 vorausgesetzt.
+
+## Lizenz
+
+MIT, siehe [LICENSE](LICENSE). Insbesondere: Die Software kommt ohne jede Gewähr, und niemand
+haftet dafür, was sie auf deinem Rechner anstellt.

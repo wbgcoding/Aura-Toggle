@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 
 namespace AuraToggle;
@@ -228,19 +229,40 @@ internal sealed class HidStream : IDisposable
         _stream.Flush();
     }
 
-    /// <summary>Reads one input report. Returns false on timeout.</summary>
+    /// <summary>Reads one input report. Returns false on timeout or on a device level error.</summary>
     public bool Read(byte[] buffer, int timeoutMs)
     {
-        using var cancel = new CancellationTokenSource();
-        var read = _stream.ReadAsync(buffer, 0, buffer.Length, cancel.Token);
+        var cancel = new CancellationTokenSource();
+        Task<int> read = _stream.ReadAsync(buffer, 0, buffer.Length, cancel.Token);
 
-        if (read.Wait(timeoutMs))
+        try
         {
+            if (!read.Wait(timeoutMs))
+            {
+                cancel.Cancel();
+
+                // The read is still in flight. Observing it keeps its failure from surfacing
+                // later as an unobserved task exception, and disposes the token source once
+                // nothing references it any more.
+                _ = read.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
+                return false;
+            }
+
             return read.Result > 0;
         }
-
-        cancel.Cancel();
-        return false;
+        catch (AggregateException)
+        {
+            // A device that disappears mid-read faults the task. Treat it as no answer;
+            // the caller decides what that means.
+            return false;
+        }
+        finally
+        {
+            if (read.IsCompleted)
+            {
+                cancel.Dispose();
+            }
+        }
     }
 
     public void Dispose() => _stream.Dispose();

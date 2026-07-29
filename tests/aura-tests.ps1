@@ -1,4 +1,4 @@
-# Regression suite for aura.exe. Switches the mainboard lighting while it runs
+﻿# Regression suite for aura.exe. Switches the mainboard lighting while it runs
 # and leaves it turned on at the end.
 #
 #   powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
@@ -114,6 +114,23 @@ Test-Case "-preset without a name exits 2" {
     Assert-Equal 2 (Invoke-Aura @("-preset")).ExitCode "exit code"
 }
 
+Test-Case "a preset takes a hex colour" {
+    Assert-Equal 0 (Invoke-Aura @("-preset", "static", "#20C0FF")).ExitCode "exit code"
+    $stored = Get-Content $state -Raw | ConvertFrom-Json
+    Assert-Equal 32 $stored.red "red"
+    Assert-Equal 192 $stored.green "green"
+    Assert-Equal 255 $stored.blue "blue"
+}
+
+Test-Case "a preset takes a colour name" {
+    Assert-Equal 0 (Invoke-Aura @("-preset", "static", "Lime")).ExitCode "exit code"
+    Assert-Equal 0 ((Get-Content $state -Raw | ConvertFrom-Json).red) "red"
+}
+
+Test-Case "an unusable colour exits 2" {
+    Assert-Equal 2 (Invoke-Aura @("-preset", "static", "not-a-colour")).ExitCode "exit code"
+}
+
 Write-Host "State"
 
 Test-Case "switching off keeps the stored effect" {
@@ -169,13 +186,19 @@ Test-Case "window opens, closes and leaves no process behind" {
     Start-Sleep -Seconds 3
     $process.Refresh()
     if ($process.HasExited) { throw "process exited immediately" }
-    Assert-Equal "Aura" $process.MainWindowTitle "window title"
+    # The title gains the controller name once the device has answered.
+    if ($process.MainWindowTitle -notlike "Aura*") { throw "unexpected title '$($process.MainWindowTitle)'" }
     if ($process.MainWindowHandle -eq 0) { throw "no window handle" }
 
     [void]$process.CloseMainWindow()
     if (-not $process.WaitForExit(5000)) { throw "window did not close" }
     Assert-Equal 0 $process.ExitCode "exit code"
-    Assert-Equal 0 ((Get-Process aura -ErrorAction SilentlyContinue | Measure-Object).Count) "leftover processes"
+
+    # Scoped to this build: another copy of the tool may legitimately be running elsewhere.
+    $target = (Resolve-Path $Exe).Path
+    $leftover = @(Get-Process aura -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -eq $target })
+    Assert-Equal 0 $leftover.Count "leftover processes"
 }
 
 # Leave the machine on the default effect, switched on.

@@ -42,18 +42,20 @@ this was written for exactly that.
 
 ## What it deliberately does not do
 
-No colour picker, no custom animations, no profiles, no tray icon, no auto-start, no updater,
-no telemetry, no network access at all. It switches the lighting and selects one of the
-effects the controller already has. That is the whole feature list, and it is meant to stay
-that way.
+No custom animations, no profiles, no tray icon, no updater, no telemetry, no network access
+at all. It switches the lighting, picks one of the effects the controller already has, and
+sets its colour. That is the whole feature list, and it is meant to stay that way.
 
 ## Getting started
 
 1. Download `aura.exe` and put it anywhere you like — Desktop, a tools folder, a USB stick.
-2. Double click it. A small window opens showing the current state, the running effect and
-   which controller was found, with a big button below it and a drop down of the available
-   effects plus a **Set** button.
-3. Click the big button to switch the lighting. Pick an effect and press **Set** to change it.
+2. Double click it. A small window opens with one big button that both shows and switches the
+   state - while the lighting is on, the button animates the effect that is actually running.
+3. Below it, pick an effect from the list; it applies immediately. Effects that use a colour
+   show colour chips underneath, including a free choice through the colour picker.
+
+The gear in the top right holds four settings: start with Windows, start minimised, minimise
+instead of closing, and which lighting state to apply when the tool starts.
 
 That is the entire setup.
 
@@ -65,6 +67,7 @@ That is the entire setup.
 | `aura -off` | Lighting off |
 | `aura -on` | Lighting back to the last effect |
 | `aura -preset <name>` | Switches to that effect and turns the lighting on |
+| `aura -preset <name> <colour>` | The same with a colour, as `#RRGGBB` or a colour name |
 
 `-on`, `--on`, `/on` and plain `on` are all accepted, in any capitalisation. Same for `off`
 and `preset`.
@@ -87,8 +90,11 @@ Names are matched forgivingly: capitalisation, spaces, hyphens and underscores a
 `spectrum-cycle`, `"Spectrum Cycle"` and `spectrumcycle` all work. The translated names shown
 in the window are accepted too. An unknown name prints the full list.
 
-The effects marked as using a colour run in white. There is no colour picker — this tool is
-about switching lighting, not designing it.
+The effects marked as using a colour take the colour you pick in the window or pass on the
+command line; the others ignore it and run the controller's own spectrum.
+
+There is no speed or direction setting, because this controller has none: the effect command
+carries a channel and a mode and nothing else.
 
 Exit codes: `0` success, `2` unknown argument, `3` no controller found, `4` controller in use
 by another program, `5` communication error. Errors are printed to standard error, so scripts
@@ -201,3 +207,8 @@ This is an independent project. It is not made, endorsed or supported by ASUSTeK
 "ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners and are used here
 only to describe which hardware this tool talks to. No ASUS software, driver or library is
 used, bundled or required.
+
+## License
+
+MIT, see [LICENSE](LICENSE). In particular: the software comes without any warranty, and
+nobody is liable for what it does on your machine.

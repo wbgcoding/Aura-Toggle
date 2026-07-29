@@ -40,9 +40,9 @@ internal sealed record AuraState(bool On, byte Mode, byte Red, byte Green, byte 
                 Green: Read(root, "green", Default.Green),
                 Blue: Read(root, "blue", Default.Blue));
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            // A damaged state file must not break switching the lights.
+            // A damaged or unreadable state file must not break switching the lights.
             return Default;
         }
     }
@@ -50,12 +50,22 @@ internal sealed record AuraState(bool On, byte Mode, byte Red, byte Green, byte 
     private static byte Read(JsonElement root, string name, byte fallback) =>
         root.TryGetProperty(name, out JsonElement value) && value.TryGetByte(out byte parsed) ? parsed : fallback;
 
+    /// <summary>
+    /// Remembers the state. Failing to write it is not worth aborting a switch that already
+    /// reached the hardware, so the error is swallowed and the lights stay as they are.
+    /// </summary>
     public void Save()
     {
-        string path = FilePath;
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        try
+        {
+            string path = FilePath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-        string json = $"{{\"on\":{(On ? "true" : "false")},\"mode\":{Mode},\"red\":{Red},\"green\":{Green},\"blue\":{Blue}}}";
-        File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            string json = $"{{\"on\":{(On ? "true" : "false")},\"mode\":{Mode},\"red\":{Red},\"green\":{Green},\"blue\":{Blue}}}";
+            File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 }

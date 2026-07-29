@@ -10,14 +10,18 @@ All notable changes to this project are documented here. The format follows
 
 - Switch ASUS Aura mainboard lighting off and on: onboard zone, 12 V RGB headers and every
   addressable ARGB header.
-- Toggle window with a status card, a button showing the current state, and a drop down of
-  the available effects with a Set button.
-- The status card names the running effect, shows its colour and reports the controller
-  firmware and channel count read from the device.
+- Toggle window built around one button that shows the state and, while the lighting is on,
+  animates the effect that is running.
+- Themed drop down listing the effects, each with an icon drawn from the effect itself.
+  Choosing one applies it straight away.
+- Colour chips plus a free colour picker for the effects that use a colour.
+- Settings behind the gear: start with Windows, start minimised, minimise instead of closing,
+  and the lighting state to apply at start.
+- The title bar names the controller firmware and channel count read from the device.
 - Nine built-in effects selectable by name: static, breathing, flashing, spectrum-cycle,
   rainbow, rainbow-breathing, chase-fade, chase and wave.
-- Command line interface: `-on`, `-off` and `-preset <name>`, also accepted as `--on`, `/on`
-  and `on`, in any capitalisation.
+- Command line interface: `-on`, `-off` and `-preset <name> [colour]`, also accepted as
+  `--on`, `/on` and `on`, in any capitalisation. Colours as `#RRGGBB` or by name.
 - Exit codes for scripting: `0` success, `2` unknown argument, `3` controller not found,
   `4` controller in use, `5` communication error.
 - Controller detection through the device handshake instead of a fixed interface number, so
@@ -32,5 +36,12 @@ All notable changes to this project are documented here. The format follows
 - `build.bat` producing either a small framework dependent build or a standalone build.
 - Switching runs off the UI thread, so the window keeps painting while the controller is
   being talked to.
+
+### Fixed
+
+- Report buffers follow the length the device reports instead of assuming 65 bytes, and short
+  or truncated replies no longer throw while the configuration table is read.
+- A device that fails mid-read, an unreadable state file and a locked down Run key are handled
+  instead of ending the process.
 
 [1.0.0]: https://github.com/wbgcoding/aura-toggle/releases/tag/v1.0.0

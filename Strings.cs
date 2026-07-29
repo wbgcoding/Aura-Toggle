@@ -33,23 +33,25 @@ internal static class Strings
 
     public static string UsagePresets => Get("UsagePresets");
 
-    public static string ButtonSet => Get("ButtonSet");
-
     public static string PresetAccessibleName => Get("PresetAccessibleName");
-
-    public static string StatusOn => Get("StatusOn");
-
-    public static string StatusOff => Get("StatusOff");
-
-    public static string StatusEffect => Get("StatusEffect");
 
     public static string StatusController => Get("StatusController");
 
     public static string StatusControllerMissing => Get("StatusControllerMissing");
 
-    public static string StatusBusy => Get("StatusBusy");
+    public static string SettingsAccessibleName => Get("SettingsAccessibleName");
 
-    public static string LabelEffect => Get("LabelEffect");
+    public static string SettingAutoStart => Get("SettingAutoStart");
+
+    public static string SettingStartMinimised => Get("SettingStartMinimised");
+
+    public static string SettingMinimiseOnClose => Get("SettingMinimiseOnClose");
+
+    public static string SettingStartAction => Get("SettingStartAction");
+
+    public static string StartActionNone => Get("StartActionNone");
+
+    public static string StartActionOff => Get("StartActionOff");
 
     /// <summary>Display name of a lighting effect.</summary>
     public static string Preset(string resourceKey) => Get(resourceKey);

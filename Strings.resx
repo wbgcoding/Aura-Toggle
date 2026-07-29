@@ -45,34 +45,22 @@
     <value>Aura</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
-    <value>LEDs: ON</value>
+    <value>On</value>
   </data>
   <data name="ButtonStateOff" xml:space="preserve">
-    <value>LEDs: OFF</value>
+    <value>Off</value>
   </data>
   <data name="ButtonAccessibleName" xml:space="preserve">
     <value>Switch mainboard lighting on or off</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: aura [-on | -off | -preset &lt;name&gt;]   (without an argument the toggle window opens)</value>
+    <value>Usage: aura [-on | -off | -preset &lt;name&gt; [colour]]   (without an argument the toggle window opens)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
     <value>Presets: {0}</value>
   </data>
-  <data name="ButtonSet" xml:space="preserve">
-    <value>Set</value>
-  </data>
-  <data name="StatusOn" xml:space="preserve">
-    <value>Lighting is on</value>
-  </data>
-  <data name="StatusOff" xml:space="preserve">
-    <value>Lighting is off</value>
-  </data>
-  <data name="StatusEffect" xml:space="preserve">
-    <value>Effect: {0}</value>
-  </data>
   <data name="StatusController" xml:space="preserve">
-    <value>Controller {0} · {1} channels</value>
+    <value>{0} · {1} channels</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>No controller found</value>
@@ -116,10 +104,25 @@
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
   </data>
-  <data name="StatusBusy" xml:space="preserve">
-    <value>Switching…</value>
+  <data name="SettingsAccessibleName" xml:space="preserve">
+    <value>Settings</value>
   </data>
-  <data name="LabelEffect" xml:space="preserve">
-    <value>Effect</value>
+  <data name="SettingAutoStart" xml:space="preserve">
+    <value>Start with Windows</value>
+  </data>
+  <data name="SettingStartMinimised" xml:space="preserve">
+    <value>Start minimised</value>
+  </data>
+  <data name="SettingMinimiseOnClose" xml:space="preserve">
+    <value>Minimise on close</value>
+  </data>
+  <data name="SettingStartAction" xml:space="preserve">
+    <value>Lighting at start</value>
+  </data>
+  <data name="StartActionNone" xml:space="preserve">
+    <value>Leave unchanged</value>
+  </data>
+  <data name="StartActionOff" xml:space="preserve">
+    <value>Switch off</value>
   </data>
 </root>

@@ -45,34 +45,22 @@
     <value>Aura</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
-    <value>LEDs: AN</value>
+    <value>An</value>
   </data>
   <data name="ButtonStateOff" xml:space="preserve">
-    <value>LEDs: AUS</value>
+    <value>Aus</value>
   </data>
   <data name="ButtonAccessibleName" xml:space="preserve">
     <value>Mainboard-Beleuchtung ein- oder ausschalten</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Aufruf: aura [-on | -off | -preset &lt;Name&gt;]   (ohne Argument öffnet sich das Umschaltfenster)</value>
+    <value>Aufruf: aura [-on | -off | -preset &lt;Name&gt; [Farbe]]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
     <value>Voreinstellungen: {0}</value>
   </data>
-  <data name="ButtonSet" xml:space="preserve">
-    <value>Setzen</value>
-  </data>
-  <data name="StatusOn" xml:space="preserve">
-    <value>Beleuchtung ist an</value>
-  </data>
-  <data name="StatusOff" xml:space="preserve">
-    <value>Beleuchtung ist aus</value>
-  </data>
-  <data name="StatusEffect" xml:space="preserve">
-    <value>Effekt: {0}</value>
-  </data>
   <data name="StatusController" xml:space="preserve">
-    <value>Controller {0} · {1} Kanäle</value>
+    <value>{0} · {1} Kanäle</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Kein Controller gefunden</value>
@@ -116,10 +104,25 @@
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>Schreiben an den AURA-Controller fehlgeschlagen (Befehl 0x{0}): {1}</value>
   </data>
-  <data name="StatusBusy" xml:space="preserve">
-    <value>Schalte…</value>
+  <data name="SettingsAccessibleName" xml:space="preserve">
+    <value>Einstellungen</value>
   </data>
-  <data name="LabelEffect" xml:space="preserve">
-    <value>Effekt</value>
+  <data name="SettingAutoStart" xml:space="preserve">
+    <value>Mit Windows starten</value>
+  </data>
+  <data name="SettingStartMinimised" xml:space="preserve">
+    <value>Minimiert starten</value>
+  </data>
+  <data name="SettingMinimiseOnClose" xml:space="preserve">
+    <value>Beim Schlie&#223;en minimieren</value>
+  </data>
+  <data name="SettingStartAction" xml:space="preserve">
+    <value>Beleuchtung beim Start</value>
+  </data>
+  <data name="StartActionNone" xml:space="preserve">
+    <value>Unver&#228;ndert lassen</value>
+  </data>
+  <data name="StartActionOff" xml:space="preserve">
+    <value>Ausschalten</value>
   </data>
 </root>

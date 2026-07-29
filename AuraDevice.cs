@@ -67,7 +67,7 @@ internal sealed class AuraDevice : IDisposable
             startLed += mainboardLeds;
         }
 
-        for (int i = 0; i < addressableHeaders; i++)
+        for (int i = 0; i < addressableHeaders && _channels.Count < byte.MaxValue; i++)
         {
             // Each addressable header contributes exactly one effect color slot.
             _channels.Add(new Channel((byte)_channels.Count, startLed, 1));
@@ -119,6 +119,11 @@ internal sealed class AuraDevice : IDisposable
                 accessDenied++;
                 stream?.Dispose();
             }
+            catch (IOException)
+            {
+                // One unresponsive interface must not stop the others from being found.
+                stream?.Dispose();
+            }
         }
 
         if (devices.Count == 0)
@@ -142,7 +147,7 @@ internal sealed class AuraDevice : IDisposable
         {
             devices = DiscoverAll();
         }
-        catch (AuraNotFoundException)
+        catch (Exception ex) when (ex is AuraNotFoundException or IOException)
         {
             return null;
         }
@@ -163,18 +168,23 @@ internal sealed class AuraDevice : IDisposable
     /// <summary>Confirms this interface speaks the Aura protocol and reads its channel layout.</summary>
     private static AuraDevice? TryHandshake(HidStream stream)
     {
-        if (!Request(stream, CmdReadFirmware, out byte[] firmwareReply) || firmwareReply[1] != ReplyFirmware)
+        if (!Request(stream, CmdReadFirmware, out byte[] firmwareReply) ||
+            firmwareReply.Length < 2 || firmwareReply[1] != ReplyFirmware)
         {
             return null;
         }
 
-        if (!Request(stream, CmdReadConfigTable, out byte[] configReply) || configReply[1] != ReplyConfigTable)
+        if (!Request(stream, CmdReadConfigTable, out byte[] configReply) ||
+            configReply.Length < 2 || configReply[1] != ReplyConfigTable)
         {
             return null;
         }
 
         // Reply layout: [0] report id, [1] reply code, [2..3] unused, [4..] 60 byte config table.
-        byte[] configTable = configReply.Skip(4).Take(60).ToArray();
+        // A device that answers with a shorter report gets the rest padded with zeroes rather
+        // than crashing the lookup below.
+        var configTable = new byte[60];
+        configReply.Skip(4).Take(60).ToArray().CopyTo(configTable, 0);
 
         var device = new AuraDevice(stream, configTable)
         {
@@ -228,18 +238,32 @@ internal sealed class AuraDevice : IDisposable
     /// <summary>Colour for the running effect, addressed by an LED bitmask.</summary>
     private void SendEffectColor(Channel channel, byte red, byte green, byte blue)
     {
-        int mask = ((1 << channel.LedCount) - 1) << channel.StartLed;
+        // The mask is two bytes wide, so it addresses at most 16 LEDs. Boards with more
+        // onboard LEDs than that still switch effects correctly through 0x35; only the
+        // colour of the LEDs past the sixteenth is left alone.
+        int addressable = Math.Min(channel.LedCount, 16 - Math.Min(channel.StartLed, 16));
+        if (addressable <= 0)
+        {
+            return;
+        }
 
-        var report = new byte[ReportLength];
+        int mask = ((1 << addressable) - 1) << channel.StartLed;
+
+        var report = new byte[_stream.Info.OutputReportLength];
         report[0] = ReportId;
         report[1] = CmdMainboardEffectColor;
         report[2] = (byte)(mask >> 8);
         report[3] = (byte)(mask & 0xFF);
         report[4] = 0x00; // 1 would target the shutdown effect, which lives in flash
 
-        for (int led = 0; led < channel.LedCount; led++)
+        for (int led = 0; led < addressable; led++)
         {
             int at = 5 + ((channel.StartLed + led) * 3);
+            if (at + 2 >= report.Length)
+            {
+                break;
+            }
+
             report[at] = red;
             report[at + 1] = green;
             report[at + 2] = blue;
@@ -250,9 +274,10 @@ internal sealed class AuraDevice : IDisposable
 
     private void Send(params byte[] payload)
     {
-        var report = new byte[ReportLength];
+        // The report always has the length the device reported, never a hardcoded one.
+        var report = new byte[_stream.Info.OutputReportLength];
         report[0] = ReportId;
-        Array.Copy(payload, 0, report, 1, payload.Length);
+        Array.Copy(payload, 0, report, 1, Math.Min(payload.Length, report.Length - 1));
         Write(report);
     }
 
