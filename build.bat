@@ -58,10 +58,13 @@ exit /b 0
 
 :installer
 REM Version is read from the project file, so it can only be changed in one place.
-for /f "tokens=2 delims=<>" %%v in ('findstr /i "<Version>" "%ROOT%AuraToggle.csproj"') do set VERSION=%%v
+REM The line reads "    <Version>1.0.0</Version>": with < and > as the only
+REM delimiters the leading indent is token 1, the tag name token 2, the value token 3.
+for /f "tokens=3 delims=<>" %%v in ('findstr /i "<Version>" "%ROOT%AuraToggle.csproj"') do set VERSION=%%v
 
 set ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe
 if not exist "%ISCC%" set ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe
+if not exist "%ISCC%" set ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe
 if not exist "%ISCC%" (
     echo.
     echo Inno Setup 6 not found. Install it with:  winget install JRSoftware.InnoSetup
