@@ -26,6 +26,9 @@ internal sealed record AuraSettings(
     /// <summary>Follow the Windows display language.</summary>
     public const string LanguageAuto = "";
 
+    /// <summary>The per-device selector's default: every controller is switched together.</summary>
+    public const string ChannelAll = "all";
+
     public static readonly AuraSettings Default = new(
         StartMinimised: false,
         MinimiseOnClose: false,
@@ -35,6 +38,12 @@ internal sealed record AuraSettings(
 
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "AuraToggle";
+
+    /// <summary>
+    /// Passed by the Run key entry. Only a start by Windows may open straight into the
+    /// notification area; starting the tool by hand always shows the window.
+    /// </summary>
+    public const string AutoStartArgument = "-autostart";
 
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "aura-toggle", "settings.json");
@@ -129,7 +138,7 @@ internal sealed record AuraSettings(
                 using RegistryKey key = Registry.CurrentUser.CreateSubKey(RunKey);
                 if (value && Environment.ProcessPath is string exe)
                 {
-                    key.SetValue(RunValue, $"\"{exe}\"");
+                    key.SetValue(RunValue, $"\"{exe}\" {AutoStartArgument}");
                 }
                 else
                 {

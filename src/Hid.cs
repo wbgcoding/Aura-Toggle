@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
@@ -15,7 +16,8 @@ internal sealed record HidInfo(
     ushort UsagePage,
     ushort Usage,
     int InputReportLength,
-    int OutputReportLength);
+    int OutputReportLength,
+    string Product);
 
 /// <summary>Minimal HID access over setupapi.dll / hid.dll. No third-party dependencies.</summary>
 internal static class Hid
@@ -75,6 +77,9 @@ internal static class Hid
 
     [DllImport("hid.dll")]
     private static extern int HidP_GetCaps(IntPtr preparsed, IntPtr caps);
+
+    [DllImport("hid.dll", CharSet = CharSet.Unicode)]
+    private static extern bool HidD_GetProductString(SafeFileHandle handle, StringBuilder buffer, int bufferLengthBytes);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security,
@@ -165,6 +170,13 @@ internal static class Hid
                 return null;
             }
 
+            // Best effort: not every device exposes a product string, and that is fine - the
+            // caller falls back to a generic name built from the product id.
+            var productBuilder = new StringBuilder(126);
+            string product = HidD_GetProductString(probe, productBuilder, productBuilder.Capacity * 2)
+                ? productBuilder.ToString().Trim()
+                : "";
+
             return new HidInfo(
                 path,
                 attributes.VendorID,
@@ -172,7 +184,8 @@ internal static class Hid
                 UsagePage: (ushort)Marshal.ReadInt16(caps, 2),
                 Usage: (ushort)Marshal.ReadInt16(caps, 0),
                 InputReportLength: (ushort)Marshal.ReadInt16(caps, 4),
-                OutputReportLength: (ushort)Marshal.ReadInt16(caps, 6));
+                OutputReportLength: (ushort)Marshal.ReadInt16(caps, 6),
+                Product: product);
         }
         finally
         {

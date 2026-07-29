@@ -9,13 +9,13 @@ namespace AuraToggle;
 /// The controller cannot report its current effect, so the last known lighting state is kept here.
 /// Defaults to the ASUS factory effect when nothing has been stored yet.
 /// </summary>
-internal sealed record AuraState(bool On, byte Mode, byte Red, byte Green, byte Blue)
+internal sealed record AuraState(bool On, byte Mode, byte Red, byte Green, byte Blue, string CustomPreset)
 {
     public const byte ModeOff = 0x00;
     public const byte ModeRainbow = 0x05;
 
     /// <summary>White is the colour handed to the effects that use one; the rest ignore it.</summary>
-    public static readonly AuraState Default = new(On: true, ModeRainbow, 0xFF, 0xFF, 0xFF);
+    public static readonly AuraState Default = new(On: true, ModeRainbow, 0xFF, 0xFF, 0xFF, CustomPreset: "");
 
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "aura-toggle", "state.json");
@@ -38,7 +38,11 @@ internal sealed record AuraState(bool On, byte Mode, byte Red, byte Green, byte 
                 Mode: Read(root, "mode", Default.Mode),
                 Red: Read(root, "red", Default.Red),
                 Green: Read(root, "green", Default.Green),
-                Blue: Read(root, "blue", Default.Blue));
+                Blue: Read(root, "blue", Default.Blue),
+                CustomPreset: root.TryGetProperty("customPreset", out JsonElement custom) &&
+                              custom.ValueKind == JsonValueKind.String
+                    ? custom.GetString() ?? ""
+                    : "");
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -61,7 +65,11 @@ internal sealed record AuraState(bool On, byte Mode, byte Red, byte Green, byte 
             string path = FilePath;
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-            string json = $"{{\"on\":{(On ? "true" : "false")},\"mode\":{Mode},\"red\":{Red},\"green\":{Green},\"blue\":{Blue}}}";
+            string json = "{" +
+                $"\"on\":{(On ? "true" : "false")}," +
+                $"\"mode\":{Mode},\"red\":{Red},\"green\":{Green},\"blue\":{Blue}," +
+                $"\"customPreset\":{JsonSerializer.Serialize(CustomPreset)}" +
+                "}";
             File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

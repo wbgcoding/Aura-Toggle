@@ -72,6 +72,28 @@ internal static class Strings
 
     public static string LanguageGerman => Get("LanguageGerman");
 
+    public static string DeviceFallbackName => Get("DeviceFallbackName");
+
+    public static string ChannelAll => Get("ChannelAll");
+
+    public static string ChannelAccessibleName => Get("ChannelAccessibleName");
+
+    public static string SettingCustomPresets => Get("SettingCustomPresets");
+
+    public static string ButtonNewCustomPreset => Get("ButtonNewCustomPreset");
+
+    public static string CustomPresetNamePlaceholder => Get("CustomPresetNamePlaceholder");
+
+    public static string CustomPresetSave => Get("CustomPresetSave");
+
+    public static string CustomPresetDelete => Get("CustomPresetDelete");
+
+    public static string CustomPresetNew => Get("CustomPresetNew");
+
+    public static string CustomPresetNoDevices => Get("CustomPresetNoDevices");
+
+    public static string CustomPresetAccessibleName => Get("CustomPresetAccessibleName");
+
     /// <summary>Display name of a lighting effect.</summary>
     public static string Preset(string resourceKey) => Get(resourceKey);
 

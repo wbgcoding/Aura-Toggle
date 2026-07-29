@@ -90,21 +90,62 @@ internal static class Theme
         return path;
     }
 
-    public static Color Hue(double degrees)
+    public static Color Hue(double degrees) => FromHsv(degrees, 1.0, 1.0);
+
+    public static Color FromHsv(double hueDegrees, double saturation, double value)
     {
-        double h = (((degrees % 360) + 360) % 360) / 60.0;
-        double x = 1 - Math.Abs((h % 2) - 1);
+        double h = (((hueDegrees % 360) + 360) % 360) / 60.0;
+        double c = value * saturation;
+        double x = c * (1 - Math.Abs((h % 2) - 1));
+        double m = value - c;
         (double r, double g, double b) = h switch
         {
-            < 1 => (1.0, x, 0.0),
-            < 2 => (x, 1.0, 0.0),
-            < 3 => (0.0, 1.0, x),
-            < 4 => (0.0, x, 1.0),
-            < 5 => (x, 0.0, 1.0),
-            _ => (1.0, 0.0, x),
+            < 1 => (c, x, 0.0),
+            < 2 => (x, c, 0.0),
+            < 3 => (0.0, c, x),
+            < 4 => (0.0, x, c),
+            < 5 => (x, 0.0, c),
+            _ => (c, 0.0, x),
         };
 
-        return Color.FromArgb((int)(r * 255), (int)(g * 255), (int)(b * 255));
+        return Color.FromArgb(
+            Math.Clamp((int)((r + m) * 255), 0, 255),
+            Math.Clamp((int)((g + m) * 255), 0, 255),
+            Math.Clamp((int)((b + m) * 255), 0, 255));
+    }
+
+    /// <summary>Hue in degrees, saturation and value in 0..1.</summary>
+    public static (double Hue, double Saturation, double Value) ToHsv(Color colour)
+    {
+        double r = colour.R / 255.0, g = colour.G / 255.0, b = colour.B / 255.0;
+        double max = Math.Max(r, Math.Max(g, b));
+        double min = Math.Min(r, Math.Min(g, b));
+        double delta = max - min;
+
+        double h = 0.0;
+        if (delta > 0.0001)
+        {
+            if (max == r)
+            {
+                h = 60 * (((g - b) / delta) % 6);
+            }
+            else if (max == g)
+            {
+                h = 60 * (((b - r) / delta) + 2);
+            }
+            else
+            {
+                h = 60 * (((r - g) / delta) + 4);
+            }
+        }
+
+        if (h < 0)
+        {
+            h += 360;
+        }
+
+        double s = max <= 0.0001 ? 0.0 : delta / max;
+        return (h, s, max);
     }
 
     public static Color Scale(Color colour, double factor) => Color.FromArgb(
@@ -131,11 +172,30 @@ internal static class EffectPainter
         Color.FromArgb(190, 60, 255), Color.FromArgb(255, 0, 160), Color.FromArgb(255, 0, 0),
     };
 
-    /// <summary>Fills a shape with the effect as it looks at <paramref name="seconds"/>.</summary>
-    public static void Paint(Graphics g, GraphicsPath shape, RectangleF bounds, byte mode, Color colour, double seconds)
+    // Built once: a fresh ColorBlend was previously allocated on every single animation
+    // frame, which was the main cost behind the animation feeling laggy.
+    private static readonly ColorBlend SpectrumBlend = Blend(SpectrumStops);
+
+    private static bool UsesColour(byte mode) => mode is 1 or 2 or 3 or 7 or 9;
+
+    /// <summary>
+    /// Fills a shape with the effect as it looks at <paramref name="seconds"/>. With
+    /// <paramref name="animate"/> false, every mode collapses to a single flat fill instead -
+    /// cheaper to paint, and unambiguously reads as paused rather than as a frozen mid-motion
+    /// gradient.
+    /// </summary>
+    public static void Paint(Graphics g, GraphicsPath shape, RectangleF bounds, byte mode, Color colour,
+        double seconds, bool animate = true)
     {
         Region clip = g.Clip;
         g.SetClip(shape, CombineMode.Intersect);
+
+        if (!animate)
+        {
+            Fill(g, bounds, mode == 0 ? Theme.Neutral : UsesColour(mode) ? colour : Theme.Accent);
+            g.Clip = clip;
+            return;
+        }
 
         switch (mode)
         {
@@ -205,7 +265,7 @@ internal static class EffectPainter
             LinearGradientMode.Horizontal)
         {
             WrapMode = WrapMode.Tile,
-            InterpolationColors = Blend(SpectrumStops),
+            InterpolationColors = SpectrumBlend,
         };
 
         double shift = ((phase % 1.0) + 1.0) % 1.0;
@@ -266,6 +326,46 @@ internal static class EffectPainter
             7 or 9 => 1.55,
             _ => 0.55,
         });
+
+        using var pen = new Pen(Color.FromArgb(46, 0, 0, 0));
+        g.DrawPath(pen, shape);
+    }
+
+    /// <summary>
+    /// Icon for a custom preset: a small person glyph over the preset's own colour, so it
+    /// reads at a glance as user-made rather than as one of the controller's built-in effects.
+    /// </summary>
+    public static void PaintUserIcon(Graphics g, Rectangle bounds, Color[] colours)
+    {
+        Theme.Prepare(g);
+        using GraphicsPath shape = Theme.RoundedRectangle(bounds, bounds.Height / 2f);
+
+        Color background = colours.Length > 0 ? colours[0] : Theme.Accent;
+        using (var fill = new SolidBrush(background))
+        {
+            g.FillPath(fill, shape);
+        }
+
+        double luminance = ((background.R * 0.299) + (background.G * 0.587) + (background.B * 0.114)) / 255.0;
+        Color ink = luminance > 0.6 ? Color.FromArgb(215, 20, 20, 24) : Color.FromArgb(235, 255, 255, 255);
+
+        Region clip = g.Clip;
+        g.SetClip(shape, CombineMode.Intersect);
+
+        float cx = bounds.X + (bounds.Width / 2f);
+        float headRadius = bounds.Height * 0.19f;
+        float headCy = bounds.Y + (bounds.Height * 0.34f);
+        float shoulderWidth = bounds.Height * 0.66f;
+        float shoulderHeight = bounds.Height * 0.72f;
+
+        using (var brush = new SolidBrush(ink))
+        {
+            g.FillEllipse(brush, cx - headRadius, headCy - headRadius, headRadius * 2, headRadius * 2);
+            g.FillEllipse(brush, cx - (shoulderWidth / 2f), bounds.Bottom - shoulderHeight + 2,
+                shoulderWidth, shoulderHeight);
+        }
+
+        g.Clip = clip;
 
         using var pen = new Pen(Color.FromArgb(46, 0, 0, 0));
         g.DrawPath(pen, shape);

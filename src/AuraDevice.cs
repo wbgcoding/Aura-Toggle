@@ -18,6 +18,9 @@ internal sealed class AuraNotFoundException : Exception
     public int ExitCode { get; }
 }
 
+/// <summary>One controller for the per-device selector: a stable key, a display name and its channel count.</summary>
+internal sealed record AuraDeviceSummary(string Key, string Name, int Channels);
+
 /// <summary>
 /// One ASUS Aura USB LED controller. Speaks the vendor HID protocol directly:
 /// 65 byte reports, report id 0xEC, command in the first payload byte.
@@ -75,13 +78,21 @@ internal sealed class AuraDevice : IDisposable
         }
 
         Firmware = "";
+        Name = "";
     }
 
     private readonly record struct Channel(byte Index, int StartLed, int LedCount);
 
     public string Firmware { get; private set; }
 
-    public ushort ProductId => _stream.Info.Pid;
+    /// <summary>The USB product string when the device exposes one, empty otherwise.</summary>
+    public string Name { get; private set; }
+
+    /// <summary>
+    /// The HID device path. Stable for as long as this physical controller stays in the same
+    /// USB port, which is what lets the window remember which single device was selected.
+    /// </summary>
+    public string Key => _stream.Info.Path;
 
     public int ChannelCount => _channels.Count;
 
@@ -137,10 +148,11 @@ internal sealed class AuraDevice : IDisposable
     }
 
     /// <summary>
-    /// Firmware and channel count of the first controller, or null when none is reachable.
-    /// This is everything the hardware actually reports - the running effect cannot be read.
+    /// Every controller present, for the title bar and the per-device selector. Empty when
+    /// none is reachable - everything here is what the hardware actually reports, since the
+    /// running effect cannot be read back.
     /// </summary>
-    public static (string Firmware, int Channels)? TryDescribe()
+    public static List<AuraDeviceSummary> ListDevices()
     {
         List<AuraDevice> devices;
         try
@@ -149,12 +161,25 @@ internal sealed class AuraDevice : IDisposable
         }
         catch (Exception ex) when (ex is AuraNotFoundException or IOException)
         {
-            return null;
+            return new List<AuraDeviceSummary>();
         }
 
         try
         {
-            return (devices[0].Firmware, devices.Sum(device => device.ChannelCount));
+            // Unnamed devices of the same kind are numbered, so two Aura Controllers on one
+            // machine are still distinguishable in the list.
+            var unnamed = 0;
+            var summaries = new List<AuraDeviceSummary>();
+            foreach (AuraDevice device in devices)
+            {
+                string name = device.Name.Length > 0
+                    ? device.Name
+                    : string.Format(CultureInfo.CurrentCulture, Strings.DeviceFallbackName, ++unnamed);
+
+                summaries.Add(new AuraDeviceSummary(device.Key, name, device.ChannelCount));
+            }
+
+            return summaries;
         }
         finally
         {
@@ -190,6 +215,7 @@ internal sealed class AuraDevice : IDisposable
         {
             Firmware = new string(firmwareReply.Skip(2).Take(16)
                 .TakeWhile(c => c is >= 0x20 and < 0x7F).Select(c => (char)c).ToArray()),
+            Name = stream.Info.Product,
         };
 
         return device.ChannelCount > 0 ? device : null;

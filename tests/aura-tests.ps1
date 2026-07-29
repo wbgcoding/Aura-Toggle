@@ -4,7 +4,7 @@
 #   powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 
 param(
-    [string]$Exe = (Join-Path $PSScriptRoot "..\dist\aura.exe")
+    [string]$Exe = (Join-Path $PSScriptRoot "..\dist\Aura Toggle.exe")
 )
 
 $ErrorActionPreference = "Stop"
@@ -67,7 +67,7 @@ function Assert-Equal {
 }
 
 if (-not (Test-Path $Exe)) {
-    Write-Host "aura.exe not found at $Exe - run: dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist"
+    Write-Host "$Exe not found - run build.bat"
     exit 1
 }
 
@@ -198,6 +198,19 @@ foreach ($linkName in "Aura An.lnk", "Aura Aus.lnk") {
 
 Write-Host "Window"
 
+Test-Case "-autostart shows the window when start minimised is off" {
+    $process = Start-Process $Exe -ArgumentList "-autostart" -PassThru
+    Start-Sleep -Seconds 3
+    $process.Refresh()
+    try {
+        if ($process.MainWindowHandle -eq 0) { throw "no window" }
+    }
+    finally {
+        [void]$process.CloseMainWindow()
+        [void]$process.WaitForExit(5000)
+    }
+}
+
 Test-Case "window opens, closes and leaves no process behind" {
     $process = Start-Process $Exe -PassThru
     Start-Sleep -Seconds 3
@@ -213,7 +226,7 @@ Test-Case "window opens, closes and leaves no process behind" {
 
     # Scoped to this build: another copy of the tool may legitimately be running elsewhere.
     $target = (Resolve-Path $Exe).Path
-    $leftover = @(Get-Process aura -ErrorAction SilentlyContinue |
+    $leftover = @(Get-Process -Name "Aura Toggle" -ErrorAction SilentlyContinue |
         Where-Object { $_.Path -eq $target })
     Assert-Equal 0 $leftover.Count "leftover processes"
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -19,6 +18,10 @@ internal sealed class SettingsPopup : Form
     private readonly ToggleSwitch _animate = new();
     private readonly Select _startAction = new();
     private readonly Select _language = new();
+    private readonly Label _startActionLabel;
+    private readonly Label _languageLabel;
+    private readonly PillButton _newPreset = new();
+    private readonly Layout _layout;
 
     private bool _childOpen;
 
@@ -26,6 +29,7 @@ internal sealed class SettingsPopup : Form
     {
         Settings = settings;
 
+        AutoScaleMode = AutoScaleMode.Dpi;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
@@ -33,46 +37,60 @@ internal sealed class SettingsPopup : Form
         ForeColor = Theme.Text;
         Font = new Font("Segoe UI", 9F);
         DoubleBuffered = true;
-        Padding = new Padding(14, 12, 14, 14);
-        ClientSize = new Size(276, 302);
+        Padding = new Padding(14, 12, 14, 12);
 
-        var layout = new Layout
+        _layout = new Layout
         {
             Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 8,
+            RowCount = 9,
             BackColor = Theme.Surface,
         };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        for (int row = 0; row < 8; row++)
+        _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        _layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        for (int row = 0; row < 9; row++)
         {
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
-        AddSwitch(layout, 0, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
-        AddSwitch(layout, 1, Strings.SettingStartMinimised, _startMinimised, settings.StartMinimised);
-        AddSwitch(layout, 2, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
-        AddSwitch(layout, 3, Strings.SettingAnimate, _animate, settings.Animate);
+        AddSwitch(0, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
+        AddSwitch(1, Strings.SettingStartMinimised, _startMinimised, settings.StartMinimised);
+        AddSwitch(2, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
+        AddSwitch(3, Strings.SettingAnimate, _animate, settings.Animate);
 
-        AddLabel(layout, 4, Strings.SettingStartAction);
-        AddSelect(layout, 5, _startAction, StartActions(), settings.StartAction);
+        _startActionLabel = AddLabel(4, Strings.SettingStartAction);
+        AddSelect(5, _startAction, StartActions(), settings.StartAction);
 
-        AddLabel(layout, 6, Strings.SettingLanguage);
-        AddSelect(layout, 7, _language, Languages(), settings.Language);
+        _languageLabel = AddLabel(6, Strings.SettingLanguage);
+        AddSelect(7, _language, Languages(), settings.Language);
 
-        Controls.Add(layout);
+        _newPreset.Dock = DockStyle.Top;
+        _newPreset.Height = 32;
+        _newPreset.Text = Strings.ButtonNewCustomPreset;
+        _newPreset.Margin = new Padding(0, 14, 0, 0);
+        _newPreset.Click += (_, _) => OpenPresetEditor(null);
+        _layout.Controls.Add(_newPreset, 0, 8);
+        _layout.SetColumnSpan(_newPreset, 2);
+
+        Controls.Add(_layout);
 
         _autoStart.CheckedChanged += (_, _) => AuraSettings.AutoStart = _autoStart.Checked;
         _startMinimised.CheckedChanged += (_, _) => Apply();
         _minimiseOnClose.CheckedChanged += (_, _) => Apply();
         _animate.CheckedChanged += (_, _) => Apply();
+
+        ClientSize = new Size(276, _layout.PreferredSize.Height + Padding.Vertical);
     }
 
     public AuraSettings Settings { get; private set; }
 
     /// <summary>Raised whenever a switch is flipped, because there is no OK button.</summary>
     public event EventHandler<AuraSettings>? Changed;
+
+    /// <summary>Raised after a custom preset was saved or deleted in the editor this opens.</summary>
+    public event EventHandler? PresetsChanged;
 
     protected override CreateParams CreateParams
     {
@@ -102,7 +120,7 @@ internal sealed class SettingsPopup : Form
         }
     }
 
-    private void AddLabel(Layout layout, int row, string text)
+    private Label AddLabel(int row, string text)
     {
         var label = new Label
         {
@@ -110,17 +128,18 @@ internal sealed class SettingsPopup : Form
             Text = text,
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Surface,
-            Margin = new Padding(2, 12, 0, 5),
+            Margin = new Padding(2, 10, 0, 4),
         };
 
-        layout.Controls.Add(label, 0, row);
-        layout.SetColumnSpan(label, 2);
+        _layout.Controls.Add(label, 0, row);
+        _layout.SetColumnSpan(label, 2);
+        return label;
     }
 
-    private void AddSelect(Layout layout, int row, Select select, IEnumerable<SelectItem> items, string selected)
+    private void AddSelect(int row, Select select, IEnumerable<SelectItem> items, string selected)
     {
         select.Dock = DockStyle.Top;
-        select.Height = 32;
+        select.Height = 30;
         select.Margin = new Padding(0);
         select.BackColor = Theme.Surface;
         select.SetItems(items);
@@ -133,11 +152,11 @@ internal sealed class SettingsPopup : Form
             Activate();
         };
 
-        layout.Controls.Add(select, 0, row);
-        layout.SetColumnSpan(select, 2);
+        _layout.Controls.Add(select, 0, row);
+        _layout.SetColumnSpan(select, 2);
     }
 
-    private void AddSwitch(Layout layout, int row, string text, ToggleSwitch toggle, bool value)
+    private void AddSwitch(int row, string text, ToggleSwitch toggle, bool value)
     {
         var label = new Label
         {
@@ -145,19 +164,21 @@ internal sealed class SettingsPopup : Form
             Text = text,
             ForeColor = Theme.Text,
             BackColor = Theme.Surface,
-            Margin = new Padding(2, 6, 0, 6),
+            Margin = new Padding(2, 5, 0, 5),
         };
 
         toggle.Checked = value;
         toggle.BackColor = Theme.Surface;
-        toggle.Margin = new Padding(10, 3, 0, 3);
+        toggle.Margin = new Padding(10, 2, 0, 2);
 
-        layout.Controls.Add(label, 0, row);
-        layout.Controls.Add(toggle, 1, row);
+        _layout.Controls.Add(label, 0, row);
+        _layout.Controls.Add(toggle, 1, row);
     }
 
     private void Apply()
     {
+        bool languageChanged = Settings.Language != (_language.Selected?.Key ?? AuraSettings.LanguageAuto);
+
         Settings = Settings with
         {
             StartMinimised = _startMinimised.Checked,
@@ -166,9 +187,47 @@ internal sealed class SettingsPopup : Form
             StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
             Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
         };
-
         Settings.Save();
+
+        if (languageChanged)
+        {
+            // Relocalises this panel in place - closing it here would undo exactly the click
+            // that just chose the new language.
+            Strings.Override = Settings.Language;
+            RefreshLanguage();
+        }
+
         Changed?.Invoke(this, Settings);
+    }
+
+    private void RefreshLanguage()
+    {
+        _startActionLabel.Text = Strings.SettingStartAction;
+        _languageLabel.Text = Strings.SettingLanguage;
+        _newPreset.Text = Strings.ButtonNewCustomPreset;
+
+        string selectedAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone;
+        _startAction.SetItems(StartActions());
+        _startAction.ShowSelection(selectedAction);
+
+        string selectedLanguage = _language.Selected?.Key ?? AuraSettings.LanguageAuto;
+        _language.SetItems(Languages());
+        _language.ShowSelection(selectedLanguage);
+    }
+
+    private void OpenPresetEditor(CustomPreset? preset)
+    {
+        var editor = new CustomPresetEditor(preset);
+        _childOpen = true;
+        editor.PresetsChanged += (_, _) => PresetsChanged?.Invoke(this, EventArgs.Empty);
+        editor.FormClosed += (_, _) =>
+        {
+            _childOpen = false;
+            editor.Dispose();
+            Activate();
+        };
+
+        editor.Open(PointToScreen(new Point(Width + 8, 0)), this);
     }
 
     /// <summary>
@@ -196,7 +255,8 @@ internal sealed class SettingsPopup : Form
     {
         base.OnDeactivate(e);
 
-        // The effect list is a window of its own; opening it must not dismiss this panel.
+        // A child popup (an effect list, the preset editor) is a window of its own; opening
+        // one must not dismiss this panel.
         if (!_childOpen)
         {
             Close();
@@ -212,15 +272,5 @@ internal sealed class SettingsPopup : Form
         }
 
         base.OnKeyDown(e);
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-
-        Theme.Prepare(e.Graphics);
-        using var border = new Pen(Theme.Border);
-        using GraphicsPath frame = Theme.RoundedRectangle(new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f), 12);
-        e.Graphics.DrawPath(border, frame);
     }
 }

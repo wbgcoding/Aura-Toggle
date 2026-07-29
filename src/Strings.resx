@@ -149,4 +149,37 @@
   <data name="LanguageGerman" xml:space="preserve">
     <value>Deutsch</value>
   </data>
+  <data name="DeviceFallbackName" xml:space="preserve">
+    <value>Aura Controller #{0}</value>
+  </data>
+  <data name="ChannelAll" xml:space="preserve">
+    <value>All controllers</value>
+  </data>
+  <data name="ChannelAccessibleName" xml:space="preserve">
+    <value>Which controller to switch</value>
+  </data>
+  <data name="SettingCustomPresets" xml:space="preserve">
+    <value>Custom presets</value>
+  </data>
+  <data name="ButtonNewCustomPreset" xml:space="preserve">
+    <value>New preset</value>
+  </data>
+  <data name="CustomPresetNamePlaceholder" xml:space="preserve">
+    <value>Preset name</value>
+  </data>
+  <data name="CustomPresetSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="CustomPresetDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="CustomPresetNew" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="CustomPresetNoDevices" xml:space="preserve">
+    <value>No controller found.</value>
+  </data>
+  <data name="CustomPresetAccessibleName" xml:space="preserve">
+    <value>Custom preset editor</value>
+  </data>
 </root>

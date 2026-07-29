@@ -6,15 +6,16 @@
 #   powershell -ExecutionPolicy Bypass -File tools\make-shortcuts.ps1 -Directory dist
 
 param(
-    [string]$Directory = (Join-Path $PSScriptRoot "..\dist")
+    [string]$Directory = (Join-Path $PSScriptRoot "..\dist"),
+    [string]$ExeName = "Aura Toggle.exe"
 )
 
 $ErrorActionPreference = "Stop"
 
 $Directory = (Resolve-Path $Directory).Path
-$exe = Join-Path $Directory "aura.exe"
+$exe = Join-Path $Directory $ExeName
 if (-not (Test-Path $exe)) {
-    Write-Host "aura.exe not found in $Directory"
+    Write-Host "$ExeName not found in $Directory"
     exit 1
 }
 
@@ -97,5 +98,5 @@ foreach ($shortcut in $shortcuts) {
     }
 
     [AuraShortcut.Writer]::Create($path, $exe, $shortcut.Arguments, $shortcut.Description)
-    Write-Host "  $($shortcut.Name) -> aura.exe $($shortcut.Arguments)"
+    Write-Host "  $($shortcut.Name) -> $ExeName $($shortcut.Arguments)"
 }

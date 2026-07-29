@@ -4,13 +4,20 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace AuraToggle;
 
-/// <summary>One entry of a <see cref="Select"/>. A mode of null draws no effect icon.</summary>
-internal sealed record SelectItem(string Key, string Text, byte? Mode);
+/// <summary>
+/// One entry of a <see cref="Select"/>. A mode of null draws no effect icon, unless
+/// <paramref name="CustomColours"/> is given - used for custom presets, which mix effects
+/// and so have no single mode of their own.
+/// </summary>
+internal sealed record SelectItem(string Key, string Text, byte? Mode, Color[]? CustomColours = null);
 
 /// <summary>
 /// The main switch. While the lighting is on it animates the effect that is running, so the
@@ -18,7 +25,9 @@ internal sealed record SelectItem(string Key, string Text, byte? Mode);
 /// </summary>
 internal sealed class EffectButton : FlatControl
 {
-    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 16 };
+    // 30 fps: smooth for lighting effects that never move faster than about one cycle every
+    // two seconds, and roughly halves the GDI+ and GC cost of the 60 fps rate this had before.
+    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 33 };
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
     private bool _on;
@@ -117,8 +126,7 @@ internal sealed class EffectButton : FlatControl
 
         if (_on && Enabled)
         {
-            // A still frame when the animation is switched off, so the colour is still shown.
-            EffectPainter.Paint(g, path, bounds, _mode, _colour, _animate ? _clock.Elapsed.TotalSeconds : 0.55);
+            EffectPainter.Paint(g, path, bounds, _mode, _colour, _clock.Elapsed.TotalSeconds, _animate);
 
             // A dark wash keeps the label readable over bright and pale effects alike.
             using var wash = new SolidBrush(Color.FromArgb(Hovered ? 52 : 74, 0, 0, 0));
@@ -251,10 +259,15 @@ internal sealed class Select : FlatControl
         DrawFocusRing(g, path);
 
         int left = 11;
+        var icon = new Rectangle(left, (Height - 14) / 2, 22, 14);
         if (Selected?.Mode is byte mode)
         {
-            var icon = new Rectangle(left, (Height - 14) / 2, 22, 14);
             EffectPainter.PaintIcon(g, icon, mode, Colour);
+            left = icon.Right + 10;
+        }
+        else if (Selected?.CustomColours is { Length: > 0 } colours)
+        {
+            EffectPainter.PaintUserIcon(g, icon, colours);
             left = icon.Right + 10;
         }
 
@@ -417,15 +430,12 @@ internal sealed class SelectPopup : Form
         Graphics g = e.Graphics;
         Theme.Prepare(g);
 
+        // Corner rounding for the window itself comes from the desktop compositor
+        // (RoundWindowCorners). Drawing a second, independently anti-aliased rounded border
+        // here fought the compositor's own hard clip and produced jagged, dark-fringed edges.
         using (var background = new SolidBrush(Theme.Surface))
         {
             g.FillRectangle(background, ClientRectangle);
-        }
-
-        using (var border = new Pen(Theme.Border))
-        using (GraphicsPath frame = Theme.RoundedRectangle(new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f), 10))
-        {
-            g.DrawPath(border, frame);
         }
 
         for (int i = 0; i < _items.Count; i++)
@@ -441,10 +451,15 @@ internal sealed class SelectPopup : Form
             }
 
             int left = row.X + 8;
+            var icon = new Rectangle(left, row.Y + ((RowHeight - 14) / 2), 22, 14);
             if (_items[i].Mode is byte mode)
             {
-                var icon = new Rectangle(left, row.Y + ((RowHeight - 14) / 2), 22, 14);
                 EffectPainter.PaintIcon(g, icon, mode, _colour);
+                left = icon.Right + 10;
+            }
+            else if (_items[i].CustomColours is { Length: > 0 } colours)
+            {
+                EffectPainter.PaintUserIcon(g, icon, colours);
                 left = icon.Right + 10;
             }
 
@@ -534,20 +549,21 @@ internal sealed class ColourStrip : FlatControl
         if (_hoveredChip < Palette.Length)
         {
             Colour = Palette[_hoveredChip];
+            Invalidate();
+            ColourPicked?.Invoke(this, EventArgs.Empty);
+            return;
         }
-        else
+
+        var box = ChipAt(_hoveredChip);
+        var popup = new ColourPickerPopup(Colour);
+        popup.ColourChanged += (_, colour) =>
         {
-            using var dialog = new ColorDialog { Color = Colour, FullOpen = true, AnyColor = true };
-            if (dialog.ShowDialog(FindForm()) != DialogResult.OK)
-            {
-                return;
-            }
-
-            Colour = dialog.Color;
-        }
-
-        Invalidate();
-        ColourPicked?.Invoke(this, EventArgs.Empty);
+            Colour = colour;
+            Invalidate();
+            ColourPicked?.Invoke(this, EventArgs.Empty);
+        };
+        popup.FormClosed += (_, _) => popup.Dispose();
+        popup.Open(PointToScreen(new Point(box.X, box.Bottom + 6)), FindForm());
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -732,5 +748,403 @@ internal sealed class ToggleSwitch : FlatControl
         float x = _checked ? Width - knob - 3 : 3;
         using var knobBrush = new SolidBrush(Color.White);
         g.FillEllipse(knobBrush, x, 3, knob, knob);
+    }
+}
+
+/// <summary>
+/// A small, themed colour picker: a hue strip, a saturation/value square and a hex field.
+/// Opens where <see cref="ColourStrip"/>'s custom chip is clicked, replacing the plain
+/// Windows colour dialog that used to sit there.
+/// </summary>
+internal sealed class ColourPickerPopup : Form
+{
+    private const int Pad = 14;
+    private const int SvSize = 168;
+    private const int HueHeight = 16;
+    private const int Gap = 10;
+    private const int SwatchSize = 30;
+
+    // The hue strip is the same for every instance and every hue, so it is built once.
+    private static readonly Bitmap HueStripBitmap = BuildHueStrip();
+
+    private readonly TextBox _hex;
+    private readonly Rectangle _svRect = new(Pad, Pad, SvSize, SvSize);
+    private readonly Rectangle _hueRect = new(Pad, Pad + SvSize + Gap, SvSize, HueHeight);
+
+    private double _hue;
+    private double _saturation;
+    private double _value;
+    private Bitmap? _svBitmap;
+    private bool _draggingSv;
+    private bool _draggingHue;
+
+    public ColourPickerPopup(Color initial)
+    {
+        (_hue, _saturation, _value) = Theme.ToHsv(initial);
+
+        FormBorderStyle = FormBorderStyle.None;
+        ShowInTaskbar = false;
+        StartPosition = FormStartPosition.Manual;
+        BackColor = Theme.Surface;
+        ForeColor = Theme.Text;
+        Font = new Font("Segoe UI", 9F);
+        DoubleBuffered = true;
+        KeyPreview = true;
+        ClientSize = new Size(Pad + SvSize + Pad, Pad + SvSize + Gap + HueHeight + Gap + SwatchSize + Pad);
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+
+        _hex = new TextBox
+        {
+            Location = new Point(Pad + SwatchSize + 10, Pad + SvSize + Gap + HueHeight + Gap + 6),
+            Width = SvSize - SwatchSize - 10,
+            BorderStyle = BorderStyle.FixedSingle,
+            BackColor = Theme.Surface,
+            ForeColor = Theme.Text,
+            MaxLength = 7,
+            Text = Hex(Current),
+        };
+        _hex.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                ApplyHex();
+                e.SuppressKeyPress = true;
+            }
+        };
+        _hex.Leave += (_, _) => ApplyHex();
+        Controls.Add(_hex);
+
+        RebuildSvBitmap();
+    }
+
+    public event EventHandler<Color>? ColourChanged;
+
+    public Color Current => Theme.FromHsv(_hue, _saturation, _value);
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams parameters = base.CreateParams;
+            parameters.ClassStyle |= 0x00020000; // CS_DROPSHADOW
+            return parameters;
+        }
+    }
+
+    /// <summary>Opens at a screen position. Not modal - a click anywhere else closes it.</summary>
+    public void Open(Point at, IWin32Window? owner)
+    {
+        Rectangle screen = Screen.FromPoint(at).WorkingArea;
+        int x = Math.Min(at.X, screen.Right - Width - 4);
+        int y = at.Y + Height > screen.Bottom ? at.Y - Height - 6 : at.Y;
+        Location = new Point(Math.Max(screen.Left + 4, x), Math.Max(screen.Top + 4, y));
+
+        if (owner == null)
+        {
+            Show();
+        }
+        else
+        {
+            Show(owner);
+        }
+
+        Activate();
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        Theme.RoundWindowCorners(Handle);
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+        Close();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.KeyCode == Keys.Escape)
+        {
+            Close();
+            e.Handled = true;
+        }
+
+        base.OnKeyDown(e);
+    }
+
+    private static Bitmap BuildHueStrip()
+    {
+        var bitmap = new Bitmap(SvSize, HueHeight, PixelFormat.Format24bppRgb);
+        BitmapData data = bitmap.LockBits(new Rectangle(0, 0, SvSize, HueHeight), ImageLockMode.WriteOnly,
+            PixelFormat.Format24bppRgb);
+        try
+        {
+            byte[] buffer = new byte[data.Stride * HueHeight];
+            for (int x = 0; x < SvSize; x++)
+            {
+                Color c = Theme.FromHsv(x * 360.0 / SvSize, 1, 1);
+                for (int y = 0; y < HueHeight; y++)
+                {
+                    int i = (y * data.Stride) + (x * 3);
+                    buffer[i] = c.B;
+                    buffer[i + 1] = c.G;
+                    buffer[i + 2] = c.R;
+                }
+            }
+
+            Marshal.Copy(buffer, 0, data.Scan0, buffer.Length);
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+
+        return bitmap;
+    }
+
+    /// <summary>
+    /// Rebuilt only when the hue changes (not on every paint), using raw pixel writes rather
+    /// than SetPixel so dragging the hue strip stays smooth.
+    /// </summary>
+    private void RebuildSvBitmap()
+    {
+        _svBitmap?.Dispose();
+        var bitmap = new Bitmap(SvSize, SvSize, PixelFormat.Format24bppRgb);
+        BitmapData data = bitmap.LockBits(new Rectangle(0, 0, SvSize, SvSize), ImageLockMode.WriteOnly,
+            PixelFormat.Format24bppRgb);
+        try
+        {
+            byte[] buffer = new byte[data.Stride * SvSize];
+            for (int y = 0; y < SvSize; y++)
+            {
+                double v = 1.0 - (y / (double)(SvSize - 1));
+                int rowOffset = y * data.Stride;
+                for (int x = 0; x < SvSize; x++)
+                {
+                    double s = x / (double)(SvSize - 1);
+                    Color c = Theme.FromHsv(_hue, s, v);
+                    int i = rowOffset + (x * 3);
+                    buffer[i] = c.B;
+                    buffer[i + 1] = c.G;
+                    buffer[i + 2] = c.R;
+                }
+            }
+
+            Marshal.Copy(buffer, 0, data.Scan0, buffer.Length);
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+
+        _svBitmap = bitmap;
+    }
+
+    private static string Hex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+
+    private void ApplyHex()
+    {
+        string text = _hex.Text.Trim().TrimStart('#');
+        if (text.Length == 6 && int.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int rgb))
+        {
+            var colour = Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+            (_hue, _saturation, _value) = Theme.ToHsv(colour);
+            RebuildSvBitmap();
+            Invalidate();
+            ColourChanged?.Invoke(this, colour);
+        }
+        else
+        {
+            _hex.Text = Hex(Current);
+        }
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (_svRect.Contains(e.Location))
+        {
+            _draggingSv = true;
+            UpdateFromSv(e.Location);
+        }
+        else if (_hueRect.Contains(e.Location))
+        {
+            _draggingHue = true;
+            UpdateFromHue(e.Location);
+        }
+
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        if (_draggingSv)
+        {
+            UpdateFromSv(e.Location);
+        }
+        else if (_draggingHue)
+        {
+            UpdateFromHue(e.Location);
+        }
+
+        base.OnMouseMove(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        if (_draggingSv || _draggingHue)
+        {
+            _draggingSv = false;
+            _draggingHue = false;
+            ColourChanged?.Invoke(this, Current);
+        }
+
+        base.OnMouseUp(e);
+    }
+
+    private void UpdateFromSv(Point at)
+    {
+        _saturation = Math.Clamp((at.X - _svRect.X) / (double)(_svRect.Width - 1), 0, 1);
+        _value = 1.0 - Math.Clamp((at.Y - _svRect.Y) / (double)(_svRect.Height - 1), 0, 1);
+        _hex.Text = Hex(Current);
+        Invalidate();
+    }
+
+    private void UpdateFromHue(Point at)
+    {
+        _hue = Math.Clamp((at.X - _hueRect.X) / (double)(_hueRect.Width - 1), 0, 1) * 360.0;
+        RebuildSvBitmap();
+        _hex.Text = Hex(Current);
+        Invalidate();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _svBitmap?.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        Theme.Prepare(g);
+        g.Clear(Theme.Surface);
+
+        if (_svBitmap != null)
+        {
+            g.DrawImage(_svBitmap, _svRect);
+        }
+
+        var svMarker = new Point(
+            _svRect.X + (int)(_saturation * (_svRect.Width - 1)),
+            _svRect.Y + (int)((1 - _value) * (_svRect.Height - 1)));
+        PaintRing(g, svMarker, 6, Current);
+
+        g.DrawImage(HueStripBitmap, _hueRect);
+        int hueX = _hueRect.X + (int)(_hue / 360.0 * (_hueRect.Width - 1));
+        using (var huePen = new Pen(Color.White, 2f))
+        {
+            g.DrawLine(huePen, hueX, _hueRect.Y - 2, hueX, _hueRect.Bottom + 2);
+        }
+        using (var hueOutline = new Pen(Color.FromArgb(90, 0, 0, 0), 1f))
+        {
+            g.DrawLine(hueOutline, hueX - 1, _hueRect.Y - 2, hueX - 1, _hueRect.Bottom + 2);
+            g.DrawLine(hueOutline, hueX + 1, _hueRect.Y - 2, hueX + 1, _hueRect.Bottom + 2);
+        }
+
+        var swatch = new Rectangle(Pad, _hueRect.Bottom + Gap, SwatchSize, SwatchSize);
+        using (GraphicsPath swatchPath = Theme.RoundedRectangle(swatch, 6))
+        using (var swatchBrush = new SolidBrush(Current))
+        {
+            g.FillPath(swatchBrush, swatchPath);
+            using var outline = new Pen(Theme.Border);
+            g.DrawPath(outline, swatchPath);
+        }
+    }
+
+    private static void PaintRing(Graphics g, Point at, int radius, Color fill)
+    {
+        var box = new Rectangle(at.X - radius, at.Y - radius, radius * 2, radius * 2);
+        using (var brush = new SolidBrush(fill))
+        {
+            g.FillEllipse(brush, box);
+        }
+
+        using var white = new Pen(Color.White, 2f);
+        g.DrawEllipse(white, box);
+        using var black = new Pen(Color.FromArgb(140, 0, 0, 0), 1f);
+        g.DrawEllipse(black, Rectangle.Inflate(box, 1, 1));
+    }
+}
+
+/// <summary>A plain flat button with a text label, for actions that are not the primary switch.</summary>
+internal sealed class PillButton : FlatControl
+{
+    public PillButton()
+    {
+        Radius = 8;
+        ForeColor = Theme.Accent;
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color Fill { get; set; } = Theme.AccentSoft;
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        Theme.Prepare(g);
+        g.Clear(BackColor);
+
+        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        using GraphicsPath path = Theme.RoundedRectangle(bounds, Radius);
+
+        Color fill = !Enabled ? Theme.NeutralSoft : Hovered ? Theme.Blend(Fill, Color.White, 0.10) : Fill;
+        using (var brush = new SolidBrush(Pressed ? Theme.Scale(fill, 0.94) : fill))
+        {
+            g.FillPath(brush, path);
+        }
+
+        DrawFocusRing(g, path);
+        TextRenderer.DrawText(g, Text, Font, ClientRectangle, Enabled ? ForeColor : Theme.TextMuted,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+}
+
+/// <summary>Small round × button, used to delete a custom preset from its list row.</summary>
+internal sealed class DeleteButton : FlatControl
+{
+    public DeleteButton()
+    {
+        Radius = 6;
+        Size = new Size(22, 22);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        Theme.Prepare(g);
+        g.Clear(BackColor);
+
+        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        using GraphicsPath path = Theme.RoundedRectangle(bounds, Radius);
+
+        if (Hovered)
+        {
+            using var brush = new SolidBrush(Theme.NeutralSoft);
+            g.FillPath(brush, path);
+        }
+
+        DrawFocusRing(g, path);
+
+        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, 1.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        float m = Width * 0.28f;
+        g.DrawLine(pen, m, m, Width - m, Height - m);
+        g.DrawLine(pen, Width - m, m, m, Height - m);
     }
 }

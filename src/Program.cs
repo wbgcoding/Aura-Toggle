@@ -27,13 +27,18 @@ internal static class Program
     /// <summary>Asks an already running window to come back from the notification area.</summary>
     public static readonly uint ShowWindowMessage = RegisterWindowMessage("AuraToggle.Show");
 
+    /// <summary>True when Windows started the tool at logon rather than the user.</summary>
+    public static bool LaunchedAtStartup { get; private set; }
+
     [STAThread]
     private static int Main(string[] args)
     {
         // The language choice also governs usage and error output on the command line.
         Strings.Override = AuraSettings.Load().Language;
 
-        if (args.Length == 0)
+        LaunchedAtStartup = args.Length == 1 && args[0] == AuraSettings.AutoStartArgument;
+
+        if (args.Length == 0 || LaunchedAtStartup)
         {
             // A second start hands over to the instance already running, which may be sitting
             // in the notification area with no window to click.
@@ -134,10 +139,26 @@ internal static class Program
     /// Applies the stored effect or switches every channel off. Nothing is written to the
     /// controller flash, so a reboot always brings the mainboard lighting back.
     /// </summary>
-    public static AuraState Switch(bool on)
+    /// <param name="deviceKey">
+    /// Limits the switch to one controller, matched by <see cref="AuraDevice.Key"/>. Null or
+    /// empty means every controller - the default, and the only option on the command line.
+    /// A remembered custom preset always targets every controller it names, so it is only
+    /// re-applied when switching every device on at once.
+    /// </param>
+    public static AuraState Switch(bool on, string? deviceKey = null)
     {
         AuraState state = AuraState.Load();
-        Send(on ? state.Mode : AuraState.ModeOff, state);
+
+        if (on && string.IsNullOrEmpty(deviceKey) && state.CustomPreset.Length > 0)
+        {
+            CustomPreset? preset = AuraCustomPresets.Load().Find(p => p.Name == state.CustomPreset);
+            if (preset != null)
+            {
+                return ApplyCustomPreset(preset);
+            }
+        }
+
+        Send(on ? state.Mode : AuraState.ModeOff, state, deviceKey);
 
         AuraState next = state with { On = on };
         next.Save();
@@ -145,27 +166,68 @@ internal static class Program
     }
 
     /// <summary>Switches to a lighting effect and remembers it as the state to restore.</summary>
-    public static AuraState ApplyPreset(AuraPreset preset, Color? colour = null)
+    public static AuraState ApplyPreset(AuraPreset preset, Color? colour = null, string? deviceKey = null)
     {
-        AuraState state = AuraState.Load() with { On = true, Mode = preset.Mode };
+        AuraState state = AuraState.Load() with { On = true, Mode = preset.Mode, CustomPreset = "" };
 
         if (colour is Color chosen)
         {
             state = state with { Red = chosen.R, Green = chosen.G, Blue = chosen.B };
         }
 
-        Send(preset.Mode, state);
+        Send(preset.Mode, state, deviceKey);
         state.Save();
         return state;
     }
 
-    private static void Send(byte mode, AuraState state)
+    /// <summary>
+    /// Applies a named bundle of per-device effects. The remembered state mirrors the first
+    /// entry, which is what the button and the effect list show while the preset is active.
+    /// </summary>
+    public static AuraState ApplyCustomPreset(CustomPreset preset)
+    {
+        var devices = AuraDevice.DiscoverAll();
+        try
+        {
+            foreach (CustomPresetEntry entry in preset.Entries)
+            {
+                foreach (AuraDevice device in devices.FindAll(d => d.Key == entry.DeviceKey))
+                {
+                    device.Apply(entry.Mode, entry.Red, entry.Green, entry.Blue);
+                }
+            }
+        }
+        finally
+        {
+            foreach (AuraDevice device in devices)
+            {
+                device.Dispose();
+            }
+        }
+
+        CustomPresetEntry first = preset.Entries[0];
+        var state = new AuraState(On: true, first.Mode, first.Red, first.Green, first.Blue, preset.Name);
+        state.Save();
+        return state;
+    }
+
+    private static void Send(byte mode, AuraState state, string? deviceKey)
     {
         var devices = AuraDevice.DiscoverAll();
 
         try
         {
-            foreach (AuraDevice device in devices)
+            var targets = string.IsNullOrEmpty(deviceKey)
+                ? devices
+                : devices.FindAll(device => device.Key == deviceKey);
+
+            if (targets.Count == 0)
+            {
+                // The selected controller was unplugged since the window last saw it.
+                throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3);
+            }
+
+            foreach (AuraDevice device in targets)
             {
                 device.Apply(mode, state.Red, state.Green, state.Blue);
             }

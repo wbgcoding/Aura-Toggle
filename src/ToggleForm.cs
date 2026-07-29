@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -10,14 +11,15 @@ using System.Windows.Forms;
 namespace AuraToggle;
 
 /// <summary>
-/// The window: the effect list and the settings gear on top, one animated button that both
-/// shows and switches the state, and colour chips for the effects that use a colour.
-/// Everything that talks to the controller runs off the UI thread.
+/// The window: the effect list, an optional per-device selector and the settings gear on top,
+/// one animated button that both shows and switches the state, and colour chips for the
+/// effects that use a colour. Everything that talks to the controller runs off the UI thread.
 /// </summary>
 internal sealed class ToggleForm : Form
 {
     private readonly EffectButton _toggle = new();
     private readonly Select _effects = new();
+    private readonly Select _channel = new();
     private readonly ColourStrip _colours = new();
     private readonly GlyphButton _gear = new();
     private readonly Layout _layout = new();
@@ -27,15 +29,16 @@ internal sealed class ToggleForm : Form
     private AuraState _state;
     private AuraSettings _settings;
     private SettingsPopup? _settingsPopup;
+    private List<AuraDeviceSummary> _devices = new();
     private bool _busy;
     private bool _exiting;
-    private int _channels;
 
     public ToggleForm()
     {
         _state = AuraState.Load();
         _settings = AuraSettings.Load();
 
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = Strings.WindowTitle;
         Icon = LoadIcon();
         ClientSize = new Size(344, 214);
@@ -50,10 +53,14 @@ internal sealed class ToggleForm : Form
 
         _effects.AccessibleName = Strings.PresetAccessibleName;
         _effects.Dock = DockStyle.Fill;
-        _effects.Margin = new Padding(0, 0, 10, 0);
-        _effects.SetItems(AuraPresets.All.Select(preset =>
-            new SelectItem(preset.Key, preset.DisplayName, preset.Mode)));
+        _effects.Margin = new Padding(0, 0, 8, 0);
         _effects.SelectionChanged += OnEffectChosen;
+
+        _channel.AccessibleName = Strings.ChannelAccessibleName;
+        _channel.Width = 92;
+        _channel.Margin = new Padding(0, 0, 8, 0);
+        _channel.Visible = false; // shown only once more than one controller is found
+        _channel.SelectionChanged += (_, _) => Render();
 
         _gear.AccessibleName = Strings.SettingsAccessibleName;
         _gear.Margin = new Padding(0, 2, 0, 0);
@@ -74,19 +81,21 @@ internal sealed class ToggleForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 2,
+            ColumnCount = 3,
             RowCount = 1,
             Margin = new Padding(0),
         };
         top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         top.Controls.Add(_effects, 0, 0);
-        top.Controls.Add(_gear, 1, 0);
+        top.Controls.Add(_channel, 1, 0);
+        top.Controls.Add(_gear, 2, 0);
 
         _layout.Dock = DockStyle.Fill;
         _layout.ColumnCount = 1;
         _layout.RowCount = 3;
-        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // effect list and gear
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // effect list, channel, gear
         _layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // toggle
         _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // colours
         _layout.Controls.Add(top, 0, 0);
@@ -94,6 +103,7 @@ internal sealed class ToggleForm : Form
         _layout.Controls.Add(_colours, 0, 2);
         Controls.Add(_layout);
 
+        RefreshEffectItems();
         SetUpTray();
         Render();
 
@@ -144,30 +154,71 @@ internal sealed class ToggleForm : Form
         _tray.DoubleClick += (_, _) => RestoreFromTray();
     }
 
+    /// <summary>
+    /// Every built-in effect plus every saved custom preset, in one list. Called again after
+    /// the custom preset editor reports a change, so a new or deleted preset shows up at once.
+    /// </summary>
+    private void RefreshEffectItems()
+    {
+        string? selected = _effects.Selected?.Key;
+
+        IEnumerable<SelectItem> builtIn = AuraPresets.All.Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode));
+        IEnumerable<SelectItem> custom = AuraCustomPresets.Load().Select(p => new SelectItem(
+            CustomKey(p.Name), p.Name, null,
+            p.Entries.Select(e => Color.FromArgb(e.Red, e.Green, e.Blue)).ToArray()));
+
+        _effects.SetItems(builtIn.Concat(custom));
+
+        if (selected != null)
+        {
+            _effects.ShowSelection(selected);
+        }
+    }
+
+    private static string CustomKey(string name) => "custom:" + name;
+
     /// <summary>Talking to the controller happens after the window is up, never before.</summary>
     private async void OnShown(object? sender, EventArgs e)
     {
-        if (_settings.StartMinimised)
+        // Starting the tool by hand always shows the window; only the Run key entry may
+        // open straight into the notification area.
+        if (_settings.StartMinimised && Program.LaunchedAtStartup)
         {
             HideToTray();
         }
 
-        (string Firmware, int Channels)? controller = await Task.Run(AuraDevice.TryDescribe);
+        _devices = await Task.Run(AuraDevice.ListDevices);
 
-        if (controller == null)
+        if (_devices.Count == 0)
         {
             Text = $"{Strings.WindowTitle} - {Strings.StatusControllerMissing}";
             _toggle.Enabled = false;
             _effects.Enabled = false;
+            _channel.Enabled = false;
             _colours.Enabled = false;
             return;
         }
 
-        _channels = controller.Value.Channels;
-        Text = $"{Strings.WindowTitle} - " + string.Format(CultureInfo.CurrentCulture,
-            Strings.StatusChannels, _channels);
+        SetUpChannelSelector();
+        UpdateTitle();
 
         await ApplyStartAction();
+    }
+
+    private void SetUpChannelSelector()
+    {
+        var items = new List<SelectItem> { new(AuraSettings.ChannelAll, Strings.ChannelAll, null) };
+        items.AddRange(_devices.Select(d => new SelectItem(d.Key, d.Name, null)));
+
+        _channel.SetItems(items);
+        _channel.ShowSelection(AuraSettings.ChannelAll);
+        _channel.Visible = _devices.Count > 1;
+    }
+
+    private void UpdateTitle()
+    {
+        int channels = _devices.Sum(d => d.Channels);
+        Text = $"{Strings.WindowTitle} - " + string.Format(CultureInfo.CurrentCulture, Strings.StatusChannels, channels);
     }
 
     /// <summary>Puts the lighting into the state chosen in the settings, once per start.</summary>
@@ -187,17 +238,40 @@ internal sealed class ToggleForm : Form
 
     private Color CurrentColour => Color.FromArgb(_state.Red, _state.Green, _state.Blue);
 
+    /// <summary>Null for "all controllers", otherwise the HID key of the one selected.</summary>
+    private string? TargetDeviceKey =>
+        _channel.Visible && _channel.Selected?.Key is string key && key != AuraSettings.ChannelAll ? key : null;
+
     private void OnToggleClick(object? sender, EventArgs e)
     {
         bool target = !_state.On;
-        _ = Run(() => Program.Switch(target));
+        string? deviceKey = TargetDeviceKey;
+        _ = Run(() => Program.Switch(target, deviceKey));
     }
 
     private void OnEffectChosen(object? sender, EventArgs e)
     {
-        if (_effects.Selected != null && AuraPresets.Find(_effects.Selected.Key) is AuraPreset preset)
+        if (_effects.Selected == null)
         {
-            _ = Run(() => Program.ApplyPreset(preset, CurrentColour));
+            return;
+        }
+
+        if (_effects.Selected.Key.StartsWith("custom:", StringComparison.Ordinal))
+        {
+            string name = _effects.Selected.Text;
+            CustomPreset? preset = AuraCustomPresets.Load().Find(p => p.Name == name);
+            if (preset != null)
+            {
+                _ = Run(() => Program.ApplyCustomPreset(preset));
+            }
+
+            return;
+        }
+
+        if (AuraPresets.Find(_effects.Selected.Key) is AuraPreset built)
+        {
+            string? deviceKey = TargetDeviceKey;
+            _ = Run(() => Program.ApplyPreset(built, CurrentColour, deviceKey));
         }
     }
 
@@ -206,7 +280,8 @@ internal sealed class ToggleForm : Form
         if (AuraPresets.ByMode(_state.Mode) is AuraPreset preset && preset.UsesColour)
         {
             Color colour = _colours.Colour;
-            _ = Run(() => Program.ApplyPreset(preset, colour));
+            string? deviceKey = TargetDeviceKey;
+            _ = Run(() => Program.ApplyPreset(preset, colour, deviceKey));
         }
     }
 
@@ -234,8 +309,12 @@ internal sealed class ToggleForm : Form
             {
                 Strings.Override = settings.Language;
                 RefreshTexts();
-                popup.Close();
             }
+        };
+        popup.PresetsChanged += (_, _) =>
+        {
+            RefreshEffectItems();
+            Render();
         };
         popup.FormClosed += (_, _) =>
         {
@@ -334,6 +413,7 @@ internal sealed class ToggleForm : Form
         _busy = busy;
         _toggle.Busy = busy;
         _effects.Enabled = !busy;
+        _channel.Enabled = !busy;
         _colours.Enabled = !busy;
         UseWaitCursor = busy;
     }
@@ -342,11 +422,16 @@ internal sealed class ToggleForm : Form
     private void RefreshTexts()
     {
         _effects.AccessibleName = Strings.PresetAccessibleName;
+        _channel.AccessibleName = Strings.ChannelAccessibleName;
         _gear.AccessibleName = Strings.SettingsAccessibleName;
         _toggle.AccessibleName = Strings.ButtonAccessibleName;
 
-        _effects.SetItems(AuraPresets.All.Select(preset =>
-            new SelectItem(preset.Key, preset.DisplayName, preset.Mode)));
+        RefreshEffectItems();
+        if (_devices.Count > 0)
+        {
+            SetUpChannelSelector();
+            UpdateTitle();
+        }
 
         if (_tray.ContextMenuStrip is ContextMenuStrip menu)
         {
@@ -359,35 +444,47 @@ internal sealed class ToggleForm : Form
             }
         }
 
-        Text = _channels > 0
-            ? $"{Strings.WindowTitle} - " + string.Format(CultureInfo.CurrentCulture, Strings.StatusChannels, _channels)
-            : Strings.WindowTitle;
-
         Render();
     }
 
     private void Render()
     {
-        AuraPreset preset = AuraPresets.ByMode(_state.Mode) ?? AuraPresets.All[0];
         Color colour = CurrentColour;
+        string effectKey;
+        string displayName;
+        bool usesColour;
+
+        if (_state.CustomPreset.Length > 0)
+        {
+            effectKey = CustomKey(_state.CustomPreset);
+            displayName = _state.CustomPreset;
+            usesColour = false;
+        }
+        else
+        {
+            AuraPreset preset = AuraPresets.ByMode(_state.Mode) ?? AuraPresets.All[0];
+            effectKey = preset.Key;
+            displayName = preset.DisplayName;
+            usesColour = preset.UsesColour;
+        }
 
         _toggle.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
         _toggle.Animate = _settings.Animate;
         _toggle.Show(_state.On, _state.Mode, colour);
 
         _effects.Colour = colour;
-        _effects.ShowSelection(preset.Key);
+        _effects.ShowSelection(effectKey);
 
         _colours.Colour = colour;
-        _colours.Visible = preset.UsesColour;
+        _colours.Visible = usesColour;
         _colours.Invalidate();
 
         _trayLighting.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
         _trayLighting.Checked = _state.On;
-        _tray.Text = $"{Strings.WindowTitle} — {(_state.On ? preset.DisplayName : Strings.ButtonStateOff)}";
+        _tray.Text = $"{Strings.WindowTitle} — {(_state.On ? displayName : Strings.ButtonStateOff)}";
 
         // The window only reserves room for the chips when an effect actually uses them.
-        int wanted = preset.UsesColour ? 218 : 176;
+        int wanted = usesColour ? 218 : 176;
         if (ClientSize.Height != wanted)
         {
             ClientSize = new Size(ClientSize.Width, wanted);

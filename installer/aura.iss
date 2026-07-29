@@ -1,26 +1,20 @@
 ; Inno Setup script for Aura Toggle.
 ;
-; Built through build.bat, which publishes the self contained executable for the target
-; architecture first and then calls ISCC with the matching defines:
+; Built through build.bat, which publishes both self contained architectures and packs them
+; into ONE installer that picks the matching binary for the machine it runs on:
 ;
-;   build.bat installer            x64
-;   build.bat installer win-arm64  ARM64
+;   build.bat installer
 ;
-; The installed build is self contained, so the machine needs no .NET runtime.
+; The installed build is self contained, so the target machine needs no .NET runtime.
 
 #ifndef AppVersion
   #define AppVersion "1.0.0"
-#endif
-#ifndef Arch
-  #define Arch "x64"
-#endif
-#ifndef SourceExe
-  #define SourceExe "..\dist\standalone\win-x64\aura.exe"
 #endif
 
 #define AppName "Aura Toggle"
 #define AppPublisher "BG Coding"
 #define AppUrl "https://github.com/wbgcoding/aura-toggle"
+#define SetupName "Setup Aura Toggle v" + AppVersion
 
 [Setup]
 AppId={{8E5C1F42-6A1D-4A0B-9C3F-2B7E4D9A1C55}
@@ -36,9 +30,9 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist\installer
-OutputBaseFilename=Setup-AuraToggle-{#AppVersion}-{#Arch}
+OutputBaseFilename={#SetupName}
 SetupIconFile=..\assets\aura.ico
-UninstallDisplayIcon={app}\aura.exe
+UninstallDisplayIcon={app}\Aura Toggle.exe
 UninstallDisplayName={#AppName}
 LicenseFile=..\LICENSE
 
@@ -55,13 +49,10 @@ MinVersion=10.0
 CloseApplications=yes
 RestartApplications=yes
 
-#if Arch == "arm64"
-ArchitecturesAllowed=arm64
-ArchitecturesInstallIn64BitMode=arm64
-#else
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
-#endif
+; One installer for both architectures - which of the two [Files] entries below actually
+; gets copied is decided per machine by the IsArm64 checks.
+ArchitecturesAllowed=x64compatible or arm64
+ArchitecturesInstallIn64BitMode=x64compatible or arm64
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
@@ -80,24 +71,25 @@ Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
 Name: "autostart"; Description: "{cm:AutoStart}"; Flags: unchecked
 
 [Files]
-Source: "{#SourceExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\standalone\win-x64\Aura Toggle.exe"; DestDir: "{app}"; DestName: "Aura Toggle.exe"; Flags: ignoreversion; Check: not IsArm64
+Source: "..\dist\standalone\win-arm64\Aura Toggle.exe"; DestDir: "{app}"; DestName: "Aura Toggle.exe"; Flags: ignoreversion; Check: IsArm64
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.de.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\aura.exe"
-Name: "{group}\Aura An"; Filename: "{app}\aura.exe"; Parameters: "-on"
-Name: "{group}\Aura Aus"; Filename: "{app}\aura.exe"; Parameters: "-off"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\aura.exe"; Tasks: desktopicon
+Name: "{group}\{#AppName}"; Filename: "{app}\Aura Toggle.exe"
+Name: "{group}\Aura An"; Filename: "{app}\Aura Toggle.exe"; Parameters: "-on"
+Name: "{group}\Aura Aus"; Filename: "{app}\Aura Toggle.exe"; Parameters: "-off"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Aura Toggle.exe"; Tasks: desktopicon
 
 [Registry]
 ; Per user autostart, matching the switch inside the application itself.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; \
-    ValueName: "AuraToggle"; ValueData: """{app}\aura.exe"""; Flags: uninsdeletevalue; Tasks: autostart
+    ValueName: "AuraToggle"; ValueData: """{app}\Aura Toggle.exe"" -autostart"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
-Filename: "{app}\aura.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Aura Toggle.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: dirifempty; Name: "{app}"

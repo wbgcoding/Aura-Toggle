@@ -4,11 +4,11 @@
 
 **Mainboard-Beleuchtung aus. Ohne Armoury Crate.**
 
-Eine Datei mit 540 KB · keine Installation · kein Hintergrunddienst · nichts wird ins Board geschrieben
+Eine Datei mit ~650 KB · keine Installation · kein Hintergrunddienst · nichts wird ins Board geschrieben
 
 [Download](#-download) · [Kommandozeile](#-kommandozeile) · [Effekte](#-effekte) · [Ist das sicher?](#-ist-das-sicher-für-mein-mainboard) · [English](README.md)
 
-<img src="docs/preview-light.png" alt="Das Aura-Toggle-Fenster" width="360">
+<img src="docs/preview-dark.png" alt="Das Aura-Toggle-Fenster" width="360">
 
 </div>
 
@@ -16,78 +16,91 @@ Eine Datei mit 540 KB · keine Installation · kein Hintergrunddienst · nichts 
 
 ## 🌙 Das Problem
 
-Halb zwei nachts. Ein Download läuft, der PC muss anbleiben — und das Gehäuse leuchtet wie eine
-Jukebox. Du willst die LEDs für die Nacht aus.
-
-Die Möglichkeiten bisher:
+RGB-Beleuchtung auf einem Mainboard ist meist Alles-oder-nichts: Entweder läuft der Effekt, den
+das BIOS zuletzt gesetzt hat, oder der, den die Hersteller-Software zuletzt gesetzt hat. Sie für
+eine Weile abzuschalten — ein dunkler Raum nachts, ein langes Rendering, eine Phase ohne die
+Lichtshow — bedeutet normalerweise einen von zwei Wegen:
 
 | Weg | Was er kostet |
 |---|---|
 | Armoury Crate | Hintergrunddienst, Autostart, Konto, Updater, hunderte MB |
-| BIOS | Neustart zum Ausschalten. Noch ein Neustart zum Einschalten |
-| **Aura Toggle** | **Ein Klick. Datei löschen, wenn du fertig bist** |
+| BIOS | Neustart zum Ausschalten, noch ein Neustart zum Einschalten |
+| **Aura Toggle** | Ein Klick. Datei löschen, wenn sie nicht mehr gebraucht wird |
 
-Wer schon mal gedacht hat *„ich will einfach nur heute Nacht die LEDs aus, nicht gleich ein
-ganzes Softwarepaket"* — genau dafür ist das hier.
+Aura Toggle gibt es für den Fall, dass keiner dieser Wege den Aufwand für einen einzelnen
+Schalter wert ist.
 
 ## ✨ Was es kann
 
 - 🔌 Schaltet **alle** Kanäle: Onboard-Zone, 12-V-RGB-Header, jeden adressierbaren ARGB-Header
 - 🎨 Neun eingebaute Effekte mit Farbwahl, sofort wirksam
+- 🧩 **Eigene Presets** — Name, ein Effekt und eine Farbe pro Controller, gespeichert und wiederverwendbar
+- 🖧 Bei mehr als einem Controller: gemeinsam oder einzeln schalten
 - 🖥️ Ein Fenster: ein Knopf, der den **laufenden Effekt animiert** und ihn umschaltet
 - 📌 Lebt im Infobereich, Rechtsklick für An/Aus
 - ⌨️ Vollständige Kommandozeile mit Exit-Codes — Aufgabenplanung, Skripte, Verknüpfungen
 - 🔒 Keine Adminrechte, kein Treiber, kein Netzwerk, keine Telemetrie
-- 🇩🇪 🇬🇧 Deutsch und Englisch
+- 🇩🇪 🇬🇧 Deutsch und Englisch, unabhängig von Windows umschaltbar
 
 ## 📥 Download
 
 | | Größe | Braucht |
 |---|---|---|
-| **Portable** `aura.exe` | 540 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| **Installer** x64 / ARM64 | 34 MB / 31 MB | Nichts — die Runtime steckt drin |
+| **Portable** `Aura Toggle.exe` | ~650 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| **Installer** (x64 und ARM64 in einer Datei) | ~63 MB | Nichts — die Runtime steckt drin |
 
 Portable: herunterladen, doppelklicken, fertig. Installer: nach Programme, optional Autostart
 und Desktop-Verknüpfung, restlose Deinstallation.
 
 ## 🚀 Bedienung
 
-<img src="docs/preview-dark.png" alt="Dunkles Design" width="360" align="right">
+<img src="docs/preview-light.png" alt="Helles Design" width="360" align="right">
 
 1. **Großer Knopf** — zeigt den Zustand und schaltet ihn. Solange die Beleuchtung an ist,
    animiert er den laufenden Effekt.
-2. **Auswahlliste** — Effekt wählen, wird sofort gesetzt.
-3. **Farbfelder** — erscheinen bei Effekten mit Farbe, inklusive freier Farbwahl.
-4. **⚙️ Zahnrad** — Autostart, minimiert starten, beim Schließen minimieren, Beleuchtung beim
-   Start, Animation an/aus, Sprache.
+2. **Auswahlliste** — eingebauten Effekt oder gespeichertes eigenes Preset wählen, wird sofort gesetzt.
+3. **Controller-Auswahl** — erscheint erst bei mehr als einem gefundenen Controller, zum
+   gemeinsamen oder einzelnen Schalten.
+4. **Farbfelder** — erscheinen bei Effekten mit Farbe, inklusive eigenem Farbwähler.
+5. **⚙️ Zahnrad** — Autostart, minimiert starten, beim Schließen minimieren, Beleuchtung beim
+   Start, Animation an/aus, Sprache, eigene Presets anlegen.
 
 Minimieren schickt das Fenster in den Infobereich. Rechtsklick auf das Symbol schaltet um,
 öffnet oder beendet.
 
+### Eigene Presets
+
+Ein eigenes Preset bündelt einen Effekt und eine Farbe pro Controller unter einem selbst
+gewählten Namen — gedacht für Rechner mit mehr als einem Aura-Controller, die gleichzeitig
+unterschiedlich aussehen sollen. Anlegen über das Zahnrad: benennen, für jeden gefundenen
+Controller Effekt und Farbe wählen, speichern. Danach erscheint es in der Effektliste wie ein
+eingebauter Effekt.
+
 ## ⌨️ Kommandozeile
 
 ```bat
-aura                            REM öffnet das Fenster
-aura -off                       REM Beleuchtung aus
-aura -on                        REM zurück auf den letzten Effekt
-aura -preset rainbow            REM Effekt wechseln
-aura -preset static "#20C0FF"   REM Effekt mit Farbe
+"Aura Toggle.exe"                            :: öffnet das Fenster
+"Aura Toggle.exe" -off                       :: Beleuchtung aus
+"Aura Toggle.exe" -on                        :: zurück auf den letzten Effekt
+"Aura Toggle.exe" -preset rainbow            :: Effekt wechseln
+"Aura Toggle.exe" -preset static "#20C0FF"   :: Effekt mit Farbe
 ```
 
 `-on`, `--on`, `/on`, `on` — alles erlaubt, Groß-/Kleinschreibung egal. Ebenso bei `off` und
-`preset`.
+`preset`. Eigene Presets sind nur im Fenster erreichbar, da sie Bündel pro Controller sind und
+kein einzelner Effekt mit einer Farbe.
 
 **Exit-Codes:** `0` ok · `2` falsches Argument · `3` kein Controller · `4` Controller belegt ·
 `5` Kommunikationsfehler. Fehler gehen nach stderr.
 
 > ⚠️ **PowerShell** wartet nicht auf Fensteranwendungen. Für den Exit-Code:
-> `Start-Process aura.exe -ArgumentList "-off" -Wait -NoNewWindow`.
+> `Start-Process "Aura Toggle.exe" -ArgumentList "-off" -Wait -NoNewWindow`.
 
 **Nachts automatisch aus:**
 
 ```bat
-schtasks /create /tn "LEDs aus" /tr "C:\tools\aura.exe -off" /sc daily /st 23:30
-schtasks /create /tn "LEDs an"  /tr "C:\tools\aura.exe -on"  /sc daily /st 08:00
+schtasks /create /tn "LEDs aus" /tr "\"C:\tools\Aura Toggle.exe\" -off" /sc daily /st 23:30
+schtasks /create /tn "LEDs an"  /tr "\"C:\tools\Aura Toggle.exe\" -on"  /sc daily /st 08:00
 ```
 
 Neben der Exe liegen zwei fertige Verknüpfungen, **Aura An** und **Aura Aus**. Sie enthalten
@@ -154,13 +167,13 @@ einfach den gewünschten Effekt wählen.
 
 ## 🔨 Selbst bauen
 
-Braucht das .NET 10 SDK. Für die Installer zusätzlich [Inno Setup 6](https://jrsoftware.org/isinfo.php).
+Braucht das .NET 10 SDK. Für den Installer zusätzlich [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 
 ```bat
-build.bat            REM dist\aura.exe, 540 KB
-build.bat standalone REM Standalone, ~120 MB, ohne Runtime lauffähig
-build.bat installer  REM dist\installer\Setup-AuraToggle-<Version>-x64.exe
-build.bat all        REM Portable plus beide Installer
+build.bat            :: dist\Aura Toggle.exe, Framework-abhängig
+build.bat standalone  :: Standalone, ohne Runtime lauffähig
+build.bat installer   :: ein Setup für x64 und ARM64
+build.bat all         :: alles, plus dist\release fertig zum Hochladen
 ```
 
 Regressionssuite — sie schaltet währenddessen die Beleuchtung und lässt sie danach an:
@@ -172,8 +185,9 @@ powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 ## ⚙️ Wie es funktioniert
 
 Der Controller ist ein USB-HID-Gerät. Aura Toggle zählt die HID-Schnittstellen auf, fragt jede
-in Frage kommende nach Firmware-String und Konfigurationstabelle und behält die, die antwortet
-— deshalb ist keine Schnittstellennummer fest verdrahtet. Die Konfigurationstabelle liefert die
+in Frage kommende nach Firmware-String und Konfigurationstabelle und behält die, die antworten
+— deshalb ist keine Schnittstellennummer fest verdrahtet, und deshalb werden auf Boards mit
+mehreren Controllern auch mehrere gefunden. Die Konfigurationstabelle liefert pro Controller die
 Kanalaufteilung, ein Effektbefehl pro Kanal erledigt den Rest.
 
 Die Befehle werden getaktet und die Sequenz zweimal gesendet: Der Controller verwirft
@@ -181,7 +195,8 @@ stillschweigend Befehle, die eintreffen, während er noch beschäftigt ist — s
 ARGB-Header an, während die Onboard-Zone schon geschaltet hatte.
 
 Der Zustand liegt unter `%LOCALAPPDATA%\aura-toggle` — `state.json` für den letzten Effekt,
-`settings.json` für die Einstellungen. Portable und installierte Variante teilen sie sich.
+`settings.json` für die Einstellungen, `presets.json` für eigene Presets. Portable und
+installierte Variante teilen sie sich.
 
 ## 📄 Lizenz und Marken
 
