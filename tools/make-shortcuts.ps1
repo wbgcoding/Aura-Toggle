@@ -1,4 +1,4 @@
-﻿# Creates the two Windows shortcuts next to aura.exe.
+﻿# Creates the two Windows shortcuts next to the executable.
 #
 # The shortcuts store a relative path in addition to the absolute one, so the whole folder
 # can be moved or copied to another machine and the shortcuts still find the executable.

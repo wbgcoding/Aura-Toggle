@@ -1,4 +1,4 @@
-﻿# Regression suite for aura.exe. Switches the mainboard lighting while it runs
+﻿# Regression suite for "Aura Toggle.exe". Switches the mainboard lighting while it runs
 # and leaves it turned on at the end.
 #
 #   powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
