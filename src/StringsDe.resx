@@ -45,93 +45,108 @@
     <value>Aura</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
-    <value>On</value>
+    <value>An</value>
   </data>
   <data name="ButtonStateOff" xml:space="preserve">
-    <value>Off</value>
+    <value>Aus</value>
   </data>
   <data name="ButtonAccessibleName" xml:space="preserve">
-    <value>Switch mainboard lighting on or off</value>
+    <value>Mainboard-Beleuchtung ein- oder ausschalten</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: aura [-on | -off | -preset &lt;name&gt; [colour]]   (without an argument the toggle window opens)</value>
+    <value>Aufruf: aura [-on | -off | -preset &lt;Name&gt; [Farbe]]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Presets: {0}</value>
+    <value>Voreinstellungen: {0}</value>
   </data>
   <data name="StatusController" xml:space="preserve">
-    <value>{0} · {1} channels</value>
+    <value>{0} · {1} Kanäle</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
-    <value>No controller found</value>
+    <value>Kein Controller gefunden</value>
   </data>
   <data name="PresetAccessibleName" xml:space="preserve">
-    <value>Lighting effect</value>
+    <value>Beleuchtungseffekt</value>
   </data>
   <data name="PresetStatic" xml:space="preserve">
-    <value>Static</value>
+    <value>Statisch</value>
   </data>
   <data name="PresetBreathing" xml:space="preserve">
-    <value>Breathing</value>
+    <value>Atmen</value>
   </data>
   <data name="PresetFlashing" xml:space="preserve">
-    <value>Flashing</value>
+    <value>Blinken</value>
   </data>
   <data name="PresetSpectrumCycle" xml:space="preserve">
-    <value>Spectrum Cycle</value>
+    <value>Farbwechsel</value>
   </data>
   <data name="PresetRainbow" xml:space="preserve">
-    <value>Rainbow</value>
+    <value>Regenbogen</value>
   </data>
   <data name="PresetRainbowBreathing" xml:space="preserve">
-    <value>Rainbow Breathing</value>
+    <value>Regenbogen-Atmen</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
-    <value>Chase Fade</value>
+    <value>Lauflicht mit Ausblenden</value>
   </data>
   <data name="PresetChase" xml:space="preserve">
-    <value>Chase</value>
+    <value>Lauflicht</value>
   </data>
   <data name="PresetWave" xml:space="preserve">
-    <value>Wave</value>
+    <value>Welle</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>No AURA LED controller found (USB VID 0B05). This tool only works on ASUS mainboards with Aura USB lighting.</value>
+    <value>Kein AURA-LED-Controller gefunden (USB VID 0B05). Dieses Tool funktioniert nur auf ASUS-Mainboards mit Aura-USB-Beleuchtung.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>The AURA LED controller is in use by another program (Armoury Crate, OpenRGB, SignalRGB). Close it and try again.</value>
+    <value>Der AURA-LED-Controller wird von einem anderen Programm belegt (Armoury Crate, OpenRGB, SignalRGB). Bitte beenden und erneut versuchen.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
+    <value>Schreiben an den AURA-Controller fehlgeschlagen (Befehl 0x{0}): {1}</value>
   </data>
   <data name="SettingsAccessibleName" xml:space="preserve">
-    <value>Settings</value>
+    <value>Einstellungen</value>
   </data>
   <data name="SettingAutoStart" xml:space="preserve">
-    <value>Start with Windows</value>
+    <value>Mit Windows starten</value>
   </data>
   <data name="SettingStartMinimised" xml:space="preserve">
-    <value>Start minimised</value>
+    <value>Minimiert starten</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimise on close</value>
+    <value>Beim Schlie&#223;en minimieren</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
-    <value>Lighting at start</value>
+    <value>Beleuchtung beim Start</value>
   </data>
   <data name="StartActionNone" xml:space="preserve">
-    <value>Leave unchanged</value>
+    <value>Unver&#228;ndert lassen</value>
   </data>
   <data name="StartActionOff" xml:space="preserve">
-    <value>Switch off</value>
+    <value>Ausschalten</value>
   </data>
   <data name="StatusChannels" xml:space="preserve">
-    <value>{0} channels</value>
+    <value>{0} Kan&#228;le</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
-    <value>Open</value>
+    <value>&#214;ffnen</value>
   </data>
   <data name="TrayExit" xml:space="preserve">
-    <value>Exit</value>
+    <value>Beenden</value>
+  </data>
+  <data name="SettingAnimate" xml:space="preserve">
+    <value>Knopf animieren</value>
+  </data>
+  <data name="SettingLanguage" xml:space="preserve">
+    <value>Sprache</value>
+  </data>
+  <data name="LanguageAuto" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="LanguageEnglish" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="LanguageGerman" xml:space="preserve">
+    <value>Deutsch</value>
   </data>
 </root>

@@ -29,6 +29,7 @@ internal sealed class ToggleForm : Form
     private SettingsPopup? _settingsPopup;
     private bool _busy;
     private bool _exiting;
+    private int _channels;
 
     public ToggleForm()
     {
@@ -37,7 +38,7 @@ internal sealed class ToggleForm : Form
 
         Text = Strings.WindowTitle;
         Icon = LoadIcon();
-        ClientSize = new Size(320, 214);
+        ClientSize = new Size(344, 214);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
@@ -125,11 +126,11 @@ internal sealed class ToggleForm : Form
         menu.Items.Add(_trayLighting);
         menu.Items.Add(new ToolStripSeparator());
 
-        var open = new ToolStripMenuItem(Strings.TrayOpen);
+        var open = new ToolStripMenuItem(Strings.TrayOpen) { Tag = "open" };
         open.Click += (_, _) => RestoreFromTray();
         menu.Items.Add(open);
 
-        var exit = new ToolStripMenuItem(Strings.TrayExit);
+        var exit = new ToolStripMenuItem(Strings.TrayExit) { Tag = "exit" };
         exit.Click += (_, _) =>
         {
             _exiting = true;
@@ -155,15 +156,16 @@ internal sealed class ToggleForm : Form
 
         if (controller == null)
         {
-            Text = $"{Strings.WindowTitle}  —  {Strings.StatusControllerMissing}";
+            Text = $"{Strings.WindowTitle} - {Strings.StatusControllerMissing}";
             _toggle.Enabled = false;
             _effects.Enabled = false;
             _colours.Enabled = false;
             return;
         }
 
-        Text = $"{Strings.WindowTitle}  —  " + string.Format(CultureInfo.CurrentCulture,
-            Strings.StatusChannels, controller.Value.Channels);
+        _channels = controller.Value.Channels;
+        Text = $"{Strings.WindowTitle} - " + string.Format(CultureInfo.CurrentCulture,
+            Strings.StatusChannels, _channels);
 
         await ApplyStartAction();
     }
@@ -222,7 +224,19 @@ internal sealed class ToggleForm : Form
         var popup = new SettingsPopup(_settings);
         _settingsPopup = popup;
 
-        popup.Changed += (_, settings) => _settings = settings;
+        popup.Changed += (_, settings) =>
+        {
+            bool languageChanged = settings.Language != _settings.Language;
+            _settings = settings;
+            _toggle.Animate = settings.Animate;
+
+            if (languageChanged)
+            {
+                Strings.Override = settings.Language;
+                RefreshTexts();
+                popup.Close();
+            }
+        };
         popup.FormClosed += (_, _) =>
         {
             _settingsPopup = null;
@@ -324,12 +338,41 @@ internal sealed class ToggleForm : Form
         UseWaitCursor = busy;
     }
 
+    /// <summary>Re-reads every piece of text, so a language change shows up straight away.</summary>
+    private void RefreshTexts()
+    {
+        _effects.AccessibleName = Strings.PresetAccessibleName;
+        _gear.AccessibleName = Strings.SettingsAccessibleName;
+        _toggle.AccessibleName = Strings.ButtonAccessibleName;
+
+        _effects.SetItems(AuraPresets.All.Select(preset =>
+            new SelectItem(preset.Key, preset.DisplayName, preset.Mode)));
+
+        if (_tray.ContextMenuStrip is ContextMenuStrip menu)
+        {
+            foreach (ToolStripItem item in menu.Items)
+            {
+                if (item.Tag is string tag)
+                {
+                    item.Text = tag == "open" ? Strings.TrayOpen : Strings.TrayExit;
+                }
+            }
+        }
+
+        Text = _channels > 0
+            ? $"{Strings.WindowTitle} - " + string.Format(CultureInfo.CurrentCulture, Strings.StatusChannels, _channels)
+            : Strings.WindowTitle;
+
+        Render();
+    }
+
     private void Render()
     {
         AuraPreset preset = AuraPresets.ByMode(_state.Mode) ?? AuraPresets.All[0];
         Color colour = CurrentColour;
 
         _toggle.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
+        _toggle.Animate = _settings.Animate;
         _toggle.Show(_state.On, _state.Mode, colour);
 
         _effects.Colour = colour;
@@ -344,7 +387,7 @@ internal sealed class ToggleForm : Form
         _tray.Text = $"{Strings.WindowTitle} — {(_state.On ? preset.DisplayName : Strings.ButtonStateOff)}";
 
         // The window only reserves room for the chips when an effect actually uses them.
-        int wanted = preset.UsesColour ? 214 : 176;
+        int wanted = preset.UsesColour ? 218 : 176;
         if (ClientSize.Height != wanted)
         {
             ClientSize = new Size(ClientSize.Width, wanted);

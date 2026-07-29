@@ -6,6 +6,7 @@ REM   build.bat standalone           self contained, runs without .NET installed
 REM   build.bat standalone win-arm64
 REM   build.bat installer            standalone build packed into a setup (needs Inno Setup)
 REM   build.bat installer win-arm64
+REM   build.bat all                  portable exe plus both installers, ready to release
 REM
 setlocal
 
@@ -13,6 +14,9 @@ set ROOT=%~dp0
 set MODE=%~1
 set RID=%~2
 if "%RID%"=="" set RID=win-x64
+
+REM Everything in one go: the portable build, then a setup per architecture.
+if /I "%MODE%"=="all" goto :all
 
 REM Assignments stay on single lines: inside a block they would expand too early.
 set SELFCONTAINED=false
@@ -53,6 +57,18 @@ if errorlevel 1 exit /b 1
 
 echo.
 echo Done: %OUTDIR%\aura.exe
+call :maybepause
+exit /b 0
+
+:all
+call "%~f0"
+if errorlevel 1 exit /b 1
+call "%~f0" installer win-x64
+if errorlevel 1 exit /b 1
+call "%~f0" installer win-arm64
+if errorlevel 1 exit /b 1
+echo.
+echo All artifacts are in %ROOT%dist
 call :maybepause
 exit /b 0
 

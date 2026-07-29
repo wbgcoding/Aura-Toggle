@@ -18,7 +18,7 @@ internal sealed record SelectItem(string Key, string Text, byte? Mode);
 /// </summary>
 internal sealed class EffectButton : FlatControl
 {
-    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 40 };
+    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 16 };
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
     private bool _on;
@@ -26,6 +26,7 @@ internal sealed class EffectButton : FlatControl
     private Color _colour = Color.White;
     private bool _busy;
     private bool _paused;
+    private bool _animate = true;
 
     public EffectButton()
     {
@@ -52,6 +53,18 @@ internal sealed class EffectButton : FlatControl
         UpdateAnimation();
     }
 
+    /// <summary>Turns the animation off entirely, from the settings.</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Animate
+    {
+        get => _animate;
+        set
+        {
+            _animate = value;
+            UpdateAnimation();
+        }
+    }
+
     /// <summary>Stops the animation while the window is minimised.</summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Paused
@@ -67,7 +80,7 @@ internal sealed class EffectButton : FlatControl
     /// <summary>Animating an unlit board would be a lie, and it would burn cycles for nothing.</summary>
     private void UpdateAnimation()
     {
-        _timer.Enabled = _on && Visible && Enabled && !_busy && !_paused;
+        _timer.Enabled = _on && _animate && Visible && Enabled && !_busy && !_paused;
         Invalidate();
     }
 
@@ -96,7 +109,7 @@ internal sealed class EffectButton : FlatControl
     protected override void OnPaint(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(g);
         g.Clear(BackColor);
 
         var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
@@ -104,7 +117,8 @@ internal sealed class EffectButton : FlatControl
 
         if (_on && Enabled)
         {
-            EffectPainter.Paint(g, path, bounds, _mode, _colour, _clock.Elapsed.TotalSeconds);
+            // A still frame when the animation is switched off, so the colour is still shown.
+            EffectPainter.Paint(g, path, bounds, _mode, _colour, _animate ? _clock.Elapsed.TotalSeconds : 0.55);
 
             // A dark wash keeps the label readable over bright and pale effects alike.
             using var wash = new SolidBrush(Color.FromArgb(Hovered ? 52 : 74, 0, 0, 0));
@@ -194,32 +208,34 @@ internal sealed class Select : FlatControl
             return;
         }
 
-        SelectItem? chosen;
-        PopupOpening?.Invoke(this, EventArgs.Empty);
-        try
+        var popup = new SelectPopup(_items, Selected, Colour, Width, Font);
+
+        popup.Picked += (_, item) =>
         {
-            using var popup = new SelectPopup(_items, Selected, Colour, Width, Font);
-            chosen = popup.Choose(PointToScreen(new Point(0, Height + 4)));
-        }
-        finally
+            if (item == Selected)
+            {
+                return;
+            }
+
+            Selected = item;
+            Invalidate();
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+        };
+
+        popup.FormClosed += (_, _) =>
         {
             PopupClosed?.Invoke(this, EventArgs.Empty);
-        }
+            popup.Dispose();
+        };
 
-        if (chosen == null || chosen == Selected)
-        {
-            return;
-        }
-
-        Selected = chosen;
-        Invalidate();
-        SelectionChanged?.Invoke(this, EventArgs.Empty);
+        PopupOpening?.Invoke(this, EventArgs.Empty);
+        popup.Open(PointToScreen(new Point(0, Height + 4)), FindForm());
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(g);
         g.Clear(BackColor);
 
         var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
@@ -271,7 +287,6 @@ internal sealed class SelectPopup : Form
     private readonly Color _colour;
     private int _highlighted;
     private int _hovered = -1;
-    private SelectItem? _result;
 
     public SelectPopup(List<SelectItem> items, SelectItem? selected, Color colour, int width, Font font)
     {
@@ -301,23 +316,35 @@ internal sealed class SelectPopup : Form
         }
     }
 
-    /// <summary>Opens the list at a screen position and returns what the user picked.</summary>
-    public SelectItem? Choose(Point at)
+    public event EventHandler<SelectItem>? Picked;
+
+    /// <summary>
+    /// Opens the list at a screen position. It is not modal, so a click on the window behind
+    /// it, or anywhere else, closes it without picking anything.
+    /// </summary>
+    public void Open(Point at, IWin32Window? owner)
     {
         Rectangle screen = Screen.FromPoint(at).WorkingArea;
         int x = Math.Min(at.X, screen.Right - Width - 4);
         int y = at.Y + Height > screen.Bottom ? at.Y - Height - 42 : at.Y;
         Location = new Point(Math.Max(screen.Left + 4, x), Math.Max(screen.Top + 4, y));
 
-        ShowDialog();
-        return _result;
+        if (owner == null)
+        {
+            Show();
+        }
+        else
+        {
+            Show(owner);
+        }
+
+        Activate();
     }
 
-    protected override void OnShown(EventArgs e)
+    protected override void OnHandleCreated(EventArgs e)
     {
-        base.OnShown(e);
-        using GraphicsPath frame = Theme.RoundedRectangle(new RectangleF(0, 0, Width, Height), 10);
-        Region = new Region(frame);
+        base.OnHandleCreated(e);
+        Theme.RoundWindowCorners(Handle);
     }
 
     protected override void OnDeactivate(EventArgs e)
@@ -343,8 +370,7 @@ internal sealed class SelectPopup : Form
 
             case Keys.Enter:
             case Keys.Space:
-                _result = _items[_highlighted];
-                Close();
+                Choose(_highlighted);
                 break;
         }
 
@@ -370,17 +396,26 @@ internal sealed class SelectPopup : Form
     {
         if (_hovered >= 0)
         {
-            _result = _items[_hovered];
-            Close();
+            Choose(_hovered);
         }
 
         base.OnMouseClick(e);
     }
 
+    private void Choose(int index)
+    {
+        if (index >= 0 && index < _items.Count)
+        {
+            Picked?.Invoke(this, _items[index]);
+        }
+
+        Close();
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(g);
 
         using (var background = new SolidBrush(Theme.Surface))
         {
@@ -437,13 +472,14 @@ internal sealed class ColourStrip : FlatControl
 
     private const int Chip = 24;
     private const int Gap = 9;
+    private const int Inset = 4;
 
     private int _hoveredChip = -1;
 
     public ColourStrip()
     {
-        Height = Chip + 8;
-        Width = ((Palette.Length + 1) * (Chip + Gap)) - Gap;
+        Height = Chip + (Inset * 2);
+        Width = ((Palette.Length + 1) * (Chip + Gap)) - Gap + (Inset * 2);
     }
 
     public event EventHandler? ColourPicked;
@@ -451,7 +487,7 @@ internal sealed class ColourStrip : FlatControl
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color Colour { get; set; } = Color.White;
 
-    private Rectangle ChipAt(int index) => new(index * (Chip + Gap), 4, Chip, Chip);
+    private Rectangle ChipAt(int index) => new(Inset + (index * (Chip + Gap)), Inset, Chip, Chip);
 
     private int IndexAt(Point point)
     {
@@ -517,7 +553,7 @@ internal sealed class ColourStrip : FlatControl
     protected override void OnPaint(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(g);
         g.Clear(BackColor);
 
         bool custom = !Array.Exists(Palette, entry => Same(entry, Colour));
@@ -618,7 +654,7 @@ internal sealed class GlyphButton : FlatControl
     protected override void OnPaint(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(g);
         g.Clear(BackColor);
 
         var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
@@ -678,7 +714,7 @@ internal sealed class ToggleSwitch : FlatControl
     protected override void OnPaint(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(g);
         g.Clear(BackColor);
 
         var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);

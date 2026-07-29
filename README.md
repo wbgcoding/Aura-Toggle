@@ -1,228 +1,191 @@
-# Aura Toggle
+<div align="center">
 
-**One button. Your ASUS mainboard LEDs go dark. No Armoury Crate, no background service, no install.**
+# 💡 Aura Toggle
 
-*Deutsche Version: [README.de.md](README.de.md)*
+**Switch your ASUS mainboard lighting off. Without Armoury Crate.**
+
+One 540 KB executable · no install · no background service · nothing written to your board
+
+[Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) · [Is it safe?](#-is-this-safe-for-my-mainboard) · [Deutsch](README.de.md)
+
+<img src="docs/preview-light.png" alt="The Aura Toggle window" width="360">
+
+</div>
 
 ---
 
-## The problem this solves
+## 🌙 The problem
 
-It is half past one in the morning. A large download is running, a render is finishing, a
-backup is crawling through the night — and your PC has to stay on. So you go to bed, and the
-machine sits there glowing like a jukebox. The onboard RGB pulses across the ceiling, the
-strip behind the case throws colour on the wall, and the room never gets properly dark.
+It is 1:30 in the morning. A download is running, so the PC stays on — and the case glows like
+a jukebox. You want the LEDs off for the night.
 
-The obvious fix is to turn the lighting off. The not-so-obvious part is what that costs you:
-the official way is to install a full RGB suite, which brings a permanent background service,
-an auto-start entry, a login account, an updater and a couple of hundred megabytes — all so
-that you can occasionally set one value to zero. Plenty of people would rather keep the LEDs
-than install all of that. So the lights stay on, every night, forever.
+Your options today:
 
-The BIOS can switch the lighting off too, but only if you reboot into it, and then it stays
-off until you reboot again. That is not a light switch. That is a ritual.
-
-**Aura Toggle is the missing light switch.** One portable 300 KB executable. Run it, the
-lighting goes out. Run it again, the lighting comes back exactly as it was. Nothing is
-installed, nothing runs in the background, nothing is written to your mainboard permanently.
-When you are done, delete the file and no trace of it remains.
-
-If you have ever thought *"I just want the LEDs off for tonight, not a whole software suite"* —
-this was written for exactly that.
-
-## What it does
-
-- Switches **all** channels of the Aura controller: the onboard zone, the 12 V RGB headers
-  and every addressable ARGB header.
-- Restores the last effect when you switch back on.
-- Lets you pick one of the controller's built-in effects, from the window or the command line.
-- Works from the command line, so you can put it in a scheduled task, a shortcut or a script.
-- Runs without administrator rights.
-- Speaks German and English, following your Windows display language.
-
-## What it deliberately does not do
-
-No custom animations, no profiles, no tray icon, no updater, no telemetry, no network access
-at all. It switches the lighting, picks one of the effects the controller already has, and
-sets its colour. That is the whole feature list, and it is meant to stay that way.
-
-## Getting started
-
-Either take the portable `aura.exe` or run the installer, whichever suits you.
-
-1. Download `aura.exe` and put it anywhere you like — Desktop, a tools folder, a USB stick.
-   The installer instead puts it into Program Files, offers autostart and a desktop shortcut,
-   and needs no .NET runtime because it ships a self contained build.
-2. Double click it. A small window opens with one big button that both shows and switches the
-   state - while the lighting is on, the button animates the effect that is actually running.
-3. Below it, pick an effect from the list; it applies immediately. Effects that use a colour
-   show colour chips underneath, including a free choice through the colour picker.
-
-The gear in the top right holds four settings: start with Windows, start minimised, minimise
-instead of closing, and which lighting state to apply when the tool starts.
-
-Minimising sends the window to the notification area. Right click the icon there for a small
-menu that toggles the lighting, reopens the window or quits.
-
-That is the entire setup.
-
-### Command line
-
-| Command | Effect |
+| Option | What it costs you |
 |---|---|
-| `aura` | Opens the toggle window |
-| `aura -off` | Lighting off |
-| `aura -on` | Lighting back to the last effect |
-| `aura -preset <name>` | Switches to that effect and turns the lighting on |
-| `aura -preset <name> <colour>` | The same with a colour, as `#RRGGBB` or a colour name |
+| Armoury Crate | Background service, auto-start, account, updater, hundreds of MB |
+| BIOS | A reboot to switch off. Another reboot to switch back on |
+| **Aura Toggle** | **One click. Delete the file when you are done** |
 
-`-on`, `--on`, `/on` and plain `on` are all accepted, in any capitalisation. Same for `off`
-and `preset`.
+If you have ever thought *"I just want the LEDs off tonight, not a whole software suite"* — this
+is for you.
 
-### Effects
+## ✨ What it does
 
-| Name | What it looks like | Uses a colour |
+- 🔌 Switches **every** channel: onboard zone, 12 V RGB headers, all addressable ARGB headers
+- 🎨 Nine built-in effects with colour picker, applied instantly
+- 🖥️ One window: a button that **animates the running effect** and switches it
+- 📌 Lives in the notification area, right-click for on/off
+- ⌨️ Full command line with exit codes — scheduled tasks, scripts, shortcuts
+- 🔒 No admin rights, no driver, no network, no telemetry
+- 🇩🇪 🇬🇧 German and English
+
+## 📥 Download
+
+| | Size | Needs |
 |---|---|---|
-| `static` | One steady colour | yes |
-| `breathing` | Fades in and out | yes |
-| `flashing` | Blinks on and off | yes |
-| `spectrum-cycle` | All LEDs cycle through the spectrum together | no |
-| `rainbow` | Colour gradient travelling across the LEDs — the ASUS default | no |
-| `rainbow-breathing` | Spectrum cycle that fades in and out | no |
-| `chase-fade` | Running light with a fading tail | yes |
-| `chase` | Running light | yes |
-| `wave` | Wave travelling across the LEDs | no |
+| **Portable** `aura.exe` | 540 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| **Installer** x64 / ARM64 | 34 MB / 31 MB | Nothing — the runtime is inside |
 
-Names are matched forgivingly: capitalisation, spaces, hyphens and underscores are ignored, so
-`spectrum-cycle`, `"Spectrum Cycle"` and `spectrumcycle` all work. The translated names shown
-in the window are accepted too. An unknown name prints the full list.
+Portable: download, double click, done. Installer: Program Files, optional autostart and
+desktop shortcut, clean uninstall.
 
-The effects marked as using a colour take the colour you pick in the window or pass on the
-command line; the others ignore it and run the controller's own spectrum.
+## 🚀 Using it
 
-There is no speed or direction setting, because this controller has none: the effect command
-carries a channel and a mode and nothing else.
+<img src="docs/preview-dark.png" alt="Dark mode" width="360" align="right">
 
-Exit codes: `0` success, `2` unknown argument, `3` no controller found, `4` controller in use
-by another program, `5` communication error. Errors are printed to standard error, so scripts
-can react to them.
+1. **Big button** — shows the state and switches it. While the lighting is on it animates
+   whatever effect is running.
+2. **Drop down** — pick an effect, it applies immediately.
+3. **Colour chips** — appear for effects that use a colour, including a free picker.
+4. **⚙️ Gear** — autostart, start minimised, minimise instead of close, lighting at start,
+   animation on/off, language.
 
-> **PowerShell note:** `aura.exe` is a windowed application, and PowerShell does not wait for
-> those. If you need the exit code, use
+Minimising sends the window to the notification area. Right click the icon there to toggle the
+lighting, reopen or quit.
+
+## ⌨️ Command line
+
+```bat
+aura                            REM opens the window
+aura -off                       REM lighting off
+aura -on                        REM back to the last effect
+aura -preset rainbow            REM switch to an effect
+aura -preset static "#20C0FF"   REM effect with a colour
+```
+
+`-on`, `--on`, `/on`, `on` — all accepted, any casing. Same for `off` and `preset`.
+
+**Exit codes:** `0` ok · `2` bad argument · `3` no controller · `4` controller busy ·
+`5` communication error. Errors go to stderr.
+
+> ⚠️ **PowerShell** does not wait for windowed apps. For the exit code use
 > `Start-Process aura.exe -ArgumentList "-off" -Wait -NoNewWindow`.
 
-### Ready-made shortcuts
-
-The download contains two shortcuts next to the executable, **Aura An** (on) and **Aura Aus**
-(off). They carry a relative path, so you can move or copy the whole folder anywhere and they
-keep working. Drag them to the desktop, the taskbar or the Start menu for one-click switching.
-
-### Turn the lights off automatically at night
-
-Windows Task Scheduler, one task, no extra software:
+**Lights out at night, automatically:**
 
 ```bat
 schtasks /create /tn "LEDs off" /tr "C:\tools\aura.exe -off" /sc daily /st 23:30
 schtasks /create /tn "LEDs on"  /tr "C:\tools\aura.exe -on"  /sc daily /st 08:00
 ```
 
-## Requirements
+Two ready-made shortcuts, **Aura An** and **Aura Aus**, sit next to the executable. They carry
+a relative path, so the folder can be moved anywhere.
 
-- Windows 10 or Windows 11, 64 bit.
-- An ASUS mainboard with an Aura USB lighting controller. Boards from roughly the X470 and
-  Z390 generation onwards use one; recent AM5 and LGA1700 boards do as well.
-- The .NET 10 Desktop Runtime for the small build. If you prefer zero prerequisites, use the
-  standalone build instead — it is much larger but needs nothing installed.
+## 🎨 Effects
 
-Developed and verified on a ROG STRIX Z790-E GAMING WIFI. The tool identifies the controller
-by talking to it rather than by a fixed model list, so unlisted ASUS boards with the same
-controller family are expected to work.
+| Name | Looks like | Colour |
+|---|---|---|
+| `static` | One steady colour | ✅ |
+| `breathing` | Fades in and out | ✅ |
+| `flashing` | Blinks | ✅ |
+| `spectrum-cycle` | All LEDs cycle the spectrum together | — |
+| `rainbow` | Gradient travelling across the LEDs *(ASUS default)* | — |
+| `rainbow-breathing` | Spectrum cycle that fades | — |
+| `chase-fade` | Running light with a fading tail | ✅ |
+| `chase` | Running light | ✅ |
+| `wave` | Slow spectrum drifting across the strip | — |
 
-## Is this safe for my mainboard?
+Names are forgiving: casing, spaces, hyphens and underscores are ignored, and the translated
+names work too. An unknown name prints the list.
 
-Yes, and the reason is worth understanding.
+> There is **no speed or direction** setting. The controller has none — its effect command
+> carries a channel and a mode, nothing else.
 
-The Aura controller keeps its lighting configuration in its own flash memory, and that flash
-is what the mainboard uses at power-on. Aura Toggle **never** sends the command that writes to
-that flash. It only sends volatile effect commands, which live in the controller's RAM.
+## 🔒 Is this safe for my mainboard?
 
-The practical consequences:
+**Yes**, and the reason matters.
 
-- Your BIOS lighting settings stay exactly as you left them.
-- After a reboot the lighting is back on, even if you shut down with it switched off.
-- Uninstalling means deleting one file.
+The Aura controller keeps its configuration in its own flash, and that flash is what your board
+applies at power-on. Aura Toggle **never sends the command that writes to it**. Only volatile
+effect commands, which live in the controller's RAM.
 
-The tool also does not load a kernel driver and does not need administrator rights — the
-controller is a standard USB HID device, so ordinary user permissions are enough.
+- ✅ Your BIOS lighting settings stay untouched
+- ✅ After a reboot the lighting is back, even if you shut down with it off
+- ✅ Uninstalling means deleting one file
+- ✅ No kernel driver, no admin rights — it is a standard USB HID device
 
-## Troubleshooting
+## 💻 Requirements
+
+- Windows 10 or 11, 64 bit or ARM64
+- An ASUS mainboard with an Aura USB controller — X470 / Z390 generation onwards, including
+  current AM5 and LGA1700 boards
+
+Developed and verified on a **ROG STRIX Z790-E GAMING WIFI**. The controller is found by
+talking to it, not by a model list, so unlisted ASUS boards of the same family should work.
+
+## 🛠️ Troubleshooting
 
 **"No AURA LED controller found"**
-Your board may not have an Aura USB controller, or lighting is disabled in the BIOS. Check
-Device Manager for a device with hardware id `USB\VID_0B05` present under Human Interface
-Devices.
+No Aura USB controller on the board, or lighting is off in the BIOS. Look for hardware id
+`USB\VID_0B05` under Human Interface Devices in Device Manager.
 
 **"The AURA LED controller is in use by another program"**
-Armoury Crate, OpenRGB, SignalRGB and similar tools hold the controller open. Close the other
-program first — two programs cannot drive the same lighting controller at once.
+Armoury Crate, OpenRGB or SignalRGB hold it open. Close them — two programs cannot drive the
+same controller.
 
 **The lighting comes back looking different**
-The controller cannot report which effect is currently running, so Aura Toggle remembers the
-effect it last applied. The first time you ever switch on, it falls back to the ASUS default
-rainbow effect. Reboot once and your BIOS setting is back, or pick the effect you want from
-the drop down.
+The controller cannot report which effect is running, so the tool remembers what it set last.
+On the very first switch-on it falls back to the ASUS rainbow. Reboot, or just pick the effect
+you want.
 
-## Building from source
+## 🔨 Building
 
-Requires the .NET 10 SDK.
-
-```bat
-build.bat
-```
-
-The result is `dist\aura.exe`. For a build that runs without the .NET runtime installed:
+Needs the .NET 10 SDK. Installers additionally need [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 
 ```bat
-build.bat standalone
+build.bat            REM dist\aura.exe, 540 KB
+build.bat standalone REM self contained, ~120 MB, no runtime needed
+build.bat installer  REM dist\installer\Setup-AuraToggle-<version>-x64.exe
+build.bat all        REM portable plus both installers
 ```
 
-And for the installer, which needs [Inno Setup 6](https://jrsoftware.org/isinfo.php):
-
-```bat
-build.bat installer
-build.bat installer win-arm64
-```
-
-There is a regression suite in `tests\`. It switches the lighting while it runs and leaves it
-turned on afterwards:
+Regression suite — it switches the lighting while it runs and leaves it on afterwards:
 
 ```bat
 powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 ```
 
-## How it works
+## ⚙️ How it works
 
-The Aura controller is a USB HID device. Aura Toggle enumerates the HID interfaces, asks each
-candidate for its firmware string and configuration table, and keeps the one that answers
-correctly — which is why it does not depend on a hardcoded interface number. From the
-configuration table it reads how many lighting channels the board has, then sends one effect
-command per channel.
+The controller is a USB HID device. Aura Toggle enumerates the HID interfaces, asks each
+candidate for its firmware string and configuration table, and keeps the one that answers —
+which is why no interface number is hardcoded. The configuration table gives the channel
+layout; one effect command per channel does the rest.
 
-The only state kept on your machine is a small file at
-`%LOCALAPPDATA%\aura-toggle\state.json`, holding the last effect so it can be restored.
+Commands are paced and the sequence is sent twice: the controller silently drops commands that
+arrive while it is still busy, which otherwise left the ARGB headers running after the onboard
+zone had already switched.
 
-Commands are paced and the switching sequence is sent twice. The controller silently drops
-commands that arrive while it is still applying the previous one, which otherwise left the
-ARGB headers running while the onboard zone had already switched.
+State lives in `%LOCALAPPDATA%\aura-toggle` — `state.json` for the last effect, `settings.json`
+for your preferences. Portable and installed builds share them.
 
-## Not affiliated with ASUS
+## 📄 Licence and trademarks
 
-This is an independent project. It is not made, endorsed or supported by ASUSTeK Computer Inc.
-"ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners and are used here
-only to describe which hardware this tool talks to. No ASUS software, driver or library is
-used, bundled or required.
+MIT, see [LICENSE](LICENSE). The software comes **without any warranty**, and nobody is liable
+for what it does on your machine.
 
-## License
-
-MIT, see [LICENSE](LICENSE). In particular: the software comes without any warranty, and
-nobody is liable for what it does on your machine.
+This is an independent project. It is **not** made, endorsed or supported by ASUSTeK Computer
+Inc. "ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners, used here only
+to describe which hardware this talks to. No ASUS software, driver or library is used, bundled
+or required.

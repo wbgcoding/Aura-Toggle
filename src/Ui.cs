@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace AuraToggle;
@@ -39,6 +41,34 @@ internal static class Theme
     public static Color Neutral => Dark ? Color.FromArgb(68, 71, 77) : Color.FromArgb(140, 147, 158);
 
     public static Color NeutralSoft => Dark ? Color.FromArgb(48, 50, 55) : Color.FromArgb(238, 239, 242);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
+
+    /// <summary>
+    /// Asks Windows for rounded corners on a borderless window. Doing it through the desktop
+    /// compositor gives clean, anti-aliased edges and a real shadow; clipping the window to a
+    /// rounded region instead is what produced stair-stepped, black looking corners.
+    /// Silently does nothing before Windows 11, which then simply keeps square corners.
+    /// </summary>
+    public static void RoundWindowCorners(IntPtr window)
+    {
+        const int WindowCornerPreference = 33;
+        const int Round = 2;
+
+        int preference = Round;
+        DwmSetWindowAttribute(window, WindowCornerPreference, ref preference, sizeof(int));
+    }
+
+    /// <summary>The drawing quality every custom control in this window paints with.</summary>
+    public static void Prepare(Graphics g)
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.CompositingQuality = CompositingQuality.HighQuality;
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+    }
 
     public static GraphicsPath RoundedRectangle(RectangleF bounds, float radius)
     {
@@ -226,7 +256,7 @@ internal static class EffectPainter
     /// <summary>Small round icon for the effect list.</summary>
     public static void PaintIcon(Graphics g, Rectangle bounds, byte mode, Color colour)
     {
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(g);
         using GraphicsPath shape = Theme.RoundedRectangle(bounds, bounds.Height / 2f);
 
         // A fixed moment in time that shows each effect at its most recognisable.

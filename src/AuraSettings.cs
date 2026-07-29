@@ -13,7 +13,9 @@ namespace AuraToggle;
 internal sealed record AuraSettings(
     bool StartMinimised,
     bool MinimiseOnClose,
-    string StartAction)
+    string StartAction,
+    bool Animate,
+    string Language)
 {
     /// <summary>Leave the lighting untouched when the tool starts.</summary>
     public const string StartActionNone = "";
@@ -21,10 +23,15 @@ internal sealed record AuraSettings(
     /// <summary>Switch the lighting off when the tool starts.</summary>
     public const string StartActionOff = "off";
 
+    /// <summary>Follow the Windows display language.</summary>
+    public const string LanguageAuto = "";
+
     public static readonly AuraSettings Default = new(
         StartMinimised: false,
         MinimiseOnClose: false,
-        StartAction: StartActionNone);
+        StartAction: StartActionNone,
+        Animate: true,
+        Language: LanguageAuto);
 
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "AuraToggle";
@@ -48,10 +55,9 @@ internal sealed record AuraSettings(
             return new AuraSettings(
                 StartMinimised: Flag(root, "startMinimised", Default.StartMinimised),
                 MinimiseOnClose: Flag(root, "minimiseOnClose", Default.MinimiseOnClose),
-                StartAction: root.TryGetProperty("startAction", out JsonElement action) &&
-                             action.ValueKind == JsonValueKind.String
-                    ? action.GetString() ?? StartActionNone
-                    : StartActionNone);
+                StartAction: Text(root, "startAction", StartActionNone),
+                Animate: Flag(root, "animate", Default.Animate),
+                Language: Text(root, "language", LanguageAuto));
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -59,6 +65,11 @@ internal sealed record AuraSettings(
             return Default;
         }
     }
+
+    private static string Text(JsonElement root, string name, string fallback) =>
+        root.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? fallback
+            : fallback;
 
     private static bool Flag(JsonElement root, string name, bool fallback) =>
         root.TryGetProperty(name, out JsonElement value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
@@ -84,7 +95,9 @@ internal sealed record AuraSettings(
         string json = "{" +
             $"\"startMinimised\":{(StartMinimised ? "true" : "false")}," +
             $"\"minimiseOnClose\":{(MinimiseOnClose ? "true" : "false")}," +
-            $"\"startAction\":{JsonSerializer.Serialize(StartAction)}" +
+            $"\"startAction\":{JsonSerializer.Serialize(StartAction)}," +
+            $"\"animate\":{(Animate ? "true" : "false")}," +
+            $"\"language\":{JsonSerializer.Serialize(Language)}" +
             "}";
 
         File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));

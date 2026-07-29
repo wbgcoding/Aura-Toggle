@@ -30,6 +30,9 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // The language choice also governs usage and error output on the command line.
+        Strings.Override = AuraSettings.Load().Language;
+
         if (args.Length == 0)
         {
             // A second start hands over to the instance already running, which may be sitting

@@ -16,7 +16,9 @@ internal sealed class SettingsPopup : Form
     private readonly ToggleSwitch _autoStart = new();
     private readonly ToggleSwitch _startMinimised = new();
     private readonly ToggleSwitch _minimiseOnClose = new();
+    private readonly ToggleSwitch _animate = new();
     private readonly Select _startAction = new();
+    private readonly Select _language = new();
 
     private bool _childOpen;
 
@@ -32,18 +34,18 @@ internal sealed class SettingsPopup : Form
         Font = new Font("Segoe UI", 9F);
         DoubleBuffered = true;
         Padding = new Padding(14, 12, 14, 14);
-        ClientSize = new Size(272, 184);
+        ClientSize = new Size(276, 302);
 
         var layout = new Layout
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
-            RowCount = 5,
+            RowCount = 8,
             BackColor = Theme.Surface,
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        for (int row = 0; row < 5; row++)
+        for (int row = 0; row < 8; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
@@ -51,39 +53,20 @@ internal sealed class SettingsPopup : Form
         AddSwitch(layout, 0, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
         AddSwitch(layout, 1, Strings.SettingStartMinimised, _startMinimised, settings.StartMinimised);
         AddSwitch(layout, 2, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
+        AddSwitch(layout, 3, Strings.SettingAnimate, _animate, settings.Animate);
 
-        var startLabel = new Label
-        {
-            AutoSize = true,
-            Text = Strings.SettingStartAction,
-            ForeColor = Theme.TextMuted,
-            BackColor = Theme.Surface,
-            Margin = new Padding(2, 14, 0, 6),
-        };
-        layout.Controls.Add(startLabel, 0, 3);
-        layout.SetColumnSpan(startLabel, 2);
+        AddLabel(layout, 4, Strings.SettingStartAction);
+        AddSelect(layout, 5, _startAction, StartActions(), settings.StartAction);
 
-        _startAction.Dock = DockStyle.Top;
-        _startAction.Height = 32;
-        _startAction.Margin = new Padding(0);
-        _startAction.BackColor = Theme.Surface;
-        _startAction.SetItems(StartActions());
-        _startAction.ShowSelection(settings.StartAction);
-        _startAction.SelectionChanged += (_, _) => Apply();
-        _startAction.PopupOpening += (_, _) => _childOpen = true;
-        _startAction.PopupClosed += (_, _) =>
-        {
-            _childOpen = false;
-            Activate();
-        };
-        layout.Controls.Add(_startAction, 0, 4);
-        layout.SetColumnSpan(_startAction, 2);
+        AddLabel(layout, 6, Strings.SettingLanguage);
+        AddSelect(layout, 7, _language, Languages(), settings.Language);
 
         Controls.Add(layout);
 
         _autoStart.CheckedChanged += (_, _) => AuraSettings.AutoStart = _autoStart.Checked;
         _startMinimised.CheckedChanged += (_, _) => Apply();
         _minimiseOnClose.CheckedChanged += (_, _) => Apply();
+        _animate.CheckedChanged += (_, _) => Apply();
     }
 
     public AuraSettings Settings { get; private set; }
@@ -101,6 +84,13 @@ internal sealed class SettingsPopup : Form
         }
     }
 
+    private static IEnumerable<SelectItem> Languages()
+    {
+        yield return new SelectItem(AuraSettings.LanguageAuto, Strings.LanguageAuto, null);
+        yield return new SelectItem("en", Strings.LanguageEnglish, null);
+        yield return new SelectItem("de", Strings.LanguageGerman, null);
+    }
+
     private static IEnumerable<SelectItem> StartActions()
     {
         yield return new SelectItem(AuraSettings.StartActionNone, Strings.StartActionNone, null);
@@ -110,6 +100,41 @@ internal sealed class SettingsPopup : Form
         {
             yield return new SelectItem(preset.Key, preset.DisplayName, preset.Mode);
         }
+    }
+
+    private void AddLabel(Layout layout, int row, string text)
+    {
+        var label = new Label
+        {
+            AutoSize = true,
+            Text = text,
+            ForeColor = Theme.TextMuted,
+            BackColor = Theme.Surface,
+            Margin = new Padding(2, 12, 0, 5),
+        };
+
+        layout.Controls.Add(label, 0, row);
+        layout.SetColumnSpan(label, 2);
+    }
+
+    private void AddSelect(Layout layout, int row, Select select, IEnumerable<SelectItem> items, string selected)
+    {
+        select.Dock = DockStyle.Top;
+        select.Height = 32;
+        select.Margin = new Padding(0);
+        select.BackColor = Theme.Surface;
+        select.SetItems(items);
+        select.ShowSelection(selected);
+        select.SelectionChanged += (_, _) => Apply();
+        select.PopupOpening += (_, _) => _childOpen = true;
+        select.PopupClosed += (_, _) =>
+        {
+            _childOpen = false;
+            Activate();
+        };
+
+        layout.Controls.Add(select, 0, row);
+        layout.SetColumnSpan(select, 2);
     }
 
     private void AddSwitch(Layout layout, int row, string text, ToggleSwitch toggle, bool value)
@@ -137,7 +162,9 @@ internal sealed class SettingsPopup : Form
         {
             StartMinimised = _startMinimised.Checked,
             MinimiseOnClose = _minimiseOnClose.Checked,
+            Animate = _animate.Checked,
             StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
+            Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
         };
 
         Settings.Save();
@@ -159,11 +186,10 @@ internal sealed class SettingsPopup : Form
         Activate();
     }
 
-    protected override void OnShown(EventArgs e)
+    protected override void OnHandleCreated(EventArgs e)
     {
-        base.OnShown(e);
-        using GraphicsPath frame = Theme.RoundedRectangle(new RectangleF(0, 0, Width, Height), 12);
-        Region = new Region(frame);
+        base.OnHandleCreated(e);
+        Theme.RoundWindowCorners(Handle);
     }
 
     protected override void OnDeactivate(EventArgs e)
@@ -192,7 +218,7 @@ internal sealed class SettingsPopup : Form
     {
         base.OnPaint(e);
 
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        Theme.Prepare(e.Graphics);
         using var border = new Pen(Theme.Border);
         using GraphicsPath frame = Theme.RoundedRectangle(new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f), 12);
         e.Graphics.DrawPath(border, frame);

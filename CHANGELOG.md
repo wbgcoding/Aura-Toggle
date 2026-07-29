@@ -43,11 +43,18 @@ All notable changes to this project are documented here. The format follows
 - Switching runs off the UI thread, so the window keeps painting while the controller is
   being talked to.
 
+- Animation can be switched off, and the language can be forced to German or English instead
+  of following Windows.
+
 ### Fixed
 
 - Report buffers follow the length the device reports instead of assuming 65 bytes, and short
   or truncated replies no longer throw while the configuration table is read.
 - A device that fails mid-read, an unreadable state file and a locked down Run key are handled
   instead of ending the process.
+- Drop downs and the settings panel close on a click anywhere else; as modal windows they used
+  to swallow exactly that click.
+- Rounded corners come from the desktop compositor instead of a clipping region, which is what
+  made popups look stair-stepped with black edges.
 
 [1.0.0]: https://github.com/wbgcoding/aura-toggle/releases/tag/v1.0.0

@@ -12,8 +12,13 @@ internal static class Strings
     private static readonly ResourceManager English = new("AuraToggle.Strings", typeof(Strings).Assembly);
     private static readonly ResourceManager German = new("AuraToggle.StringsDe", typeof(Strings).Assembly);
 
+    /// <summary>Empty follows Windows; "de" or "en" force one language.</summary>
+    public static string Override { get; set; } = "";
+
     private static ResourceManager Current =>
-        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "de" ? German : English;
+        (Override.Length > 0 ? Override : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName) == "de"
+            ? German
+            : English;
 
     public static string WindowTitle => Get("WindowTitle");
 
@@ -56,6 +61,16 @@ internal static class Strings
     public static string StartActionNone => Get("StartActionNone");
 
     public static string StartActionOff => Get("StartActionOff");
+
+    public static string SettingAnimate => Get("SettingAnimate");
+
+    public static string SettingLanguage => Get("SettingLanguage");
+
+    public static string LanguageAuto => Get("LanguageAuto");
+
+    public static string LanguageEnglish => Get("LanguageEnglish");
+
+    public static string LanguageGerman => Get("LanguageGerman");
 
     /// <summary>Display name of a lighting effect.</summary>
     public static string Preset(string resourceKey) => Get(resourceKey);

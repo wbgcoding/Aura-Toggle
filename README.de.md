@@ -1,237 +1,195 @@
-# Aura Toggle
+<div align="center">
 
-**Ein Knopf. Die LEDs auf dem ASUS-Mainboard gehen aus. Ohne Armoury Crate, ohne
-Hintergrunddienst, ohne Installation.**
+# 💡 Aura Toggle
 
-*English version: [README.md](README.md)*
+**Mainboard-Beleuchtung aus. Ohne Armoury Crate.**
+
+Eine Datei mit 540 KB · keine Installation · kein Hintergrunddienst · nichts wird ins Board geschrieben
+
+[Download](#-download) · [Kommandozeile](#-kommandozeile) · [Effekte](#-effekte) · [Ist das sicher?](#-ist-das-sicher-für-mein-mainboard) · [English](README.md)
+
+<img src="docs/preview-light.png" alt="Das Aura-Toggle-Fenster" width="360">
+
+</div>
 
 ---
 
-## Das Problem
+## 🌙 Das Problem
 
-Halb zwei nachts. Ein großer Download läuft, ein Render wird fertig, ein Backup arbeitet sich
-durch die Nacht — der Rechner muss anbleiben. Also geht man ins Bett, und die Kiste steht da
-und leuchtet wie eine Jukebox. Die Onboard-Beleuchtung pulsiert an die Decke, der Strip hinter
-dem Gehäuse wirft Farbe an die Wand, und richtig dunkel wird es nie.
+Halb zwei nachts. Ein Download läuft, der PC muss anbleiben — und das Gehäuse leuchtet wie eine
+Jukebox. Du willst die LEDs für die Nacht aus.
 
-Die naheliegende Lösung ist, die Beleuchtung auszuschalten. Weniger naheliegend ist der Preis:
-Der offizielle Weg heißt, eine komplette RGB-Suite zu installieren — mit Hintergrunddienst,
-Autostart-Eintrag, Benutzerkonto, Updater und ein paar hundert Megabyte. Alles nur, um
-gelegentlich einen Wert auf null zu setzen. Viele behalten lieber die leuchtenden LEDs, als
-sich das anzutun. Also bleibt das Licht an. Jede Nacht.
+Die Möglichkeiten bisher:
 
-Über das BIOS geht es auch — aber nur mit Neustart, und dann bleibt es aus bis zum nächsten
-Neustart. Das ist kein Lichtschalter, das ist ein Ritual.
-
-**Aura Toggle ist der fehlende Lichtschalter.** Eine portable Datei mit 300 KB. Starten, Licht
-aus. Nochmal starten, Licht wieder an — genau so wie vorher. Nichts wird installiert, nichts
-läuft im Hintergrund, nichts wird dauerhaft ins Mainboard geschrieben. Datei löschen, und es
-ist, als wäre das Tool nie da gewesen.
+| Weg | Was er kostet |
+|---|---|
+| Armoury Crate | Hintergrunddienst, Autostart, Konto, Updater, hunderte MB |
+| BIOS | Neustart zum Ausschalten. Noch ein Neustart zum Einschalten |
+| **Aura Toggle** | **Ein Klick. Datei löschen, wenn du fertig bist** |
 
 Wer schon mal gedacht hat *„ich will einfach nur heute Nacht die LEDs aus, nicht gleich ein
 ganzes Softwarepaket"* — genau dafür ist das hier.
 
-## Was es macht
+## ✨ Was es kann
 
-- Schaltet **alle** Kanäle des Aura-Controllers: Onboard-Zone, 12-V-RGB-Header und jeden
-  adressierbaren ARGB-Header.
-- Stellt beim Einschalten den zuletzt gesetzten Effekt wieder her.
-- Lässt dich einen der eingebauten Effekte des Controllers wählen — im Fenster oder über die
-  Kommandozeile.
-- Läuft über die Kommandozeile, also auch aus Aufgabenplanung, Verknüpfung oder Skript.
-- Braucht keine Administratorrechte.
-- Spricht Deutsch und Englisch, passend zur Windows-Anzeigesprache.
+- 🔌 Schaltet **alle** Kanäle: Onboard-Zone, 12-V-RGB-Header, jeden adressierbaren ARGB-Header
+- 🎨 Neun eingebaute Effekte mit Farbwahl, sofort wirksam
+- 🖥️ Ein Fenster: ein Knopf, der den **laufenden Effekt animiert** und ihn umschaltet
+- 📌 Lebt im Infobereich, Rechtsklick für An/Aus
+- ⌨️ Vollständige Kommandozeile mit Exit-Codes — Aufgabenplanung, Skripte, Verknüpfungen
+- 🔒 Keine Adminrechte, kein Treiber, kein Netzwerk, keine Telemetrie
+- 🇩🇪 🇬🇧 Deutsch und Englisch
 
-## Was es bewusst nicht macht
+## 📥 Download
 
-Keine eigenen Animationen, keine Profile, kein Tray-Icon, kein Updater, keine Telemetrie,
-überhaupt kein Netzwerkzugriff. Es schaltet die Beleuchtung, wählt einen der Effekte, die der
-Controller ohnehin kann, und setzt dessen Farbe. Das ist der komplette Funktionsumfang, und das
-soll auch so bleiben.
-
-## Loslegen
-
-Entweder die portable `aura.exe` nehmen oder den Installer, ganz wie du magst.
-
-1. `aura.exe` herunterladen und hinlegen, wo du willst — Desktop, Tools-Ordner, USB-Stick.
-   Der Installer legt sie stattdessen unter Programme ab, bietet Autostart und eine
-   Desktop-Verknüpfung an und braucht keine .NET-Runtime, weil er den Standalone-Build enthält.
-2. Doppelklick. Ein kleines Fenster mit einem großen Knopf, der den Zustand zugleich anzeigt
-   und umschaltet — solange die Beleuchtung an ist, animiert der Knopf den laufenden Effekt.
-3. Darunter den Effekt aus der Liste wählen, er wird sofort gesetzt. Effekte mit Farbe zeigen
-   darunter Farbfelder, inklusive freier Farbwahl über den Farbdialog.
-
-Das Zahnrad oben rechts enthält vier Einstellungen: mit Windows starten, minimiert starten,
-beim Schließen nur minimieren, und welcher Zustand beim Start gesetzt wird.
-
-Minimieren schickt das Fenster in den Infobereich der Taskleiste. Rechtsklick auf das Symbol
-dort öffnet ein kleines Menü zum Umschalten, Öffnen und Beenden.
-
-Mehr Einrichtung gibt es nicht.
-
-### Kommandozeile
-
-| Befehl | Wirkung |
-|---|---|
-| `aura` | Öffnet das Umschaltfenster |
-| `aura -off` | Beleuchtung aus |
-| `aura -on` | Beleuchtung zurück auf den zuletzt gesetzten Effekt |
-| `aura -preset <Name>` | Wechselt auf diesen Effekt und schaltet die Beleuchtung ein |
-| `aura -preset <Name> <Farbe>` | Dasselbe mit Farbe, als `#RRGGBB` oder Farbname |
-
-`-on`, `--on`, `/on` und einfach `on` funktionieren alle, Groß- und Kleinschreibung egal.
-Ebenso bei `off` und `preset`.
-
-### Effekte
-
-| Name | Wie es aussieht | Nutzt Farbe |
+| | Größe | Braucht |
 |---|---|---|
-| `static` | Eine feste Farbe | ja |
-| `breathing` | Auf- und abblenden | ja |
-| `flashing` | Blinken | ja |
-| `spectrum-cycle` | Alle LEDs durchlaufen gemeinsam das Farbspektrum | nein |
-| `rainbow` | Farbverlauf, der über die LEDs wandert — der ASUS-Standard | nein |
-| `rainbow-breathing` | Farbwechsel mit Auf- und Abblenden | nein |
-| `chase-fade` | Lauflicht mit ausblendendem Schweif | ja |
-| `chase` | Lauflicht | ja |
-| `wave` | Welle, die über die LEDs läuft | nein |
+| **Portable** `aura.exe` | 540 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| **Installer** x64 / ARM64 | 34 MB / 31 MB | Nichts — die Runtime steckt drin |
 
-Namen werden großzügig erkannt: Groß-/Kleinschreibung, Leerzeichen, Binde- und Unterstriche
-sind egal, also funktionieren `spectrum-cycle`, `"Spectrum Cycle"` und `spectrumcycle`
-gleichermaßen. Die übersetzten Namen aus dem Fenster werden ebenfalls akzeptiert. Ein
-unbekannter Name gibt die vollständige Liste aus.
+Portable: herunterladen, doppelklicken, fertig. Installer: nach Programme, optional Autostart
+und Desktop-Verknüpfung, restlose Deinstallation.
 
-Die mit „nutzt Farbe" markierten Effekte nehmen die Farbe, die du im Fenster wählst oder auf
-der Kommandozeile übergibst; die anderen ignorieren sie und laufen im Spektrum des Controllers.
+## 🚀 Bedienung
 
-Geschwindigkeit oder Richtung gibt es nicht, weil dieser Controller das nicht kann: Der
-Effektbefehl trägt einen Kanal und einen Modus, sonst nichts.
+<img src="docs/preview-dark.png" alt="Dunkles Design" width="360" align="right">
 
-Exit-Codes: `0` Erfolg, `2` unbekanntes Argument, `3` kein Controller gefunden, `4` Controller
-von einem anderen Programm belegt, `5` Kommunikationsfehler. Fehler gehen nach stderr, damit
-Skripte darauf reagieren können.
+1. **Großer Knopf** — zeigt den Zustand und schaltet ihn. Solange die Beleuchtung an ist,
+   animiert er den laufenden Effekt.
+2. **Auswahlliste** — Effekt wählen, wird sofort gesetzt.
+3. **Farbfelder** — erscheinen bei Effekten mit Farbe, inklusive freier Farbwahl.
+4. **⚙️ Zahnrad** — Autostart, minimiert starten, beim Schließen minimieren, Beleuchtung beim
+   Start, Animation an/aus, Sprache.
 
-> **Hinweis zu PowerShell:** `aura.exe` ist eine Fensteranwendung, und darauf wartet PowerShell
-> nicht. Wer den Exit-Code braucht, nutzt
+Minimieren schickt das Fenster in den Infobereich. Rechtsklick auf das Symbol schaltet um,
+öffnet oder beendet.
+
+## ⌨️ Kommandozeile
+
+```bat
+aura                            REM öffnet das Fenster
+aura -off                       REM Beleuchtung aus
+aura -on                        REM zurück auf den letzten Effekt
+aura -preset rainbow            REM Effekt wechseln
+aura -preset static "#20C0FF"   REM Effekt mit Farbe
+```
+
+`-on`, `--on`, `/on`, `on` — alles erlaubt, Groß-/Kleinschreibung egal. Ebenso bei `off` und
+`preset`.
+
+**Exit-Codes:** `0` ok · `2` falsches Argument · `3` kein Controller · `4` Controller belegt ·
+`5` Kommunikationsfehler. Fehler gehen nach stderr.
+
+> ⚠️ **PowerShell** wartet nicht auf Fensteranwendungen. Für den Exit-Code:
 > `Start-Process aura.exe -ArgumentList "-off" -Wait -NoNewWindow`.
 
-### Fertige Verknüpfungen
-
-Neben der Exe liegen zwei Verknüpfungen: **Aura An** und **Aura Aus**. Sie enthalten einen
-relativen Pfad, du kannst den ganzen Ordner also beliebig verschieben oder kopieren, ohne dass
-sie kaputtgehen. Zieh sie auf den Desktop, in die Taskleiste oder ins Startmenü, dann schaltest
-du mit einem Klick.
-
-### Nachts automatisch ausschalten
-
-Windows-Aufgabenplanung, zwei Aufgaben, keine Zusatzsoftware:
+**Nachts automatisch aus:**
 
 ```bat
 schtasks /create /tn "LEDs aus" /tr "C:\tools\aura.exe -off" /sc daily /st 23:30
 schtasks /create /tn "LEDs an"  /tr "C:\tools\aura.exe -on"  /sc daily /st 08:00
 ```
 
-## Voraussetzungen
+Neben der Exe liegen zwei fertige Verknüpfungen, **Aura An** und **Aura Aus**. Sie enthalten
+einen relativen Pfad, der Ordner lässt sich also beliebig verschieben.
 
-- Windows 10 oder Windows 11, 64 Bit.
-- Ein ASUS-Mainboard mit Aura-USB-Beleuchtungscontroller. Boards ab etwa der X470- und
-  Z390-Generation haben einen, aktuelle AM5- und LGA1700-Boards ebenfalls.
-- Die .NET 10 Desktop Runtime für die kleine Variante. Wer gar keine Voraussetzungen will,
-  nimmt den Standalone-Build — deutlich größer, dafür ohne alles.
+## 🎨 Effekte
 
-Entwickelt und geprüft auf einem ROG STRIX Z790-E GAMING WIFI. Das Tool erkennt den Controller
-im Dialog mit dem Gerät statt über eine feste Modellliste, deshalb funktionieren auch nicht
-aufgeführte ASUS-Boards derselben Controller-Familie voraussichtlich.
+| Name | Sieht aus wie | Farbe |
+|---|---|---|
+| `static` | Eine feste Farbe | ✅ |
+| `breathing` | Auf- und abblenden | ✅ |
+| `flashing` | Blinken | ✅ |
+| `spectrum-cycle` | Alle LEDs durchlaufen gemeinsam das Spektrum | — |
+| `rainbow` | Verlauf, der über die LEDs wandert *(ASUS-Standard)* | — |
+| `rainbow-breathing` | Farbwechsel mit Blenden | — |
+| `chase-fade` | Lauflicht mit ausblendendem Schweif | ✅ |
+| `chase` | Lauflicht | ✅ |
+| `wave` | Langsam driftendes Spektrum über den Strip | — |
 
-## Ist das sicher für mein Mainboard?
+Namen werden großzügig erkannt: Groß-/Kleinschreibung, Leerzeichen, Binde- und Unterstriche
+sind egal, die übersetzten Namen funktionieren ebenfalls. Ein unbekannter Name gibt die Liste
+aus.
 
-Ja — und der Grund ist wichtig.
+> Es gibt **keine Geschwindigkeit und keine Richtung**. Der Controller kennt das nicht — sein
+> Effektbefehl trägt einen Kanal und einen Modus, sonst nichts.
 
-Der Aura-Controller hält seine Beleuchtungskonfiguration im eigenen Flash, und dieser Flash ist
-das, was das Mainboard beim Einschalten anwendet. Aura Toggle sendet **nie** den Befehl, der in
-diesen Flash schreibt. Es sendet ausschließlich flüchtige Effektbefehle, die nur im RAM des
-Controllers stehen.
+## 🔒 Ist das sicher für mein Mainboard?
 
-Praktisch heißt das:
+**Ja**, und der Grund ist wichtig.
 
-- Deine BIOS-Beleuchtungseinstellungen bleiben unangetastet.
-- Nach einem Neustart ist die Beleuchtung wieder an, auch wenn du sie vorher ausgeschaltet
-  hattest.
-- Deinstallieren heißt: eine Datei löschen.
+Der Aura-Controller hält seine Konfiguration im eigenen Flash, und dieser Flash ist das, was
+dein Board beim Einschalten anwendet. Aura Toggle sendet **nie den Befehl, der dort
+hineinschreibt**. Nur flüchtige Effektbefehle, die im RAM des Controllers stehen.
 
-Es wird auch kein Kerneltreiber geladen und kein Administratorrecht gebraucht — der Controller
-ist ein normales USB-HID-Gerät, dafür reichen Benutzerrechte.
+- ✅ Deine BIOS-Beleuchtungseinstellungen bleiben unangetastet
+- ✅ Nach einem Neustart ist die Beleuchtung wieder da, auch wenn du sie vorher ausgeschaltet hast
+- ✅ Deinstallieren heißt: eine Datei löschen
+- ✅ Kein Kerneltreiber, keine Adminrechte — es ist ein normales USB-HID-Gerät
 
-## Wenn etwas klemmt
+## 💻 Voraussetzungen
+
+- Windows 10 oder 11, 64 Bit oder ARM64
+- Ein ASUS-Mainboard mit Aura-USB-Controller — ab X470-/Z390-Generation, inklusive aktueller
+  AM5- und LGA1700-Boards
+
+Entwickelt und geprüft auf einem **ROG STRIX Z790-E GAMING WIFI**. Der Controller wird im
+Dialog mit dem Gerät erkannt, nicht über eine Modellliste — nicht aufgeführte ASUS-Boards
+derselben Familie sollten also funktionieren.
+
+## 🛠️ Wenn etwas klemmt
 
 **„Kein AURA-LED-Controller gefunden"**
-Vielleicht hat das Board keinen Aura-USB-Controller, oder die Beleuchtung ist im BIOS
-deaktiviert. Im Geräte-Manager unter „Eingabegeräte (Human Interface Devices)" nach einem Gerät
-mit der Hardware-ID `USB\VID_0B05` schauen.
+Kein Aura-USB-Controller auf dem Board, oder die Beleuchtung ist im BIOS aus. Im Geräte-Manager
+unter „Eingabegeräte" nach der Hardware-ID `USB\VID_0B05` schauen.
 
 **„Der AURA-LED-Controller wird von einem anderen Programm belegt"**
-Armoury Crate, OpenRGB, SignalRGB und ähnliche Tools halten den Controller offen. Das andere
-Programm zuerst beenden — zwei Programme können denselben Beleuchtungscontroller nicht
-gleichzeitig steuern.
+Armoury Crate, OpenRGB oder SignalRGB halten ihn offen. Beenden — zwei Programme können
+denselben Controller nicht gleichzeitig steuern.
 
 **Die Beleuchtung kommt anders zurück**
-Der Controller kann nicht mitteilen, welcher Effekt gerade läuft. Aura Toggle merkt sich daher
-den zuletzt gesetzten Effekt. Beim allerersten Einschalten greift der ASUS-Standard
-(Regenbogen). Ein Neustart holt deine BIOS-Einstellung zurück — oder du wählst den gewünschten
-Effekt einfach in der Auswahlliste.
+Der Controller kann nicht mitteilen, welcher Effekt läuft, das Tool merkt sich also, was es
+zuletzt gesetzt hat. Beim allerersten Einschalten greift der ASUS-Regenbogen. Neustarten oder
+einfach den gewünschten Effekt wählen.
 
-## Selbst bauen
+## 🔨 Selbst bauen
 
-Braucht das .NET 10 SDK.
-
-```bat
-build.bat
-```
-
-Ergebnis ist `dist\aura.exe`. Für eine Variante ohne installierte .NET-Runtime:
+Braucht das .NET 10 SDK. Für die Installer zusätzlich [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 
 ```bat
-build.bat standalone
+build.bat            REM dist\aura.exe, 540 KB
+build.bat standalone REM Standalone, ~120 MB, ohne Runtime lauffähig
+build.bat installer  REM dist\installer\Setup-AuraToggle-<Version>-x64.exe
+build.bat all        REM Portable plus beide Installer
 ```
 
-Und für den Installer, dafür wird [Inno Setup 6](https://jrsoftware.org/isinfo.php) gebraucht:
-
-```bat
-build.bat installer
-build.bat installer win-arm64
-```
-
-In `tests\` liegt eine Regressionssuite. Sie schaltet die Beleuchtung während des Laufs und
-lässt sie danach eingeschaltet:
+Regressionssuite — sie schaltet währenddessen die Beleuchtung und lässt sie danach an:
 
 ```bat
 powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 ```
 
-## Wie es funktioniert
+## ⚙️ Wie es funktioniert
 
-Der Aura-Controller ist ein USB-HID-Gerät. Aura Toggle zählt die HID-Schnittstellen auf, fragt
-jede in Frage kommende nach Firmware-String und Konfigurationstabelle und behält die, die
-korrekt antwortet — deshalb hängt es nicht an einer fest verdrahteten Schnittstellennummer. Aus
-der Konfigurationstabelle liest es, wie viele Beleuchtungskanäle das Board hat, und schickt
-dann pro Kanal einen Effektbefehl.
+Der Controller ist ein USB-HID-Gerät. Aura Toggle zählt die HID-Schnittstellen auf, fragt jede
+in Frage kommende nach Firmware-String und Konfigurationstabelle und behält die, die antwortet
+— deshalb ist keine Schnittstellennummer fest verdrahtet. Die Konfigurationstabelle liefert die
+Kanalaufteilung, ein Effektbefehl pro Kanal erledigt den Rest.
 
-Der einzige Zustand auf deinem Rechner ist eine kleine Datei unter
-`%LOCALAPPDATA%\aura-toggle\state.json` mit dem zuletzt gesetzten Effekt.
+Die Befehle werden getaktet und die Sequenz zweimal gesendet: Der Controller verwirft
+stillschweigend Befehle, die eintreffen, während er noch beschäftigt ist — sonst blieben die
+ARGB-Header an, während die Onboard-Zone schon geschaltet hatte.
 
-Die Befehle werden getaktet und die Schaltsequenz zweimal gesendet. Der Controller verwirft
-stillschweigend Befehle, die eintreffen, während er den vorherigen noch anwendet — sonst
-blieben die ARGB-Header an, während die Onboard-Zone schon geschaltet hatte.
+Der Zustand liegt unter `%LOCALAPPDATA%\aura-toggle` — `state.json` für den letzten Effekt,
+`settings.json` für die Einstellungen. Portable und installierte Variante teilen sie sich.
 
-## Keine Verbindung zu ASUS
+## 📄 Lizenz und Marken
 
-Dies ist ein unabhängiges Projekt. Es stammt nicht von ASUSTeK Computer Inc., wird von dort
-weder unterstützt noch empfohlen. „ASUS", „ROG", „TUF" und „Aura" sind Marken der jeweiligen
-Inhaber und werden hier ausschließlich zur Beschreibung der angesprochenen Hardware verwendet.
-Es wird keine ASUS-Software, kein Treiber und keine Bibliothek verwendet, mitgeliefert oder
-vorausgesetzt.
+MIT, siehe [LICENSE](LICENSE). Die Software kommt **ohne jede Gewähr**, und niemand haftet
+dafür, was sie auf deinem Rechner anstellt.
 
-## Lizenz
-
-MIT, siehe [LICENSE](LICENSE). Insbesondere: Die Software kommt ohne jede Gewähr, und niemand
-haftet dafür, was sie auf deinem Rechner anstellt.
+Dies ist ein unabhängiges Projekt. Es stammt **nicht** von ASUSTeK Computer Inc. und wird von
+dort weder unterstützt noch empfohlen. „ASUS", „ROG", „TUF" und „Aura" sind Marken der
+jeweiligen Inhaber und werden hier ausschließlich zur Beschreibung der angesprochenen Hardware
+verwendet. Es wird keine ASUS-Software, kein Treiber und keine Bibliothek verwendet,
+mitgeliefert oder vorausgesetzt.
