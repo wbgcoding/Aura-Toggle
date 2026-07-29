@@ -17,4 +17,9 @@
     <Description>Switches ASUS Aura mainboard lighting on and off.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Embedded as well as being the executable icon, so the window can show it crisply. -->
+    <EmbeddedResource Include="aura.ico" LogicalName="AuraToggle.aura.ico" />
+  </ItemGroup>
+
 </Project>

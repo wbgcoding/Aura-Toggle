@@ -52,8 +52,9 @@ Funktionsumfang, und das soll auch so bleiben.
 ## Loslegen
 
 1. `aura.exe` herunterladen und hinlegen, wo du willst — Desktop, Tools-Ordner, USB-Stick.
-2. Doppelklick. Ein kleines Fenster zeigt oben einen großen Knopf mit dem aktuellen Zustand und
-   darunter eine Auswahlliste mit den verfügbaren Effekten samt **Setzen**-Knopf.
+2. Doppelklick. Ein kleines Fenster zeigt oben den aktuellen Zustand, den laufenden Effekt und
+   den gefundenen Controller, darunter einen großen Schaltknopf und eine Auswahlliste mit den
+   verfügbaren Effekten samt **Setzen**-Knopf.
 3. Großer Knopf schaltet die Beleuchtung. Effekt auswählen und **Setzen** drücken wechselt ihn.
 
 Mehr Einrichtung gibt es nicht.

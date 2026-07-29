@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace AuraToggle;
 
@@ -37,6 +38,7 @@ internal sealed class AuraDevice : IDisposable
     private const ushort AuraMainboardUsagePage = 0xFF72;
     private const int ReportLength = 65;
     private const int ReplyTimeoutMs = 1000;
+    private const int ReportGapMs = 8;
 
     /// <summary>Aura mainboard and addressable controllers, covering ASUS boards from X470/Z390 onwards.</summary>
     private static readonly ushort[] KnownProductIds =
@@ -129,6 +131,35 @@ internal sealed class AuraDevice : IDisposable
         return devices;
     }
 
+    /// <summary>
+    /// Firmware and channel count of the first controller, or null when none is reachable.
+    /// This is everything the hardware actually reports - the running effect cannot be read.
+    /// </summary>
+    public static (string Firmware, int Channels)? TryDescribe()
+    {
+        List<AuraDevice> devices;
+        try
+        {
+            devices = DiscoverAll();
+        }
+        catch (AuraNotFoundException)
+        {
+            return null;
+        }
+
+        try
+        {
+            return (devices[0].Firmware, devices.Sum(device => device.ChannelCount));
+        }
+        finally
+        {
+            foreach (AuraDevice device in devices)
+            {
+                device.Dispose();
+            }
+        }
+    }
+
     /// <summary>Confirms this interface speaks the Aura protocol and reads its channel layout.</summary>
     private static AuraDevice? TryHandshake(HidStream stream)
     {
@@ -169,18 +200,28 @@ internal sealed class AuraDevice : IDisposable
     /// Applies an effect mode to every channel. Volatile only - without the commit command
     /// the controller keeps its stored configuration and a reboot restores it.
     /// </summary>
+    /// <remarks>
+    /// The whole sequence runs twice. The controller silently drops commands that arrive
+    /// while it is still applying the previous one, which showed up as the onboard zone
+    /// switching while the ARGB headers kept running. Together with the pause between
+    /// reports in <see cref="Write"/> this makes the switch reliable; setting the same mode
+    /// again is idempotent, so the second pass costs nothing but time.
+    /// </remarks>
     public void Apply(byte mode, byte red, byte green, byte blue)
     {
-        foreach (Channel channel in _channels)
+        for (int pass = 0; pass < 2; pass++)
         {
-            if (_addressableOnly)
+            foreach (Channel channel in _channels)
             {
-                Send(CmdAddressableEffect, channel.Index, 0x00, mode, red, green, blue);
-                continue;
-            }
+                if (_addressableOnly)
+                {
+                    Send(CmdAddressableEffect, channel.Index, 0x00, mode, red, green, blue);
+                    continue;
+                }
 
-            Send(CmdMainboardEffect, channel.Index, 0x00, 0x00, mode);
-            SendEffectColor(channel, red, green, blue);
+                Send(CmdMainboardEffect, channel.Index, 0x00, 0x00, mode);
+                SendEffectColor(channel, red, green, blue);
+            }
         }
     }
 
@@ -220,6 +261,10 @@ internal sealed class AuraDevice : IDisposable
         try
         {
             _stream.Write(report);
+
+            // The controller needs a moment between commands, otherwise later channels are
+            // dropped. Eight milliseconds per report keeps a full switch under 150 ms.
+            Thread.Sleep(ReportGapMs);
         }
         catch (IOException ex)
         {

@@ -6,7 +6,7 @@ using System.Text;
 namespace AuraToggle;
 
 /// <summary>One lighting effect the controller can run.</summary>
-internal sealed record AuraPreset(string Key, byte Mode, string ResourceKey)
+internal sealed record AuraPreset(string Key, byte Mode, string ResourceKey, bool UsesColour)
 {
     public string DisplayName => Strings.Preset(ResourceKey);
 
@@ -22,15 +22,15 @@ internal static class AuraPresets
 {
     public static readonly IReadOnlyList<AuraPreset> All = new[]
     {
-        new AuraPreset("static", 1, "PresetStatic"),
-        new AuraPreset("breathing", 2, "PresetBreathing"),
-        new AuraPreset("flashing", 3, "PresetFlashing"),
-        new AuraPreset("spectrum-cycle", 4, "PresetSpectrumCycle"),
-        new AuraPreset("rainbow", 5, "PresetRainbow"),
-        new AuraPreset("rainbow-breathing", 6, "PresetRainbowBreathing"),
-        new AuraPreset("chase-fade", 7, "PresetChaseFade"),
-        new AuraPreset("chase", 9, "PresetChase"),
-        new AuraPreset("wave", 11, "PresetWave"),
+        new AuraPreset("static", 1, "PresetStatic", UsesColour: true),
+        new AuraPreset("breathing", 2, "PresetBreathing", UsesColour: true),
+        new AuraPreset("flashing", 3, "PresetFlashing", UsesColour: true),
+        new AuraPreset("spectrum-cycle", 4, "PresetSpectrumCycle", UsesColour: false),
+        new AuraPreset("rainbow", 5, "PresetRainbow", UsesColour: false),
+        new AuraPreset("rainbow-breathing", 6, "PresetRainbowBreathing", UsesColour: false),
+        new AuraPreset("chase-fade", 7, "PresetChaseFade", UsesColour: true),
+        new AuraPreset("chase", 9, "PresetChase", UsesColour: true),
+        new AuraPreset("wave", 11, "PresetWave", UsesColour: false),
     };
 
     /// <summary>All preset names, for the usage line.</summary>

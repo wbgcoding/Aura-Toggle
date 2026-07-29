@@ -50,8 +50,9 @@ that way.
 ## Getting started
 
 1. Download `aura.exe` and put it anywhere you like — Desktop, a tools folder, a USB stick.
-2. Double click it. A small window opens with a big button showing the current state, and
-   below it a drop down with the available effects plus a **Set** button.
+2. Double click it. A small window opens showing the current state, the running effect and
+   which controller was found, with a big button below it and a drop down of the available
+   effects plus a **Set** button.
 3. Click the big button to switch the lighting. Pick an effect and press **Set** to change it.
 
 That is the entire setup.

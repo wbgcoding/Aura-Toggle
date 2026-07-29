@@ -37,6 +37,16 @@ internal static class Strings
 
     public static string PresetAccessibleName => Get("PresetAccessibleName");
 
+    public static string StatusOn => Get("StatusOn");
+
+    public static string StatusOff => Get("StatusOff");
+
+    public static string StatusEffect => Get("StatusEffect");
+
+    public static string StatusController => Get("StatusController");
+
+    public static string StatusControllerMissing => Get("StatusControllerMissing");
+
     /// <summary>Display name of a lighting effect.</summary>
     public static string Preset(string resourceKey) => Get(resourceKey);
 

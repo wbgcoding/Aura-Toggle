@@ -62,6 +62,21 @@
   <data name="ButtonSet" xml:space="preserve">
     <value>Set</value>
   </data>
+  <data name="StatusOn" xml:space="preserve">
+    <value>Lighting is on</value>
+  </data>
+  <data name="StatusOff" xml:space="preserve">
+    <value>Lighting is off</value>
+  </data>
+  <data name="StatusEffect" xml:space="preserve">
+    <value>Effect: {0}</value>
+  </data>
+  <data name="StatusController" xml:space="preserve">
+    <value>Controller {0} · {1} channels</value>
+  </data>
+  <data name="StatusControllerMissing" xml:space="preserve">
+    <value>No controller found</value>
+  </data>
   <data name="PresetAccessibleName" xml:space="preserve">
     <value>Lighting effect</value>
   </data>
