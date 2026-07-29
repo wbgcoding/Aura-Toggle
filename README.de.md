@@ -101,6 +101,13 @@ Skripte darauf reagieren können.
 > nicht. Wer den Exit-Code braucht, nutzt
 > `Start-Process aura.exe -ArgumentList "-off" -Wait -NoNewWindow`.
 
+### Fertige Verknüpfungen
+
+Neben der Exe liegen zwei Verknüpfungen: **Aura An** und **Aura Aus**. Sie enthalten einen
+relativen Pfad, du kannst den ganzen Ordner also beliebig verschieben oder kopieren, ohne dass
+sie kaputtgehen. Zieh sie auf den Desktop, in die Taskleiste oder ins Startmenü, dann schaltest
+du mit einem Klick.
+
 ### Nachts automatisch ausschalten
 
 Windows-Aufgabenplanung, zwei Aufgaben, keine Zusatzsoftware:
@@ -190,3 +197,15 @@ dann pro Kanal einen Effektbefehl.
 
 Der einzige Zustand auf deinem Rechner ist eine kleine Datei unter
 `%LOCALAPPDATA%\aura-toggle\state.json` mit dem zuletzt gesetzten Effekt.
+
+Die Befehle werden getaktet und die Schaltsequenz zweimal gesendet. Der Controller verwirft
+stillschweigend Befehle, die eintreffen, während er den vorherigen noch anwendet — sonst
+blieben die ARGB-Header an, während die Onboard-Zone schon geschaltet hatte.
+
+## Keine Verbindung zu ASUS
+
+Dies ist ein unabhängiges Projekt. Es stammt nicht von ASUSTeK Computer Inc., wird von dort
+weder unterstützt noch empfohlen. „ASUS", „ROG", „TUF" und „Aura" sind Marken der jeweiligen
+Inhaber und werden hier ausschließlich zur Beschreibung der angesprochenen Hardware verwendet.
+Es wird keine ASUS-Software, kein Treiber und keine Bibliothek verwendet, mitgeliefert oder
+vorausgesetzt.

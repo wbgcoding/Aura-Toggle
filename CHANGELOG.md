@@ -23,10 +23,14 @@ All notable changes to this project are documented here. The format follows
 - Controller detection through the device handshake instead of a fixed interface number, so
   ASUS boards other than the reference board are covered.
 - German and English user interface, following the Windows display language.
+- Two ready-made shortcuts next to the executable, Aura An and Aura Aus, carrying a relative
+  path so the folder can be moved without breaking them.
 - Regression suite in `tests\`.
 - Commands are paced and the switching sequence runs twice, because the controller silently
   drops commands that arrive while it is still busy — that showed up as the onboard zone
   switching while the ARGB headers kept running.
 - `build.bat` producing either a small framework dependent build or a standalone build.
+- Switching runs off the UI thread, so the window keeps painting while the controller is
+  being talked to.
 
 [1.0.0]: https://github.com/wbgcoding/aura-toggle/releases/tag/v1.0.0

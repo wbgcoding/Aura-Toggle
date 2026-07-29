@@ -98,6 +98,12 @@ can react to them.
 > those. If you need the exit code, use
 > `Start-Process aura.exe -ArgumentList "-off" -Wait -NoNewWindow`.
 
+### Ready-made shortcuts
+
+The download contains two shortcuts next to the executable, **Aura An** (on) and **Aura Aus**
+(off). They carry a relative path, so you can move or copy the whole folder anywhere and they
+keep working. Drag them to the desktop, the taskbar or the Start menu for one-click switching.
+
 ### Turn the lights off automatically at night
 
 Windows Task Scheduler, one task, no extra software:
@@ -184,3 +190,14 @@ command per channel.
 
 The only state kept on your machine is a small file at
 `%LOCALAPPDATA%\aura-toggle\state.json`, holding the last effect so it can be restored.
+
+Commands are paced and the switching sequence is sent twice. The controller silently drops
+commands that arrive while it is still applying the previous one, which otherwise left the
+ARGB headers running while the onboard zone had already switched.
+
+## Not affiliated with ASUS
+
+This is an independent project. It is not made, endorsed or supported by ASUSTeK Computer Inc.
+"ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners and are used here
+only to describe which hardware this tool talks to. No ASUS software, driver or library is
+used, bundled or required.

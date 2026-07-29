@@ -116,4 +116,10 @@
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
   </data>
+  <data name="StatusBusy" xml:space="preserve">
+    <value>Switching…</value>
+  </data>
+  <data name="LabelEffect" xml:space="preserve">
+    <value>Effect</value>
+  </data>
 </root>

@@ -19,33 +19,36 @@ internal static class Theme
         }
     }
 
-    public static Color Background => Dark ? Color.FromArgb(30, 31, 34) : Color.FromArgb(245, 246, 248);
+    public static Color Background => Dark ? Color.FromArgb(32, 33, 36) : Color.FromArgb(250, 250, 251);
 
-    public static Color Surface => Dark ? Color.FromArgb(42, 44, 48) : Color.White;
+    public static Color Surface => Dark ? Color.FromArgb(45, 47, 51) : Color.White;
 
-    public static Color Border => Dark ? Color.FromArgb(58, 61, 66) : Color.FromArgb(226, 229, 234);
+    public static Color Border => Dark ? Color.FromArgb(62, 65, 70) : Color.FromArgb(222, 225, 230);
 
-    public static Color Text => Dark ? Color.FromArgb(232, 234, 237) : Color.FromArgb(22, 24, 29);
+    public static Color Text => Dark ? Color.FromArgb(235, 237, 240) : Color.FromArgb(24, 26, 31);
 
-    public static Color TextMuted => Dark ? Color.FromArgb(154, 160, 166) : Color.FromArgb(107, 114, 128);
+    public static Color TextMuted => Dark ? Color.FromArgb(150, 156, 163) : Color.FromArgb(115, 122, 133);
 
-    public static Color Accent => Dark ? Color.FromArgb(77, 139, 255) : Color.FromArgb(37, 99, 235);
+    public static Color Accent => Dark ? Color.FromArgb(90, 150, 255) : Color.FromArgb(37, 99, 235);
 
-    public static Color AccentHover => Dark ? Color.FromArgb(102, 158, 255) : Color.FromArgb(59, 118, 240);
+    public static Color AccentHover => Dark ? Color.FromArgb(112, 168, 255) : Color.FromArgb(55, 117, 246);
 
-    public static Color AccentPressed => Dark ? Color.FromArgb(58, 116, 219) : Color.FromArgb(29, 78, 216);
+    public static Color AccentPressed => Dark ? Color.FromArgb(70, 128, 226) : Color.FromArgb(29, 78, 216);
 
-    public static Color Neutral => Dark ? Color.FromArgb(63, 66, 72) : Color.FromArgb(124, 132, 143);
+    /// <summary>Faint accent wash, used behind the status line and on the secondary button.</summary>
+    public static Color AccentSoft => Dark ? Color.FromArgb(43, 55, 78) : Color.FromArgb(234, 240, 254);
 
-    public static Color NeutralHover => Dark ? Color.FromArgb(74, 78, 85) : Color.FromArgb(140, 148, 159);
+    public static Color AccentSoftHover => Dark ? Color.FromArgb(52, 66, 93) : Color.FromArgb(221, 231, 253);
 
-    public static Color NeutralPressed => Dark ? Color.FromArgb(54, 57, 62) : Color.FromArgb(105, 112, 122);
+    public static Color AccentSoftPressed => Dark ? Color.FromArgb(38, 48, 68) : Color.FromArgb(206, 220, 250);
 
-    public static Color Secondary => Dark ? Color.FromArgb(46, 55, 74) : Color.FromArgb(232, 238, 252);
+    public static Color Neutral => Dark ? Color.FromArgb(68, 71, 77) : Color.FromArgb(134, 142, 153);
 
-    public static Color SecondaryHover => Dark ? Color.FromArgb(56, 67, 90) : Color.FromArgb(219, 229, 250);
+    public static Color NeutralHover => Dark ? Color.FromArgb(79, 83, 90) : Color.FromArgb(148, 156, 167);
 
-    public static Color SecondaryPressed => Dark ? Color.FromArgb(40, 48, 65) : Color.FromArgb(203, 217, 246);
+    public static Color NeutralPressed => Dark ? Color.FromArgb(58, 61, 66) : Color.FromArgb(115, 123, 134);
+
+    public static Color NeutralSoft => Dark ? Color.FromArgb(48, 50, 55) : Color.FromArgb(240, 241, 243);
 
     public static GraphicsPath RoundedRectangle(RectangleF bounds, float radius)
     {
@@ -66,6 +69,49 @@ internal static class Theme
 
         return path;
     }
+
+    /// <summary>
+    /// Colour chip for an effect. Effects that use the stored colour show it, the others show
+    /// a spectrum, because that is what they actually do.
+    /// </summary>
+    public static void PaintSwatch(Graphics g, Rectangle bounds, Color colour, bool spectrum)
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using GraphicsPath path = RoundedRectangle(bounds, 3.5f);
+
+        if (spectrum)
+        {
+            using var brush = new LinearGradientBrush(bounds, Color.Red, Color.Red, LinearGradientMode.Horizontal);
+            brush.InterpolationColors = new ColorBlend
+            {
+                Colors = new[]
+                {
+                    Color.FromArgb(255, 0, 0), Color.FromArgb(255, 255, 0), Color.FromArgb(0, 255, 0),
+                    Color.FromArgb(0, 255, 255), Color.FromArgb(0, 0, 255), Color.FromArgb(255, 0, 255),
+                },
+                Positions = new[] { 0f, 0.2f, 0.4f, 0.6f, 0.8f, 1f },
+            };
+            g.FillPath(brush, path);
+        }
+        else
+        {
+            using var brush = new SolidBrush(colour);
+            g.FillPath(brush, path);
+        }
+
+        using var pen = new Pen(Color.FromArgb(60, 0, 0, 0));
+        g.DrawPath(pen, path);
+    }
+}
+
+/// <summary>Double buffered container, so resizing and repainting never flicker.</summary>
+internal sealed class Layout : TableLayoutPanel
+{
+    public Layout()
+    {
+        DoubleBuffered = true;
+        BackColor = Theme.Background;
+    }
 }
 
 /// <summary>A flat button with rounded corners and hover and pressed states.</summary>
@@ -73,14 +119,16 @@ internal sealed class RoundedButton : Button
 {
     private bool _hovered;
     private bool _pressed;
+    private bool _busy;
 
     public RoundedButton()
     {
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+                 ControlStyles.OptimizedDoubleBuffer, true);
         FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0;
         UseVisualStyleBackColor = false;
+        BackColor = Theme.Background;
     }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -97,6 +145,20 @@ internal sealed class RoundedButton : Button
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color Label { get; set; } = Color.White;
+
+    /// <summary>Dims the button while a switch is running, without changing its colour.</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Busy
+    {
+        get => _busy;
+        set
+        {
+            _busy = value;
+            _hovered = false;
+            _pressed = false;
+            Invalidate();
+        }
+    }
 
     protected override void OnMouseEnter(EventArgs e)
     {
@@ -131,76 +193,58 @@ internal sealed class RoundedButton : Button
     {
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Parent?.BackColor ?? BackColor);
+        g.Clear(BackColor);
 
-        Color fill = !Enabled ? Theme.Neutral : _pressed ? FillPressed : _hovered ? FillHover : Fill;
-        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
-
-        using (GraphicsPath path = Theme.RoundedRectangle(bounds, Radius))
-        using (var brush = new SolidBrush(fill))
+        Color fill = !Enabled ? Theme.NeutralSoft : _pressed ? FillPressed : _hovered ? FillHover : Fill;
+        if (Busy)
         {
+            fill = Blend(fill, BackColor, 0.35f);
+        }
+
+        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        using (GraphicsPath path = Theme.RoundedRectangle(bounds, Radius))
+        {
+            using var brush = new SolidBrush(fill);
             g.FillPath(brush, path);
 
-            if (Focused)
+            if (Focused && Enabled)
             {
-                using var pen = new Pen(Color.FromArgb(120, Theme.Text), 2f);
+                using var pen = new Pen(Color.FromArgb(110, Theme.Text), 2f);
                 g.DrawPath(pen, path);
             }
         }
 
-        TextRenderer.DrawText(g, Text, Font, ClientRectangle, Enabled ? Label : Theme.TextMuted,
+        Color label = !Enabled ? Theme.TextMuted : Busy ? Blend(Label, fill, 0.35f) : Label;
+        TextRenderer.DrawText(g, Text, Font, ClientRectangle, label,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
     }
+
+    private static Color Blend(Color colour, Color towards, float amount) => Color.FromArgb(
+        (int)(colour.R + ((towards.R - colour.R) * amount)),
+        (int)(colour.G + ((towards.G - colour.G) * amount)),
+        (int)(colour.B + ((towards.B - colour.B) * amount)));
 }
 
-/// <summary>A rounded surface panel used to group content.</summary>
-internal sealed class Card : Panel
+/// <summary>Rounded status line: a coloured dot and a short sentence on a tinted background.</summary>
+internal sealed class StatusPill : Control
 {
-    public Card()
+    private Color _dot = Theme.Accent;
+    private Color _tint = Theme.AccentSoft;
+
+    public StatusPill()
     {
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.OptimizedDoubleBuffer, true);
         BackColor = Theme.Background;
+        ForeColor = Theme.Text;
     }
 
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int Radius { get; set; } = 10;
-
-    protected override void OnPaint(PaintEventArgs e)
+    public void Show(string text, Color dot, Color tint, Color foreground)
     {
-        Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Parent?.BackColor ?? BackColor);
-
-        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
-        using GraphicsPath path = Theme.RoundedRectangle(bounds, Radius);
-        using var fill = new SolidBrush(Theme.Surface);
-        using var pen = new Pen(Theme.Border);
-
-        g.FillPath(fill, path);
-        g.DrawPath(pen, path);
-    }
-}
-
-/// <summary>
-/// Small colour indicator. Effects that use the stored colour show it directly, the others
-/// show a spectrum, because that is what they actually do.
-/// </summary>
-internal sealed class Swatch : Control
-{
-    private Color _colour = Color.White;
-    private bool _spectrum;
-
-    public Swatch()
-    {
-        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                 ControlStyles.OptimizedDoubleBuffer, true);
-    }
-
-    public void Show(Color colour, bool spectrum)
-    {
-        _colour = colour;
-        _spectrum = spectrum;
+        Text = text;
+        _dot = dot;
+        _tint = tint;
+        ForeColor = foreground;
         Invalidate();
     }
 
@@ -208,32 +252,24 @@ internal sealed class Swatch : Control
     {
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Parent?.BackColor ?? BackColor);
+        g.Clear(BackColor);
 
-        var bounds = new Rectangle(0, 0, Width - 1, Height - 1);
-        using GraphicsPath path = Theme.RoundedRectangle(bounds, 4);
-
-        if (_spectrum)
+        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        using (GraphicsPath path = Theme.RoundedRectangle(bounds, Height / 2f))
+        using (var brush = new SolidBrush(_tint))
         {
-            using var brush = new LinearGradientBrush(bounds, Color.Red, Color.Red, LinearGradientMode.Horizontal);
-            brush.InterpolationColors = new ColorBlend
-            {
-                Colors = new[]
-                {
-                    Color.FromArgb(255, 0, 0), Color.FromArgb(255, 255, 0), Color.FromArgb(0, 255, 0),
-                    Color.FromArgb(0, 255, 255), Color.FromArgb(0, 0, 255), Color.FromArgb(255, 0, 255),
-                },
-                Positions = new[] { 0f, 0.2f, 0.4f, 0.6f, 0.8f, 1f },
-            };
-            g.FillPath(brush, path);
-        }
-        else
-        {
-            using var brush = new SolidBrush(_colour);
             g.FillPath(brush, path);
         }
 
-        using var pen = new Pen(Theme.Border);
-        g.DrawPath(pen, path);
+        int dotSize = Math.Max(8, Height / 3);
+        int dotY = (Height - dotSize) / 2;
+        using (var brush = new SolidBrush(_dot))
+        {
+            g.FillEllipse(brush, 14, dotY, dotSize, dotSize);
+        }
+
+        var text = new Rectangle(14 + dotSize + 9, 0, Width - (14 + dotSize + 9) - 12, Height);
+        TextRenderer.DrawText(g, Text, Font, text, ForeColor,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
     }
 }

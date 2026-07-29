@@ -141,6 +141,27 @@ Test-Case "a preset survives an off/on round trip" {
     Assert-Equal 9 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
+Write-Host "Shortcuts"
+
+# Do not call the loop variable $name: inside Test-Case that would resolve to its own
+# $Name parameter, which is how this test first went looking for the wrong file.
+foreach ($linkName in "Aura An.lnk", "Aura Aus.lnk") {
+    Test-Case "'$linkName' exists and carries a relative path" {
+        $link = Join-Path (Split-Path $Exe) $linkName
+        if (-not (Test-Path $link)) { throw "shortcut missing at $link" }
+
+        $bytes = [IO.File]::ReadAllBytes($link)
+        $flags = [BitConverter]::ToUInt32($bytes, 20)
+        if (($flags -band 0x08) -eq 0) { throw "no relative path stored, the folder cannot be moved" }
+
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($link)
+        $expected = if ($linkName -eq "Aura An.lnk") { "-on" } else { "-off" }
+        Assert-Equal $expected $shortcut.Arguments "arguments"
+        Assert-Equal (Resolve-Path $Exe).Path $shortcut.TargetPath "target"
+    }
+}
+
 Write-Host "Window"
 
 Test-Case "window opens, closes and leaves no process behind" {

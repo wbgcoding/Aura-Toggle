@@ -41,6 +41,8 @@ mkdir "%OUTDIR%"
 copy /y "%STAGE%\aura.exe" "%OUTDIR%" >nul
 copy /y "%STAGE%\aura.pdb" "%OUTDIR%" >nul
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%tools\make-shortcuts.ps1" -Directory "%OUTDIR%"
+
 echo.
 echo Done: %OUTDIR%\aura.exe
 call :maybepause

@@ -47,6 +47,10 @@ internal static class Strings
 
     public static string StatusControllerMissing => Get("StatusControllerMissing");
 
+    public static string StatusBusy => Get("StatusBusy");
+
+    public static string LabelEffect => Get("LabelEffect");
+
     /// <summary>Display name of a lighting effect.</summary>
     public static string Preset(string resourceKey) => Get(resourceKey);
 
