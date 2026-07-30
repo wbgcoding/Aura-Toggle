@@ -18,8 +18,45 @@ internal sealed class AuraNotFoundException : Exception
     public int ExitCode { get; }
 }
 
-/// <summary>One controller for the per-device selector: a stable key, a display name and its channel count.</summary>
-internal sealed record AuraDeviceSummary(string Key, string Name, int Channels);
+/// <summary>
+/// One switchable channel of a controller. <paramref name="Header"/> is 0 for the fixed
+/// onboard zone and 1..n for the RGB and ARGB headers. Naming is left to the caller, so a
+/// language change relabels the selector without having to talk to the hardware again.
+/// </summary>
+internal sealed record AuraChannel(int Index, bool Onboard, int Header);
+
+/// <summary>One controller for the selector: a stable key, a display name and its channels.</summary>
+internal sealed record AuraDeviceSummary(string Key, string Name, List<AuraChannel> Channels);
+
+/// <summary>
+/// Names a channel for the selector and the preset editor. Kept out of <see cref="AuraDevice"/>
+/// so that a language change can relabel everything without touching the hardware again.
+/// </summary>
+internal static class ChannelLabels
+{
+    /// <param name="withDevice">
+    /// Prefixes the controller's name, for machines that have more than one.
+    /// </param>
+    /// <param name="chosen">
+    /// The chosen names, when labelling several channels in a row - passing them in reads the
+    /// file once instead of once per channel.
+    /// </param>
+    public static string For(AuraDeviceSummary device, AuraChannel channel, bool withDevice,
+        Dictionary<string, string>? chosen = null)
+    {
+        string? own = chosen == null
+            ? AuraChannelNames.Get(device.Key, channel.Index)
+            : AuraChannelNames.Get(chosen, device.Key, channel.Index);
+
+        string name = own ?? (channel.Onboard
+            ? Strings.ChannelOnboard
+            : string.Format(CultureInfo.CurrentCulture, Strings.ChannelHeader, channel.Header));
+
+        return withDevice
+            ? string.Format(CultureInfo.CurrentCulture, Strings.ChannelQualified, device.Name, name)
+            : name;
+    }
+}
 
 /// <summary>
 /// One ASUS Aura USB LED controller. Speaks the vendor HID protocol directly:
@@ -66,24 +103,21 @@ internal sealed class AuraDevice : IDisposable
         int startLed = 0;
         if (mainboardLeds > 0)
         {
-            _channels.Add(new Channel(0, startLed, mainboardLeds));
+            _channels.Add(new Channel(0, startLed, mainboardLeds, Header: 0));
             startLed += mainboardLeds;
         }
 
         for (int i = 0; i < addressableHeaders && _channels.Count < byte.MaxValue; i++)
         {
             // Each addressable header contributes exactly one effect color slot.
-            _channels.Add(new Channel((byte)_channels.Count, startLed, 1));
+            _channels.Add(new Channel((byte)_channels.Count, startLed, 1, Header: i + 1));
             startLed++;
         }
 
-        Firmware = "";
         Name = "";
     }
 
-    private readonly record struct Channel(byte Index, int StartLed, int LedCount);
-
-    public string Firmware { get; private set; }
+    private readonly record struct Channel(byte Index, int StartLed, int LedCount, int Header);
 
     /// <summary>The USB product string when the device exposes one, empty otherwise.</summary>
     public string Name { get; private set; }
@@ -96,15 +130,25 @@ internal sealed class AuraDevice : IDisposable
 
     public int ChannelCount => _channels.Count;
 
+    /// <summary>The channels this controller drives, in the order the protocol addresses them.</summary>
+    public List<AuraChannel> Channels =>
+        _channels.ConvertAll(channel => new AuraChannel(channel.Index, channel.Header == 0, channel.Header));
+
     /// <summary>Every Aura LED controller present. Throws if none answers.</summary>
     public static List<AuraDevice> DiscoverAll()
     {
-        List<HidInfo> candidates = Hid.Enumerate((vid, pid) => vid == VendorId && KnownProductIds.Contains(pid));
+        // One sweep, not two: enumerating opens and queries every HID interface on the machine,
+        // which is the slow part of discovery, and the known and unknown ids were each doing a
+        // full pass of their own.
+        List<HidInfo> present = Hid.Enumerate((vid, _) => vid == VendorId);
+
+        var candidates = new List<HidInfo>();
+        candidates.AddRange(present.Where(info => KnownProductIds.Contains(info.Pid)));
 
         // Unknown product ids are accepted when they expose the Aura vendor usage page, so that
         // newer boards work without a code change. The handshake below still has to succeed.
-        candidates.AddRange(Hid.Enumerate((vid, pid) => vid == VendorId && !KnownProductIds.Contains(pid))
-            .Where(info => info.UsagePage == AuraMainboardUsagePage));
+        candidates.AddRange(present.Where(info =>
+            !KnownProductIds.Contains(info.Pid) && info.UsagePage == AuraMainboardUsagePage));
 
         var devices = new List<AuraDevice>();
         int accessDenied = 0;
@@ -176,7 +220,7 @@ internal sealed class AuraDevice : IDisposable
                     ? device.Name
                     : string.Format(CultureInfo.CurrentCulture, Strings.DeviceFallbackName, ++unnamed);
 
-                summaries.Add(new AuraDeviceSummary(device.Key, name, device.ChannelCount));
+                summaries.Add(new AuraDeviceSummary(device.Key, name, device.Channels));
             }
 
             return summaries;
@@ -211,12 +255,9 @@ internal sealed class AuraDevice : IDisposable
         var configTable = new byte[60];
         configReply.Skip(4).Take(60).ToArray().CopyTo(configTable, 0);
 
-        var device = new AuraDevice(stream, configTable)
-        {
-            Firmware = new string(firmwareReply.Skip(2).Take(16)
-                .TakeWhile(c => c is >= 0x20 and < 0x7F).Select(c => (char)c).ToArray()),
-            Name = stream.Info.Product,
-        };
+        // The firmware string itself is not kept: answering 0x82 at all is the protocol probe,
+        // and nothing in the tool has a use for the version.
+        var device = new AuraDevice(stream, configTable) { Name = stream.Info.Product };
 
         return device.ChannelCount > 0 ? device : null;
     }
@@ -233,9 +274,14 @@ internal sealed class AuraDevice : IDisposable
     }
 
     /// <summary>
-    /// Applies an effect mode to every channel. Volatile only - without the commit command
-    /// the controller keeps its stored configuration and a reboot restores it.
+    /// Applies an effect mode to every channel, or to one of them. Volatile only - without the
+    /// commit command the controller keeps its stored configuration and a reboot restores it.
     /// </summary>
+    /// <param name="channelIndex">
+    /// The single channel to switch, or -1 for all of them. Channels the caller does not name
+    /// are left exactly as they are, which is how one header can run a different effect from
+    /// the rest of the board.
+    /// </param>
     /// <remarks>
     /// The whole sequence runs twice. The controller silently drops commands that arrive
     /// while it is still applying the previous one, which showed up as the onboard zone
@@ -243,12 +289,26 @@ internal sealed class AuraDevice : IDisposable
     /// reports in <see cref="Write"/> this makes the switch reliable; setting the same mode
     /// again is idempotent, so the second pass costs nothing but time.
     /// </remarks>
-    public void Apply(byte mode, byte red, byte green, byte blue)
+    public void Apply(byte mode, byte red, byte green, byte blue, int channelIndex = -1)
     {
+        // The mode arrives from state.json, presets.json or channel-state.json, all of which are
+        // plain text in the user's profile. Only the modes verified on this hardware may be sent -
+        // an unverified number is exactly the fuzzing the project forbids - so anything else
+        // falls back to the ASUS default.
+        if (mode != AuraState.ModeOff && AuraPresets.ByMode(mode) == null)
+        {
+            mode = AuraState.ModeRainbow;
+        }
+
         for (int pass = 0; pass < 2; pass++)
         {
             foreach (Channel channel in _channels)
             {
+                if (channelIndex >= 0 && channel.Index != channelIndex)
+                {
+                    continue;
+                }
+
                 if (_addressableOnly)
                 {
                     Send(CmdAddressableEffect, channel.Index, 0x00, mode, red, green, blue);
@@ -307,8 +367,31 @@ internal sealed class AuraDevice : IDisposable
         Write(report);
     }
 
+    /// <summary>
+    /// The only commands this tool is ever allowed to send. Everything here is verified on the
+    /// reference board and volatile; anything else - above all the commit command 0x3F - writes
+    /// the controller flash and can brick it. Enforced rather than merely documented, so a
+    /// future edit cannot quietly widen it.
+    /// </summary>
+    private static readonly byte[] AllowedCommands =
+    {
+        CmdReadFirmware, CmdReadConfigTable, CmdMainboardEffect, CmdMainboardEffectColor, CmdAddressableEffect,
+    };
+
     private void Write(byte[] report)
     {
+        if (report.Length < 2 || Array.IndexOf(AllowedCommands, report[1]) < 0)
+        {
+            throw new InvalidOperationException(
+                $"Refusing to send command 0x{(report.Length > 1 ? report[1] : 0):X2} to the LED controller.");
+        }
+
+        // Byte 4 of the colour command selects the shutdown effect, which lives in flash.
+        if (report[1] == CmdMainboardEffectColor && report.Length > 4 && report[4] != 0x00)
+        {
+            throw new InvalidOperationException("Refusing to write the shutdown effect to flash.");
+        }
+
         try
         {
             _stream.Write(report);
@@ -320,7 +403,8 @@ internal sealed class AuraDevice : IDisposable
         catch (IOException ex)
         {
             throw new IOException(
-                string.Format(CultureInfo.InvariantCulture, Strings.ErrorWriteFailed, report[1].ToString("X2"), ex.Message),
+                string.Format(CultureInfo.CurrentCulture, Strings.ErrorWriteFailed,
+                    report[1].ToString("X2", CultureInfo.InvariantCulture), ex.Message),
                 ex);
         }
     }

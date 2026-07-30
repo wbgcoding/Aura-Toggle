@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Drawing.Text;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -12,35 +14,207 @@ namespace AuraToggle;
 /// <summary>Colours and drawing helpers, following the Windows light or dark theme.</summary>
 internal static class Theme
 {
-    public static bool Dark
+    /// <summary>
+    /// What a colour means, rather than what it is. Both palettes are listed in this order, so a
+    /// control's current colour is enough to tell which role it was given - which is what lets
+    /// a whole window be re-coloured after Windows switches theme.
+    /// </summary>
+    private enum Role
     {
-        get
-        {
+        Background,
+        Surface,
+        SurfaceHover,
+        Border,
+        Text,
+        TextMuted,
+        Accent,
+        AccentSoft,
+        Neutral,
+        NeutralSoft,
+        Danger,
+    }
+
+    private static readonly Color[] DarkPalette =
+    {
+        Color.FromArgb(32, 33, 36),    // Background
+        Color.FromArgb(45, 47, 51),    // Surface
+        Color.FromArgb(54, 56, 61),    // SurfaceHover
+        Color.FromArgb(62, 65, 70),    // Border
+        Color.FromArgb(235, 237, 240), // Text
+        Color.FromArgb(150, 156, 163), // TextMuted
+        Color.FromArgb(90, 150, 255),  // Accent
+        Color.FromArgb(43, 55, 78),    // AccentSoft
+        Color.FromArgb(68, 71, 77),    // Neutral
+        Color.FromArgb(48, 50, 55),    // NeutralSoft
+        Color.FromArgb(255, 116, 108), // Danger
+    };
+
+    private static readonly Color[] LightPalette =
+    {
+        Color.FromArgb(250, 250, 251), // Background
+        Color.White,                   // Surface
+        Color.FromArgb(243, 244, 246), // SurfaceHover
+        Color.FromArgb(222, 225, 230), // Border
+        Color.FromArgb(24, 26, 31),    // Text
+        Color.FromArgb(115, 122, 133), // TextMuted
+        Color.FromArgb(37, 99, 235),   // Accent
+        Color.FromArgb(234, 240, 254), // AccentSoft
+        Color.FromArgb(140, 147, 158), // Neutral
+        Color.FromArgb(238, 239, 242), // NeutralSoft
+        Color.FromArgb(198, 40, 40),   // Danger
+    };
+
+    /// <summary>
+    /// The roles a text colour may hold. White is the light theme's surface and also the label
+    /// of a filled accent button, so translating a foreground has to stay out of the fills.
+    /// </summary>
+    private static readonly Role[] InkRoles = { Role.Text, Role.TextMuted, Role.Accent, Role.Danger };
+
+    // Asked once and then remembered: every custom control reads this on every repaint, and the
+    // Windows setting behind it only changes when Forget() is called from the window that heard
+    // the system say so.
+    private static bool? _dark;
+
+    /// <summary>
+    /// The fonts this window uses, shared rather than created per control. Every popup used to
+    /// build its own and none of them were ever released.
+    /// </summary>
+    public static readonly Font Ui = new("Segoe UI", 9F);
+
+    public static readonly Font Menu = new("Segoe UI", 9.5F);
+
+    public static readonly Font Input = new("Segoe UI", 10F);
+
+    public static readonly Font Heading = new("Segoe UI", 11F, FontStyle.Bold);
+
+    /// <summary>The state on the big switch, which is what the window is read from across a room.</summary>
+    public static readonly Font Display = new("Segoe UI", 30F, FontStyle.Bold);
+
+    /// <summary>The label on a panel's primary button.</summary>
+    public static readonly Font Action = new("Segoe UI", 11F, FontStyle.Bold);
+
+    public static bool Dark => _dark ??= SystemDark();
+
+    /// <summary>Forgets the cached theme, so the next read follows Windows again.</summary>
+    public static void Forget() => _dark = null;
+
+    private static bool SystemDark()
+    {
 #pragma warning disable WFO5001 // colour mode support is still marked experimental
-            return Application.IsDarkModeEnabled;
+        // A mode forced through SetColorMode wins, which is what the render checks rely on.
+        // Following the system is the normal case, and then the Windows setting is read directly:
+        // WinForms latches its own dark mode at startup, so asking it would never see a switch.
+        return Application.ColorMode == SystemColorMode.System
+            ? AppsUseDarkTheme()
+            : Application.IsDarkModeEnabled;
 #pragma warning restore WFO5001
+    }
+
+    /// <summary>The Windows "app mode" setting. Its value is 0 for dark, and missing means light.</summary>
+    private static bool AppsUseDarkTheme()
+    {
+        try
+        {
+            return Microsoft.Win32.Registry.GetValue(
+                @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "AppsUseLightTheme", 1) is int light && light == 0;
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or IOException or
+                                       UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 
-    public static Color Background => Dark ? Color.FromArgb(32, 33, 36) : Color.FromArgb(250, 250, 251);
+    private static Color Of(Role role) => (Dark ? DarkPalette : LightPalette)[(int)role];
 
-    public static Color Surface => Dark ? Color.FromArgb(45, 47, 51) : Color.White;
+    public static Color Background => Of(Role.Background);
 
-    public static Color SurfaceHover => Dark ? Color.FromArgb(54, 56, 61) : Color.FromArgb(243, 244, 246);
+    public static Color Surface => Of(Role.Surface);
 
-    public static Color Border => Dark ? Color.FromArgb(62, 65, 70) : Color.FromArgb(222, 225, 230);
+    public static Color SurfaceHover => Of(Role.SurfaceHover);
 
-    public static Color Text => Dark ? Color.FromArgb(235, 237, 240) : Color.FromArgb(24, 26, 31);
+    public static Color Border => Of(Role.Border);
 
-    public static Color TextMuted => Dark ? Color.FromArgb(150, 156, 163) : Color.FromArgb(115, 122, 133);
+    public static Color Text => Of(Role.Text);
 
-    public static Color Accent => Dark ? Color.FromArgb(90, 150, 255) : Color.FromArgb(37, 99, 235);
+    public static Color TextMuted => Of(Role.TextMuted);
 
-    public static Color AccentSoft => Dark ? Color.FromArgb(43, 55, 78) : Color.FromArgb(234, 240, 254);
+    public static Color Accent => Of(Role.Accent);
 
-    public static Color Neutral => Dark ? Color.FromArgb(68, 71, 77) : Color.FromArgb(140, 147, 158);
+    public static Color AccentSoft => Of(Role.AccentSoft);
 
-    public static Color NeutralSoft => Dark ? Color.FromArgb(48, 50, 55) : Color.FromArgb(238, 239, 242);
+    public static Color Neutral => Of(Role.Neutral);
+
+    public static Color NeutralSoft => Of(Role.NeutralSoft);
+
+    /// <summary>For the one thing in this window that cannot be undone: deleting a preset.</summary>
+    public static Color Danger => Of(Role.Danger);
+
+    /// <summary>
+    /// Re-colours a window, everything on it and every panel it owns, after Windows switched
+    /// between light and dark. Controls that paint straight from the palette only need the
+    /// repaint; the colours that were copied into a property at construction are translated by
+    /// role, which is why nothing has to remember what it once asked for.
+    /// </summary>
+    public static void Retint(Form window)
+    {
+        Retint((Control)window, Dark ? LightPalette : DarkPalette, Dark ? DarkPalette : LightPalette);
+
+        foreach (Form owned in window.OwnedForms)
+        {
+            Retint(owned);
+        }
+    }
+
+    /// <summary>The counterpart of a colour from the other theme, for colours held in a field.</summary>
+    public static Color Retint(Color colour) =>
+        Translate(colour, Dark ? LightPalette : DarkPalette, Dark ? DarkPalette : LightPalette, inkOnly: false)
+            ?? colour;
+
+    private static void Retint(Control control, Color[] from, Color[] to)
+    {
+        if (control is FlatControl flat)
+        {
+            // Its background is deliberately inherited, so assigning one here would pin the old
+            // window colour into it; only what it keeps of its own is reset.
+            flat.ApplyTheme();
+        }
+        else if (Translate(control.BackColor, from, to, inkOnly: false) is Color background)
+        {
+            control.BackColor = background;
+        }
+
+        if (Translate(control.ForeColor, from, to, inkOnly: true) is Color foreground)
+        {
+            control.ForeColor = foreground;
+        }
+
+        foreach (Control child in control.Controls)
+        {
+            Retint(child, from, to);
+        }
+
+        control.Invalidate(true);
+    }
+
+    private static Color? Translate(Color colour, Color[] from, Color[] to, bool inkOnly)
+    {
+        for (var role = 0; role < from.Length; role++)
+        {
+            if (inkOnly && Array.IndexOf(InkRoles, (Role)role) < 0)
+            {
+                continue;
+            }
+
+            if (from[role].ToArgb() == colour.ToArgb())
+            {
+                return to[role];
+            }
+        }
+
+        return null;
+    }
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
@@ -179,21 +353,24 @@ internal static class EffectPainter
     private static bool UsesColour(byte mode) => mode is 1 or 2 or 3 or 7 or 9;
 
     /// <summary>
-    /// Fills a shape with the effect as it looks at <paramref name="seconds"/>. With
-    /// <paramref name="animate"/> false, every mode collapses to a single flat fill instead -
-    /// cheaper to paint, and unambiguously reads as paused rather than as a frozen mid-motion
-    /// gradient.
+    /// Draws the effect as it looks at <paramref name="seconds"/>, filling
+    /// <paramref name="bounds"/> edge to edge. With <paramref name="animate"/> false, every
+    /// mode collapses to a single flat fill instead - cheaper to paint, and unambiguously
+    /// reads as paused rather than as a frozen mid-motion gradient.
     /// </summary>
-    public static void Paint(Graphics g, GraphicsPath shape, RectangleF bounds, byte mode, Color colour,
+    /// <remarks>
+    /// Deliberately unclipped. Rounding is applied once, by <see cref="EffectSurface"/>, which
+    /// masks the finished frame through an anti-aliased path. Clipping here instead - as this
+    /// used to - meant a <see cref="Graphics.SetClip(GraphicsPath)"/> region, and a region has
+    /// hard, unsmoothed edges: that was the stair-stepped rim on the button and on the effect
+    /// icons.
+    /// </remarks>
+    public static void Render(Graphics g, RectangleF bounds, byte mode, Color colour,
         double seconds, bool animate = true)
     {
-        Region clip = g.Clip;
-        g.SetClip(shape, CombineMode.Intersect);
-
         if (!animate)
         {
             Fill(g, bounds, mode == 0 ? Theme.Neutral : UsesColour(mode) ? colour : Theme.Accent);
-            g.Clip = clip;
             return;
         }
 
@@ -239,8 +416,6 @@ internal static class EffectPainter
                 Fill(g, bounds, Theme.Neutral);
                 break;
         }
-
-        g.Clip = clip;
     }
 
     private static double Breath(double seconds, double period) =>
@@ -295,7 +470,7 @@ internal static class EffectPainter
         Fill(g, bounds, dim);
 
         float tailWidth = Math.Max(bounds.Width * tail, 10f);
-        float head = (float)(((seconds / 2.4) % 1.0) * (bounds.Width + tailWidth)) - tailWidth;
+        float head = (float)(((seconds / 3.8) % 1.0) * (bounds.Width + tailWidth)) - tailWidth;
 
         // Drawn twice so the comet re-enters on the left exactly as it leaves on the right.
         foreach (float offset in new[] { head, head - bounds.Width - tailWidth })
@@ -313,62 +488,85 @@ internal static class EffectPainter
         }
     }
 
-    /// <summary>Small round icon for the effect list.</summary>
-    public static void PaintIcon(Graphics g, Rectangle bounds, byte mode, Color colour)
+    /// <summary>
+    /// Small round icon for the effect list. Pass a <paramref name="surface"/> to reuse one
+    /// buffer for a whole list; without one it allocates and frees its own.
+    /// </summary>
+    public static void PaintIcon(Graphics g, Rectangle bounds, byte mode, Color colour,
+        EffectSurface? surface = null)
     {
-        Theme.Prepare(g);
-        using GraphicsPath shape = Theme.RoundedRectangle(bounds, bounds.Height / 2f);
-
         // A fixed moment in time that shows each effect at its most recognisable.
-        Paint(g, shape, bounds, mode, colour, seconds: mode switch
+        double seconds = mode switch
         {
             3 => 0.1,
-            7 or 9 => 1.55,
+            7 or 9 => 2.4,
             _ => 0.55,
-        });
+        };
 
-        using var pen = new Pen(Color.FromArgb(46, 0, 0, 0));
-        g.DrawPath(pen, shape);
+        Using(surface, shared => shared.Paint(g, bounds, bounds.Height / 2f, buffer =>
+            Render(buffer, new RectangleF(0, 0, bounds.Width, bounds.Height), mode, colour, seconds),
+            Outline(mode == 0 ? Theme.Neutral : UsesColour(mode) ? colour : Color.FromArgb(90, 150, 255))));
     }
+
+    /// <summary>Runs <paramref name="body"/> with the surface given, or with a throwaway one.</summary>
+    private static void Using(EffectSurface? surface, Action<EffectSurface> body)
+    {
+        if (surface != null)
+        {
+            body(surface);
+            return;
+        }
+
+        using var own = new EffectSurface();
+        body(own);
+    }
+
+    /// <summary>
+    /// A hairline along the icon's edge, but only for an icon that would otherwise disappear into
+    /// the panel it sits on - a white pill on a white window, a near-black one in dark mode. On a
+    /// coloured icon the same line reads as a rim around it, which is what made some of them look
+    /// outlined and others not.
+    /// </summary>
+    private static Color? Outline(Color icon)
+    {
+        double distance = Math.Abs(Luminance(icon) - Luminance(Theme.Surface));
+
+        return distance > 0.22
+            ? null
+            : Theme.Dark ? Color.FromArgb(46, 255, 255, 255) : Color.FromArgb(58, 0, 0, 0);
+    }
+
+    private static double Luminance(Color colour) =>
+        ((colour.R * 0.299) + (colour.G * 0.587) + (colour.B * 0.114)) / 255.0;
 
     /// <summary>
     /// Icon for a custom preset: a small person glyph over the preset's own colour, so it
     /// reads at a glance as user-made rather than as one of the controller's built-in effects.
     /// </summary>
-    public static void PaintUserIcon(Graphics g, Rectangle bounds, Color[] colours)
+    public static void PaintUserIcon(Graphics g, Rectangle bounds, Color[] colours,
+        EffectSurface? surface = null)
     {
-        Theme.Prepare(g);
-        using GraphicsPath shape = Theme.RoundedRectangle(bounds, bounds.Height / 2f);
-
         Color background = colours.Length > 0 ? colours[0] : Theme.Accent;
-        using (var fill = new SolidBrush(background))
+        Color ink = Luminance(background) > 0.6 ? Color.FromArgb(215, 20, 20, 24) : Color.FromArgb(235, 255, 255, 255);
+
+        Using(surface, shared => shared.Paint(g, bounds, bounds.Height / 2f, buffer =>
         {
-            g.FillPath(fill, shape);
-        }
+            using (var fill = new SolidBrush(background))
+            {
+                buffer.FillRectangle(fill, 0, 0, bounds.Width, bounds.Height);
+            }
 
-        double luminance = ((background.R * 0.299) + (background.G * 0.587) + (background.B * 0.114)) / 255.0;
-        Color ink = luminance > 0.6 ? Color.FromArgb(215, 20, 20, 24) : Color.FromArgb(235, 255, 255, 255);
+            float cx = bounds.Width / 2f;
+            float headRadius = bounds.Height * 0.19f;
+            float headCy = bounds.Height * 0.34f;
+            float shoulderWidth = bounds.Height * 0.66f;
+            float shoulderHeight = bounds.Height * 0.72f;
 
-        Region clip = g.Clip;
-        g.SetClip(shape, CombineMode.Intersect);
-
-        float cx = bounds.X + (bounds.Width / 2f);
-        float headRadius = bounds.Height * 0.19f;
-        float headCy = bounds.Y + (bounds.Height * 0.34f);
-        float shoulderWidth = bounds.Height * 0.66f;
-        float shoulderHeight = bounds.Height * 0.72f;
-
-        using (var brush = new SolidBrush(ink))
-        {
-            g.FillEllipse(brush, cx - headRadius, headCy - headRadius, headRadius * 2, headRadius * 2);
-            g.FillEllipse(brush, cx - (shoulderWidth / 2f), bounds.Bottom - shoulderHeight + 2,
+            using var brush = new SolidBrush(ink);
+            buffer.FillEllipse(brush, cx - headRadius, headCy - headRadius, headRadius * 2, headRadius * 2);
+            buffer.FillEllipse(brush, cx - (shoulderWidth / 2f), bounds.Height - shoulderHeight + 2,
                 shoulderWidth, shoulderHeight);
-        }
-
-        g.Clip = clip;
-
-        using var pen = new Pen(Color.FromArgb(46, 0, 0, 0));
-        g.DrawPath(pen, shape);
+        }, Outline(background)));
     }
 
     /// <summary>An ordinary gear: eight teeth around a ring with an open centre.</summary>
@@ -403,6 +601,93 @@ internal static class EffectPainter
         centre.Y + (float)(Math.Sin(angle) * radius));
 }
 
+/// <summary>
+/// Draws a rounded shape whose contents take several passes, with exactly one anti-aliased
+/// edge. The passes go into an offscreen buffer first, and the finished frame is then masked
+/// through the rounded path in a single fill.
+/// </summary>
+/// <remarks>
+/// This is what keeps the button and the effect icons smooth. Painting straight onto the
+/// control needed a clip region for the rounding, and a region is not anti-aliased at all;
+/// layering a second pass (the label wash, the busy dim) over the same path afterwards then
+/// blended into the edge pixels again and left a dark rim outside it. One buffer, one masked
+/// fill, no matter how many passes the effect itself takes.
+/// </remarks>
+internal sealed class EffectSurface : IDisposable
+{
+    private Bitmap? _buffer;
+
+    /// <summary>Rounds <paramref name="bounds"/> itself, for callers that need no path of their own.</summary>
+    /// <param name="outline">
+    /// Optional hairline along the inside of the edge, so a pale icon still reads on a pale
+    /// window. Drawn into the buffer rather than over the finished shape: a stroke on top would
+    /// blend into the anti-aliased edge and fringe it.
+    /// </param>
+    public void Paint(Graphics g, Rectangle bounds, float radius, Action<Graphics> draw, Color? outline = null)
+    {
+        using GraphicsPath shape = Theme.RoundedRectangle(bounds, radius);
+
+        Paint(g, shape, bounds, surface =>
+        {
+            draw(surface);
+
+            if (outline is not Color colour)
+            {
+                return;
+            }
+
+            using GraphicsPath inner = Theme.RoundedRectangle(
+                new RectangleF(0.5f, 0.5f, bounds.Width - 1f, bounds.Height - 1f), radius);
+            using var pen = new Pen(colour, 1.2f);
+            surface.DrawPath(pen, inner);
+        });
+    }
+
+    /// <summary>
+    /// Hands <paramref name="draw"/> a surface the size of <paramref name="bounds"/>, with the
+    /// origin at its top left, and masks the result through <paramref name="shape"/>.
+    /// </summary>
+    public void Paint(Graphics g, GraphicsPath shape, Rectangle bounds, Action<Graphics> draw)
+    {
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return;
+        }
+
+        if (_buffer == null || _buffer.Width < bounds.Width || _buffer.Height < bounds.Height)
+        {
+            _buffer?.Dispose();
+            _buffer = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppPArgb);
+        }
+
+        using (Graphics surface = Graphics.FromImage(_buffer))
+        {
+            Theme.Prepare(surface);
+
+            // The buffer is reused and can be larger than this shape, so it starts empty rather
+            // than showing whatever the last, bigger caller left in it.
+            surface.Clear(Color.Transparent);
+            draw(surface);
+        }
+
+        using var brush = new TextureBrush(_buffer, WrapMode.Clamp);
+        brush.TranslateTransform(bounds.X, bounds.Y);
+
+        // The buffer is already at the target scale, so sampling it 1:1 keeps it pin sharp;
+        // only the path's own edge is smoothed.
+        InterpolationMode interpolation = g.InterpolationMode;
+        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+        g.FillPath(brush, shape);
+        g.InterpolationMode = interpolation;
+    }
+
+    public void Dispose()
+    {
+        _buffer?.Dispose();
+        _buffer = null;
+    }
+}
+
 /// <summary>Double buffered container, so resizing and repainting never flicker.</summary>
 internal sealed class Layout : TableLayoutPanel
 {
@@ -423,13 +708,24 @@ internal abstract class FlatControl : Control
     {
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-        BackColor = Theme.Background;
+
+        // BackColor is deliberately left alone so it keeps inheriting from whatever this sits
+        // on. Pinning it to the window colour painted that colour into the corners outside the
+        // rounded shape, which on a panel of a different shade showed up as a square halo -
+        // the "ugly border" around buttons inside the popups.
         ForeColor = Theme.Text;
     }
 
     protected bool Hovered => _hovered;
 
     protected bool Pressed => _pressed;
+
+    /// <summary>
+    /// Called after Windows switched theme. Everything here paints straight from
+    /// <see cref="Theme"/>, so the repaint is all it takes; a control that copies a palette
+    /// colour into a field of its own translates it here.
+    /// </summary>
+    public virtual void ApplyTheme() => Invalidate();
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public int Radius { get; set; } = 10;
@@ -501,5 +797,43 @@ internal abstract class FlatControl : Control
 
         using var pen = new Pen(Color.FromArgb(130, Theme.Accent), 2f);
         g.DrawPath(pen, path);
+    }
+}
+
+/// <summary>
+/// Lets a borderless window be dragged by parts of its own contents. The gesture is handed to
+/// Windows rather than moved from mouse events, so it behaves like any other title bar - it
+/// snaps, it keeps up with the pointer, and releasing it needs no bookkeeping here.
+/// </summary>
+internal static class WindowDrag
+{
+    private const int NonClientLeftButtonDown = 0x00A1;
+    private const int HitCaption = 2;
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
+
+    /// <param name="grips">
+    /// The controls that act as the title bar. Child controls do not pass their mouse events on,
+    /// so anything that should be draggable has to be named here.
+    /// </param>
+    public static void Enable(Form window, params Control[] grips)
+    {
+        foreach (Control grip in grips)
+        {
+            grip.MouseDown += (_, e) =>
+            {
+                if (e.Button != MouseButtons.Left || window.IsDisposed)
+                {
+                    return;
+                }
+
+                ReleaseCapture();
+                SendMessage(window.Handle, NonClientLeftButtonDown, (IntPtr)HitCaption, IntPtr.Zero);
+            };
+        }
     }
 }

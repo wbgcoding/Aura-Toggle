@@ -4,7 +4,7 @@
 
 **Mainboard-Beleuchtung aus. Ohne Armoury Crate.**
 
-Eine Datei mit ~650 KB · keine Installation · kein Hintergrunddienst · nichts wird ins Board geschrieben
+Eine Datei mit ~740 KB · keine Installation · kein Hintergrunddienst · nichts wird ins Board geschrieben
 
 [Download](#-download) · [Kommandozeile](#-kommandozeile) · [Effekte](#-effekte) · [Ist das sicher?](#-ist-das-sicher-für-mein-mainboard) · [English](README.md)
 
@@ -33,9 +33,10 @@ Schalter wert ist.
 ## ✨ Was es kann
 
 - 🔌 Schaltet **alle** Kanäle: Onboard-Zone, 12-V-RGB-Header, jeden adressierbaren ARGB-Header
+- 🎯 Oder **einzelne Kanäle** — Onboard-Zone statisch weiß, während ein ARGB-Header rot atmet
 - 🎨 Neun eingebaute Effekte mit Farbwahl, sofort wirksam
-- 🧩 **Eigene Presets** — Name, ein Effekt und eine Farbe pro Controller, gespeichert und wiederverwendbar
-- 🖧 Bei mehr als einem Controller: gemeinsam oder einzeln schalten
+- 🔆 **Helligkeit** für die Farbeffekte, 10 – 100 %, pro Kanal oder für das ganze Board
+- 🧩 **Eigene Presets** — Name, ein Effekt und eine Farbe pro Kanal, gespeichert und wiederverwendbar
 - 🖥️ Ein Fenster: ein Knopf, der den **laufenden Effekt animiert** und ihn umschaltet
 - 📌 Lebt im Infobereich, Rechtsklick für An/Aus
 - ⌨️ Vollständige Kommandozeile mit Exit-Codes — Aufgabenplanung, Skripte, Verknüpfungen
@@ -46,35 +47,47 @@ Schalter wert ist.
 
 | | Größe | Braucht |
 |---|---|---|
-| **Portable** `Aura Toggle.exe` | ~650 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| **Installer** (x64 und ARM64 in einer Datei) | ~63 MB | Nichts — die Runtime steckt drin |
+| **Portable** `Aura Toggle.exe` | ~740 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| **Installer** (x64 und ARM64 in einer Datei) | ~2,5 MB | Nichts — er holt die Runtime bei Bedarf |
 
-Portable: herunterladen, doppelklicken, fertig. Installer: nach Programme, optional Autostart
-und Desktop-Verknüpfung, restlose Deinstallation.
+Portable: herunterladen, doppelklicken, fertig. Installer: für alle oder nur für dich, optional
+Autostart und Desktop-Verknüpfung, restlose Deinstallation. Fehlt die .NET 10 Desktop Runtime,
+fragt er einmal, lädt sie bei Microsoft herunter und installiert sie — statt 60 MB Runtime in
+jedem Download mitzuschleppen.
 
 ## 🚀 Bedienung
 
 <img src="docs/preview-light.png" alt="Helles Design" width="360" align="right">
 
 1. **Großer Knopf** — zeigt den Zustand und schaltet ihn. Solange die Beleuchtung an ist,
-   animiert er den laufenden Effekt.
-2. **Auswahlliste** — eingebauten Effekt oder gespeichertes eigenes Preset wählen, wird sofort gesetzt.
-3. **Controller-Auswahl** — erscheint erst bei mehr als einem gefundenen Controller, zum
-   gemeinsamen oder einzelnen Schalten.
+   animiert er den laufenden Effekt, Helligkeit inklusive.
+2. **Auswahlliste** — eingebauten Effekt oder gespeichertes eigenes Preset wählen, wird sofort
+   gesetzt. Die letzte Zeile legt ein Preset an; jedes eigene Preset hat ein ✏️ zum Bearbeiten
+   und ein ✕ zum Löschen, das noch einmal nachfragt.
+3. **Kanal-Auswahl** — alle Kanäle oder ein einzelner: die Onboard-Zone, ein ARGB-Header oder
+   ein ganzer Controller, wenn das Board mehrere hat. Beim Überfahren eines Kanals erscheint ein
+   ✏️ zum Umbenennen.
 4. **Farbfelder** — erscheinen bei Effekten mit Farbe, inklusive eigenem Farbwähler.
-5. **⚙️ Zahnrad** — Autostart, minimiert starten, beim Schließen minimieren, Beleuchtung beim
-   Start, Animation an/aus, Sprache, eigene Presets anlegen.
+5. **Helligkeit** — erscheint zusammen mit den Farbfeldern, 10 bis 100 %, und folgt der
+   Kanalauswahl: einen Header allein dimmen oder das ganze Board setzen, was jeden Kanal wieder
+   dem boardweiten Wert überlässt.
+6. **⚙️ Zahnrad** — Autostart, minimiert starten, beim Schließen minimieren, Beleuchtung beim
+   Start, Animation an/aus, Sprache.
 
 Minimieren schickt das Fenster in den Infobereich. Rechtsklick auf das Symbol schaltet um,
 öffnet oder beendet.
 
 ### Eigene Presets
 
-Ein eigenes Preset bündelt einen Effekt und eine Farbe pro Controller unter einem selbst
-gewählten Namen — gedacht für Rechner mit mehr als einem Aura-Controller, die gleichzeitig
-unterschiedlich aussehen sollen. Anlegen über das Zahnrad: benennen, für jeden gefundenen
-Controller Effekt und Farbe wählen, speichern. Danach erscheint es in der Effektliste wie ein
-eingebauter Effekt.
+Ein eigenes Preset bündelt einen Effekt und eine Farbe **pro Kanal** unter einem selbst
+gewählten Namen — die Onboard-Zone statisch weiß, während ein ARGB-Header rot atmet. Anlegen
+über die letzte Zeile der Effektliste: benennen, dann pro Kanal Effekt und Farbe wählen,
+speichern. Jeder Kanal startet mit dem, was gerade läuft, ein Preset für den aktuellen Look
+braucht also keine einzige Änderung. Danach erscheint es in der Effektliste neben einem kleinen
+Personen-Symbol, auf einen Blick von den eingebauten Effekten unterscheidbar. Jeder Kanal hat
+dort auch seine eigene Helligkeit, ein Preset kann also einen Header auf 30 % und den nächsten
+auf voller Helligkeit halten. Das Fenster hat keine eigene Titelleiste, lässt sich aber an seiner
+Überschrift verschieben und steht damit nie im Weg.
 
 ## ⌨️ Kommandozeile
 
@@ -84,11 +97,13 @@ eingebauter Effekt.
 "Aura Toggle.exe" -on                        :: zurück auf den letzten Effekt
 "Aura Toggle.exe" -preset rainbow            :: Effekt wechseln
 "Aura Toggle.exe" -preset static "#20C0FF"   :: Effekt mit Farbe
+"Aura Toggle.exe" -brightness 40             :: Farbeffekte dimmen, 10 bis 100
 ```
 
-`-on`, `--on`, `/on`, `on` — alles erlaubt, Groß-/Kleinschreibung egal. Ebenso bei `off` und
-`preset`. Eigene Presets sind nur im Fenster erreichbar, da sie Bündel pro Controller sind und
-kein einzelner Effekt mit einer Farbe.
+`-on`, `--on`, `/on`, `on` — alles erlaubt, Groß-/Kleinschreibung egal. Ebenso bei `off`,
+`preset` und `brightness`. Eigene Presets und einzelne Kanäle sind nur im Fenster erreichbar:
+ein Preset ist ein Bündel aus Kanälen und kein einzelner Effekt mit Farbe, und ein Kanal bedeutet
+ohne den Controller, zu dem er gehört, nichts.
 
 **Exit-Codes:** `0` ok · `2` falsches Argument · `3` kein Controller · `4` Controller belegt ·
 `5` Kommunikationsfehler. Fehler gehen nach stderr.
@@ -126,6 +141,16 @@ aus.
 
 > Es gibt **keine Geschwindigkeit und keine Richtung**. Der Controller kennt das nicht — sein
 > Effektbefehl trägt einen Kanal und einen Modus, sonst nichts.
+>
+> **Helligkeit** entsteht dadurch, dass die gesendete Farbe skaliert wird, gilt also für die
+> fünf oben mit ✅ markierten Effekte. Die anderen vier erzeugt die Firmware des Controllers
+> selbst; sie nimmt weder Farbe noch Helligkeit an — dimmen lässt sich dort nichts.
+>
+> Effekte lassen sich über die Kanäle **mischen** — ein Header statisch rot, der nächste atmend —
+> aber nur die fünf Farbeffekte. Die anderen vier sind ein Effekt-Generator im Controller, den
+> alle seine Kanäle teilen: setzt man den Regenbogen auf einen Header, läuft er auf allen Headern
+> dieses Controllers. Deshalb bietet das Fenster bei ausgewähltem Einzelkanal nur die fünf an und
+> sagt das auch, statt die Wahl still auf die Nachbarn auszudehnen.
 
 ## 🔒 Ist das sicher für mein Mainboard?
 
@@ -170,10 +195,9 @@ einfach den gewünschten Effekt wählen.
 Braucht das .NET 10 SDK. Für den Installer zusätzlich [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 
 ```bat
-build.bat            :: dist\Aura Toggle.exe, Framework-abhängig
-build.bat standalone  :: Standalone, ohne Runtime lauffähig
-build.bat installer   :: ein Setup für x64 und ARM64
-build.bat all         :: alles, plus dist\release fertig zum Hochladen
+build.bat             :: alles: Portable, Installer, dist\release fertig zum Hochladen
+build.bat portable    :: nur dist\Aura Toggle.exe, x64
+build.bat installer   :: nur das Setup für x64 und ARM64
 ```
 
 Regressionssuite — sie schaltet währenddessen die Beleuchtung und lässt sie danach an:
@@ -194,9 +218,13 @@ Die Befehle werden getaktet und die Sequenz zweimal gesendet: Der Controller ver
 stillschweigend Befehle, die eintreffen, während er noch beschäftigt ist — sonst blieben die
 ARGB-Header an, während die Onboard-Zone schon geschaltet hatte.
 
-Der Zustand liegt unter `%LOCALAPPDATA%\aura-toggle` — `state.json` für den letzten Effekt,
-`settings.json` für die Einstellungen, `presets.json` für eigene Presets. Portable und
-installierte Variante teilen sie sich.
+Der Zustand liegt unter `%LOCALAPPDATA%\aura-toggle` — `state.json` für den letzten Effekt und
+die Helligkeit, `settings.json` für die Einstellungen, `presets.json` für eigene Presets,
+`channel-state.json` für den letzten Stand jedes Kanals samt eigener Helligkeit,
+`channel-names.json` für umbenannte
+Kanäle. Portable und installierte Variante teilen sie sich, jeder Schreibvorgang läuft über eine
+temporäre Datei, damit ein Abbruch keine Datei beschädigt, und die Deinstallation fragt, ob der
+Ordner gelöscht werden soll.
 
 ## 📄 Lizenz und Marken
 

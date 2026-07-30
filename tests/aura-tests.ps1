@@ -8,25 +8,47 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$state = Join-Path $env:LOCALAPPDATA "aura-toggle\state.json"
-$settings = Join-Path $env:LOCALAPPDATA "aura-toggle\settings.json"
+$dataDir = Join-Path $env:LOCALAPPDATA "aura-toggle"
+$state = Join-Path $dataDir "state.json"
+$settings = Join-Path $dataDir "settings.json"
+$presets = Join-Path $dataDir "presets.json"
+$channelState = Join-Path $dataDir "channel-state.json"
 $failed = 0
 
-# The suite must not depend on, or destroy, the settings in use on this machine.
-$settingsBackup = "$settings.testbak"
-if (Test-Path $settings) { Copy-Item $settings $settingsBackup -Force }
-New-Item -ItemType Directory -Force (Split-Path $settings) | Out-Null
-Set-Content -Path $settings -Encoding ascii `
-    -Value '{"startMinimised":false,"minimiseOnClose":false,"startAction":""}'
+if (-not (Test-Path $Exe)) {
+    Write-Host "$Exe not found - run build.bat"
+    exit 1
+}
 
-function Restore-Settings {
-    if (Test-Path $settingsBackup) {
-        Move-Item $settingsBackup $settings -Force
-    }
-    else {
-        Remove-Item $settings -ErrorAction SilentlyContinue
+# Every file the tool writes, not just settings.json: the suite switches the lighting, changes
+# presets and rewrites the per-channel records, so all of them have to come back exactly as they
+# were. Getting this wrong silently destroys the user's presets and channel names.
+$dataFiles = @("state.json", "settings.json", "presets.json", "channel-names.json", "channel-state.json")
+
+New-Item -ItemType Directory -Force $dataDir | Out-Null
+
+$backups = @{}
+foreach ($name in $dataFiles) {
+    $path = Join-Path $dataDir $name
+    $backups[$name] = if (Test-Path $path) { Get-Content $path -Raw -Encoding UTF8 } else { $null }
+}
+
+function Restore-UserData {
+    foreach ($name in $script:dataFiles) {
+        $path = Join-Path $script:dataDir $name
+        $saved = $script:backups[$name]
+        if ($null -eq $saved) {
+            Remove-Item $path -ErrorAction SilentlyContinue
+        }
+        else {
+            # -NoNewline: the tool writes no trailing newline, so this restores it byte for byte.
+            Set-Content -Path $path -Value $saved -Encoding UTF8 -NoNewline
+        }
     }
 }
+
+Set-Content -Path $settings -Encoding ascii `
+    -Value '{"startMinimised":false,"minimiseOnClose":false,"startAction":""}'
 
 function Invoke-Aura {
     param([string[]]$Arguments)
@@ -66,10 +88,7 @@ function Assert-Equal {
     }
 }
 
-if (-not (Test-Path $Exe)) {
-    Write-Host "$Exe not found - run build.bat"
-    exit 1
-}
+try {
 
 Write-Host "Arguments"
 
@@ -146,6 +165,234 @@ Test-Case "a preset takes a colour name" {
 
 Test-Case "an unusable colour exits 2" {
     Assert-Equal 2 (Invoke-Aura @("-preset", "static", "not-a-colour")).ExitCode "exit code"
+}
+
+Write-Host "Brightness"
+
+Test-Case "-brightness sets the stored percentage" {
+    Assert-Equal 0 (Invoke-Aura @("-brightness", "50")).ExitCode "exit code"
+    Assert-Equal 50 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "brightness"
+}
+
+Test-Case "a brightness below the floor is clamped, not rejected" {
+    Assert-Equal 0 (Invoke-Aura @("-brightness", "0")).ExitCode "exit code"
+    Assert-Equal 10 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "brightness"
+}
+
+Test-Case "-brightness 100 is accepted" {
+    Assert-Equal 0 (Invoke-Aura @("-brightness", "100")).ExitCode "exit code"
+    Assert-Equal 100 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "brightness"
+}
+
+foreach ($bad in "101", "255", "abc", "-5") {
+    Test-Case "-brightness $bad exits 2" {
+        Assert-Equal 2 (Invoke-Aura @("-brightness", $bad)).ExitCode "exit code"
+    }
+}
+
+Test-Case "-brightness without a value exits 2" {
+    Assert-Equal 2 (Invoke-Aura @("-brightness")).ExitCode "exit code"
+}
+
+Test-Case "brightness never dims what is stored, only what is sent" {
+    [void](Invoke-Aura @("-brightness", "40"))
+    [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
+
+    # The record has to hold the colour as chosen. Storing the dimmed value would darken the
+    # lighting again on every restore.
+    $stored = Get-Content $state -Raw | ConvertFrom-Json
+    Assert-Equal 32 $stored.red "stored red"
+    Assert-Equal 192 $stored.green "stored green"
+    Assert-Equal 255 $stored.blue "stored blue"
+
+    foreach ($entry in (Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties) {
+        Assert-Equal 32 $entry.Value.red "channel red"
+        Assert-Equal 192 $entry.Value.green "channel green"
+        Assert-Equal 255 $entry.Value.blue "channel blue"
+    }
+
+    [void](Invoke-Aura @("-brightness", "100"))
+}
+
+Test-Case "-brightness while off only stores the percentage" {
+    [void](Invoke-Aura @("-off"))
+    Assert-Equal 0 (Invoke-Aura @("-brightness", "60")).ExitCode "exit code"
+    $stored = Get-Content $state -Raw | ConvertFrom-Json
+    Assert-Equal 60 $stored.brightness "brightness"
+    Assert-Equal $false $stored.on "stored state"
+    [void](Invoke-Aura @("-brightness", "100"))
+}
+
+Write-Host "Per channel state"
+
+Test-Case "-off marks every channel off but keeps its effect and colour" {
+    [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
+    [void](Invoke-Aura @("-off"))
+
+    $entries = @((Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties)
+    if ($entries.Count -eq 0) { throw "no channel records were written" }
+
+    foreach ($entry in $entries) {
+        Assert-Equal $false $entry.Value.on "channel on"
+        Assert-Equal 1 $entry.Value.mode "channel mode kept"
+        Assert-Equal 32 $entry.Value.red "channel colour kept"
+    }
+}
+
+Test-Case "-on brings every channel back on with its own colour" {
+    [void](Invoke-Aura @("-on"))
+    foreach ($entry in (Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties) {
+        Assert-Equal $true $entry.Value.on "channel on"
+        Assert-Equal 32 $entry.Value.red "channel colour"
+    }
+    Assert-Equal $true ((Get-Content $state -Raw | ConvertFrom-Json).on) "board state"
+}
+
+Test-Case "a board-wide brightness hands every channel back to the board" {
+    [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
+    Assert-Equal 0 (Invoke-Aura @("-brightness", "55")).ExitCode "exit code"
+
+    Assert-Equal 55 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "board brightness"
+    foreach ($entry in (Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties) {
+        # 0 means "no brightness of its own", which is what the whole board being set implies.
+        Assert-Equal 0 $entry.Value.brightness "channel brightness"
+    }
+
+    [void](Invoke-Aura @("-brightness", "100"))
+}
+
+Test-Case "a channel keeps its own brightness when its colour changes" {
+    [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
+
+    # The keys are the real device paths, so they are taken from the file the tool just wrote
+    # rather than invented here.
+    $records = Get-Content $channelState -Raw | ConvertFrom-Json
+    $first = @($records.PSObject.Properties)[0]
+    if ($null -eq $first) { throw "no channel records were written" }
+
+    $first.Value.brightness = 40
+    Set-Content -Path $channelState -Value ($records | ConvertTo-Json -Depth 4 -Compress) `
+        -Encoding ascii -NoNewline
+
+    # An effect and a colour carry no brightness, so the one this channel was given has to stay.
+    [void](Invoke-Aura @("-preset", "breathing", "#112233"))
+    $after = (Get-Content $channelState -Raw | ConvertFrom-Json).($first.Name)
+    Assert-Equal 40 $after.brightness "brightness after a colour change"
+    Assert-Equal 2 $after.mode "effect after a colour change"
+
+    # And an off/on round trip must not flatten it either.
+    [void](Invoke-Aura @("-off"))
+    [void](Invoke-Aura @("-on"))
+    Assert-Equal 40 ((Get-Content $channelState -Raw | ConvertFrom-Json).($first.Name).brightness) `
+        "brightness after off and on"
+
+    [void](Invoke-Aura @("-brightness", "100"))
+}
+
+Test-Case "a custom preset applies its own brightness per channel" {
+    [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
+    [void](Invoke-Aura @("-brightness", "100"))
+
+    # The real device key, taken from the file the tool just wrote.
+    $first = @((Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties)[0]
+    if ($null -eq $first) { throw "no channel records were written" }
+    $split = $first.Name -split '\|'
+    $deviceKey = ($split[0..($split.Count - 2)] -join '|')
+    $channel = [int]$split[-1]
+
+    $preset = @{
+        name    = "Testhelligkeit"
+        entries = @(@{
+            deviceKey  = $deviceKey
+            channel    = $channel
+            label      = "x"
+            mode       = 1
+            red        = 32
+            green      = 192
+            blue       = 255
+            brightness = 45
+        })
+    }
+
+    # Wrapped by hand: ConvertTo-Json in Windows PowerShell unwraps a one element array, which
+    # would write an object where the tool expects a list - and be ignored, exactly as intended.
+    Set-Content -Path $presets -Encoding ascii -NoNewline `
+        -Value ("[" + ($preset | ConvertTo-Json -Depth 5 -Compress) + "]")
+
+    $stored = Get-Content $state -Raw | ConvertFrom-Json
+    $stored.customPreset = "Testhelligkeit"
+    $stored.on = $true
+    Set-Content -Path $state -Value ($stored | ConvertTo-Json -Compress) -Encoding ascii -NoNewline
+
+    Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
+    Assert-Equal 45 ((Get-Content $channelState -Raw | ConvertFrom-Json).($first.Name).brightness) `
+        "brightness taken from the preset"
+
+    Set-Content -Path $presets -Value '[]' -Encoding ascii -NoNewline
+    [void](Invoke-Aura @("-brightness", "100"))
+}
+
+Test-Case "a channel record without 'on' counts as on" {
+    # What a file written before channels remembered their power state looks like.
+    Set-Content -Path $channelState -Encoding utf8 `
+        -Value '{"legacy|0":{"mode":1,"red":10,"green":20,"blue":30}}'
+    Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
+    Assert-Equal $true ((Get-Content $state -Raw | ConvertFrom-Json).on) "board state"
+}
+
+Write-Host "Damaged files"
+
+Test-Case "an unusable brightness in a channel record is ignored" {
+    Set-Content -Path $channelState -Encoding ascii -NoNewline `
+        -Value '{"legacy|0":{"mode":1,"red":10,"green":20,"blue":30,"brightness":"loud"}}'
+    Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
+}
+
+foreach ($junk in '[]', '5', '"x"', 'null', '{"broken":', 'not json') {
+    Test-Case "a damaged channel-state.json is ignored ($junk)" {
+        Set-Content -Path $channelState -Value $junk -Encoding ascii -NoNewline
+        Assert-Equal 0 (Invoke-Aura @("-preset", "rainbow")).ExitCode "exit code"
+    }
+
+    Test-Case "a damaged presets.json is ignored ($junk)" {
+        Set-Content -Path $presets -Value $junk -Encoding ascii -NoNewline
+        Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
+    }
+
+    Test-Case "a damaged settings.json still starts ($junk)" {
+        Set-Content -Path $settings -Value $junk -Encoding ascii -NoNewline
+        Assert-Equal 0 (Invoke-Aura @("-preset", "rainbow")).ExitCode "exit code"
+    }
+}
+
+Test-Case "no temporary files are left behind" {
+    $leftovers = @(Get-ChildItem $dataDir -Filter "*.tmp" -ErrorAction SilentlyContinue)
+    Assert-Equal 0 $leftovers.Count "leftover .tmp files"
+}
+
+Test-Case "a custom preset naming a missing controller does not claim success" {
+    Set-Content -Path $presets -Encoding utf8 -Value `
+        '[{"name":"Ghost","entries":[{"deviceKey":"nope","channel":0,"label":"x","mode":1,"red":1,"green":2,"blue":3}]}]'
+    Set-Content -Path $state -Encoding utf8 `
+        -Value '{"on":true,"mode":1,"red":1,"green":2,"blue":3,"customPreset":"Ghost","brightness":100}'
+
+    # Nothing matched, so the restore has to report a missing controller rather than pretend.
+    Assert-Equal 3 (Invoke-Aura @("-on")).ExitCode "exit code"
+}
+
+Test-Case "a remembered preset that no longer exists falls back to a normal restore" {
+    Set-Content -Path $presets -Value '[]' -Encoding ascii -NoNewline
+    Set-Content -Path $state -Encoding utf8 `
+        -Value '{"on":true,"mode":5,"red":255,"green":255,"blue":255,"customPreset":"Gone","brightness":100}'
+    Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
+}
+
+Test-Case "brightness survives an off/on round trip" {
+    [void](Invoke-Aura @("-brightness", "40"))
+    [void](Invoke-Aura @("-off"))
+    [void](Invoke-Aura @("-on"))
+    Assert-Equal 40 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "brightness"
+    [void](Invoke-Aura @("-brightness", "100"))
 }
 
 Write-Host "State"
@@ -231,9 +478,13 @@ Test-Case "window opens, closes and leaves no process behind" {
     Assert-Equal 0 $leftover.Count "leftover processes"
 }
 
-# Leave the machine on the default effect, switched on, with the real settings back.
-[void](Invoke-Aura @("-preset", "rainbow"))
-Restore-Settings
+}
+finally {
+    # Runs even when a test throws or the run is interrupted: leave the machine on the default
+    # effect, switched on, with every one of the user's own files back exactly as it was.
+    [void](Invoke-Aura @("-preset", "rainbow"))
+    Restore-UserData
+}
 
 Write-Host ""
 if ($failed -gt 0) {

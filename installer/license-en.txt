@@ -1,0 +1,49 @@
+﻿Aura Toggle - licence and what it means for you
+
+
+IN SHORT
+
+Aura Toggle is free software. You may use it privately or commercially, pass it on and
+change it. You do not owe anything for it, and nothing is collected from you: the tool has
+no account, no telemetry and no network access of its own.
+
+The only thing asked in return is that the copyright line and this licence stay with the
+software if you pass it on.
+
+
+WHAT IT DOES TO YOUR MAINBOARD
+
+Aura Toggle only sends volatile lighting commands. It never writes to the controller's
+flash memory, so your BIOS lighting settings stay untouched and a restart brings them back.
+It needs no administrator rights and installs no driver and no background service.
+
+That said, this is software talking directly to hardware, and it comes with no warranty of
+any kind. If you do not accept that, do not install it.
+
+
+THIRD PARTY NAMES
+
+This is an independent project. It is not made, endorsed or supported by ASUSTeK Computer
+Inc. "ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners, used here
+only to describe which hardware this software talks to.
+
+
+THE LICENCE ITSELF (MIT)
+
+Copyright (c) 2026 BG Coding
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.

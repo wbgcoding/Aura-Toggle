@@ -11,10 +11,8 @@ namespace AuraToggle;
 
 internal sealed record HidInfo(
     string Path,
-    ushort Vid,
     ushort Pid,
     ushort UsagePage,
-    ushort Usage,
     int InputReportLength,
     int OutputReportLength,
     string Product);
@@ -179,10 +177,8 @@ internal static class Hid
 
             return new HidInfo(
                 path,
-                attributes.VendorID,
                 attributes.ProductID,
                 UsagePage: (ushort)Marshal.ReadInt16(caps, 2),
-                Usage: (ushort)Marshal.ReadInt16(caps, 0),
                 InputReportLength: (ushort)Marshal.ReadInt16(caps, 4),
                 OutputReportLength: (ushort)Marshal.ReadInt16(caps, 6),
                 Product: product);
@@ -207,7 +203,17 @@ internal static class Hid
             throw new HidAccessException(error);
         }
 
-        return new HidStream(handle, info);
+        try
+        {
+            return new HidStream(handle, info);
+        }
+        catch
+        {
+            // Without this the handle would only come back at the next finalizer pass, leaving
+            // the controller open and the next discovery locked out of it.
+            handle.Dispose();
+            throw;
+        }
     }
 }
 
@@ -216,15 +222,25 @@ internal sealed class HidAccessException : IOException
     public HidAccessException(int win32Error)
         : base($"Cannot open the LED controller (Windows error {win32Error}).")
     {
-        Win32Error = win32Error;
     }
-
-    public int Win32Error { get; }
 }
 
 internal sealed class HidStream : IDisposable
 {
+    /// <summary>
+    /// A report is a few dozen bytes to a device on the local bus, so this is not a budget but a
+    /// backstop: a controller that never completes the write would otherwise park the switching
+    /// thread for good, leaving the window permanently busy.
+    /// </summary>
+    private const int WriteTimeoutMs = 3000;
+
     private readonly FileStream _stream;
+
+    /// <summary>
+    /// Set once a read has timed out. The abandoned read still owns the caller's buffer and may
+    /// yet consume the next report, so this stream cannot be trusted for further exchanges.
+    /// </summary>
+    private bool _readAbandoned;
 
     public HidStream(SafeFileHandle handle, HidInfo info)
     {
@@ -238,13 +254,43 @@ internal sealed class HidStream : IDisposable
     /// <summary>Writes one output report. The buffer must start with the report id.</summary>
     public void Write(byte[] report)
     {
-        _stream.Write(report, 0, report.Length);
-        _stream.Flush();
+        var cancel = new CancellationTokenSource();
+        Task write = _stream.WriteAsync(report, 0, report.Length, cancel.Token);
+
+        try
+        {
+            if (!write.Wait(WriteTimeoutMs))
+            {
+                cancel.Cancel();
+                _ = write.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
+                throw new IOException("The LED controller did not accept the report in time.");
+            }
+
+            write.GetAwaiter().GetResult();
+            _stream.Flush();
+        }
+        catch (AggregateException ex)
+        {
+            throw new IOException("Writing to the LED controller failed.", ex.InnerException ?? ex);
+        }
+        finally
+        {
+            if (write.IsCompleted)
+            {
+                cancel.Dispose();
+            }
+        }
     }
 
     /// <summary>Reads one input report. Returns false on timeout or on a device level error.</summary>
     public bool Read(byte[] buffer, int timeoutMs)
     {
+        if (_readAbandoned)
+        {
+            // Reading again would race the previous, still pending read for the same buffer.
+            return false;
+        }
+
         var cancel = new CancellationTokenSource();
         Task<int> read = _stream.ReadAsync(buffer, 0, buffer.Length, cancel.Token);
 
@@ -253,6 +299,7 @@ internal sealed class HidStream : IDisposable
             if (!read.Wait(timeoutMs))
             {
                 cancel.Cancel();
+                _readAbandoned = true;
 
                 // The read is still in flight. Observing it keeps its failure from surfacing
                 // later as an unobserved task exception, and disposes the token source once

@@ -1,0 +1,52 @@
+﻿Aura Toggle - Lizenz und was sie für Sie bedeutet
+
+
+KURZ GESAGT
+
+Aura Toggle ist freie Software. Sie dürfen es privat wie gewerblich nutzen, weitergeben und
+verändern. Es kostet nichts, und es wird nichts von Ihnen erhoben: das Programm hat kein
+Konto, keine Telemetrie und keinen eigenen Netzwerkzugriff.
+
+Erwartet wird nur, dass der Copyright-Hinweis und diese Lizenz bei der Software bleiben,
+wenn Sie sie weitergeben.
+
+
+WAS ES MIT IHREM MAINBOARD MACHT
+
+Aura Toggle sendet ausschließlich flüchtige Beleuchtungsbefehle. Es schreibt nie in den
+Flash-Speicher des Controllers, Ihre BIOS-Einstellungen bleiben also unangetastet und ein
+Neustart holt sie zurück. Es braucht keine Administratorrechte und installiert weder einen
+Treiber noch einen Hintergrunddienst.
+
+Trotzdem gilt: hier spricht Software direkt mit Hardware, und das ohne jede Gewährleistung.
+Wer das nicht akzeptiert, sollte es nicht installieren.
+
+
+FREMDE NAMEN
+
+Dies ist ein unabhängiges Projekt. Es stammt nicht von ASUSTeK Computer Inc. und wird von
+dort weder unterstützt noch empfohlen. "ASUS", "ROG", "TUF" und "Aura" sind Marken ihrer
+jeweiligen Inhaber und werden hier nur genannt, um die Hardware zu beschreiben, mit der
+diese Software spricht.
+
+
+DIE LIZENZ SELBST (MIT)
+
+Maßgeblich ist der englische Originaltext; diese Übersetzung dient nur dem Verständnis.
+
+Copyright (c) 2026 BG Coding
+
+Hiermit wird unentgeltlich jeder Person, die eine Kopie dieser Software und der zugehörigen
+Dokumentationsdateien (die "Software") erhält, die Erlaubnis erteilt, sie uneingeschränkt zu
+nutzen, zu kopieren, zu verändern, zusammenzuführen, zu veröffentlichen, zu verbreiten, zu
+unterlizenzieren und/oder zu verkaufen, und Personen, denen die Software überlassen wird,
+diese Rechte zu gewähren, unter den folgenden Bedingungen:
+
+Der obige Copyright-Hinweis und dieser Erlaubnishinweis sind in allen Kopien oder
+wesentlichen Teilen der Software beizufügen.
+
+DIE SOFTWARE WIRD OHNE JEDE AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG BEREITGESTELLT,
+EINSCHLIESSLICH DER GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT, DER EIGNUNG FÜR EINEN BESTIMMTEN ZWECK
+UND DER NICHTVERLETZUNG VON RECHTEN DRITTER. IN KEINEM FALL HAFTEN DIE AUTOREN ODER
+COPYRIGHT-INHABER FÜR ANSPRÜCHE, SCHÄDEN ODER SONSTIGE VERPFLICHTUNGEN, OB AUS VERTRAG,
+UNERLAUBTER HANDLUNG ODER ANDERWEITIG, DIE SICH AUS DER SOFTWARE ODER IHRER NUTZUNG ERGEBEN.

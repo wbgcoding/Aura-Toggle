@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -17,10 +18,28 @@ namespace AuraToggle;
 /// </summary>
 internal sealed class ToggleForm : Form
 {
+    /// <summary>The drop down entry that opens the editor for a new custom preset.</summary>
+    private const string NewPresetKey = "new-custom-preset";
+
+    private const string CustomPrefix = "custom:";
+    private const string DevicePrefix = "dev:";
+    private const string ChannelPrefix = "ch:";
+
+    /// <summary>How much room the big switch keeps for itself, whatever else the window shows.</summary>
+    private const int ToggleHeight = 96;
+
+    /// <summary>WM_SETTINGCHANGE, which is how a light or dark theme switch arrives.</summary>
+    private const int SettingChange = 0x001A;
+
     private readonly EffectButton _toggle = new();
     private readonly Select _effects = new();
     private readonly Select _channel = new();
     private readonly ColourStrip _colours = new();
+    private readonly Slider _brightness = new();
+    private readonly Label _brightnessValue = new();
+    private readonly Label _brightnessLabel = new();
+    private readonly Layout _brightnessRow;
+    private readonly Layout _topRow;
     private readonly GlyphButton _gear = new();
     private readonly Layout _layout = new();
     private readonly NotifyIcon _tray = new();
@@ -32,6 +51,10 @@ internal sealed class ToggleForm : Form
     private List<AuraDeviceSummary> _devices = new();
     private bool _busy;
     private bool _exiting;
+    private bool _dark = Theme.Dark;
+
+    /// <summary>When the settings panel last closed, so the gear does not immediately reopen it.</summary>
+    private long _settingsClosedAt;
 
     public ToggleForm()
     {
@@ -41,33 +64,44 @@ internal sealed class ToggleForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         Text = Strings.WindowTitle;
         Icon = LoadIcon();
-        ClientSize = new Size(344, 214);
+        ClientSize = new Size(380, 214);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Theme.Background;
         ForeColor = Theme.Text;
-        Font = new Font("Segoe UI", 9F);
+        Font = Theme.Ui;
         Padding = new Padding(16, 14, 16, 14);
         DoubleBuffered = true;
 
         _effects.AccessibleName = Strings.PresetAccessibleName;
         _effects.Dock = DockStyle.Fill;
         _effects.Margin = new Padding(0, 0, 8, 0);
+        _effects.PopupWidth = 252; // room for a preset name next to its edit and delete buttons
         _effects.SelectionChanged += OnEffectChosen;
+        _effects.ActionPicked += (_, _) => OpenPresetEditor(null);
+        _effects.EditRequested += (_, item) => OpenPresetEditor(FindCustomPreset(item.Text));
+        _effects.DeleteRequested += (_, item) => DeleteCustomPreset(item.Text);
 
         _channel.AccessibleName = Strings.ChannelAccessibleName;
-        _channel.Width = 92;
+        _channel.Width = 112; // "Alle Kanäle" has to fit without being cut off
+        _channel.PopupWidth = 210;
         _channel.Margin = new Padding(0, 0, 8, 0);
-        _channel.Visible = false; // shown only once more than one controller is found
-        _channel.SelectionChanged += (_, _) => Render();
+        _channel.Visible = false; // shown once the board has more than one switchable channel
+        _channel.SelectionChanged += (_, _) =>
+        {
+            // Which effects can be offered depends on what is selected, so the list is rebuilt.
+            RefreshEffectItems();
+            Render();
+        };
+        _channel.EditRequested += (_, item) => OpenChannelRename(item);
 
         _gear.AccessibleName = Strings.SettingsAccessibleName;
         _gear.Margin = new Padding(0, 2, 0, 0);
         _gear.Click += OnSettingsClick;
 
         _toggle.Dock = DockStyle.Fill;
-        _toggle.Font = new Font(Font.FontFamily, 16F, FontStyle.Bold);
+        _toggle.Font = Theme.Display;
         _toggle.AccessibleName = Strings.ButtonAccessibleName;
         _toggle.Margin = new Padding(0, 14, 0, 0);
         _toggle.Click += OnToggleClick;
@@ -76,7 +110,42 @@ internal sealed class ToggleForm : Form
         _colours.Margin = new Padding(0, 14, 0, 0);
         _colours.ColourPicked += OnColourPicked;
 
-        var top = new Layout
+        _brightnessLabel.AutoSize = true;
+        _brightnessLabel.Text = Strings.SettingBrightness;
+        _brightnessLabel.ForeColor = Theme.TextMuted;
+        _brightnessLabel.Margin = new Padding(2, 0, 0, 2);
+
+        _brightnessValue.AutoSize = true;
+        _brightnessValue.ForeColor = Theme.TextMuted;
+        _brightnessValue.Margin = new Padding(0, 0, 2, 2);
+
+        _brightness.Dock = DockStyle.Top;
+        _brightness.Minimum = AuraState.MinBrightness;
+        _brightness.Maximum = AuraState.MaxBrightness;
+        _brightness.AccessibleName = Strings.SettingBrightness;
+        _brightness.Margin = new Padding(0);
+        _brightness.ValueChanged += (_, _) => ShowBrightnessValue();
+        _brightness.ValueCommitted += OnBrightnessCommitted;
+
+        _brightnessRow = new Layout
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 2,
+            RowCount = 2,
+            Margin = new Padding(0, 12, 0, 0),
+        };
+        _brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        _brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _brightnessRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _brightnessRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _brightnessRow.Controls.Add(_brightnessLabel, 0, 0);
+        _brightnessRow.Controls.Add(_brightnessValue, 1, 0);
+        _brightnessRow.Controls.Add(_brightness, 0, 1);
+        _brightnessRow.SetColumnSpan(_brightness, 2);
+
+        _topRow = new Layout
         {
             Dock = DockStyle.Fill,
             AutoSize = true,
@@ -85,22 +154,24 @@ internal sealed class ToggleForm : Form
             RowCount = 1,
             Margin = new Padding(0),
         };
-        top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        top.Controls.Add(_effects, 0, 0);
-        top.Controls.Add(_channel, 1, 0);
-        top.Controls.Add(_gear, 2, 0);
+        _topRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        _topRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _topRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _topRow.Controls.Add(_effects, 0, 0);
+        _topRow.Controls.Add(_channel, 1, 0);
+        _topRow.Controls.Add(_gear, 2, 0);
 
         _layout.Dock = DockStyle.Fill;
         _layout.ColumnCount = 1;
-        _layout.RowCount = 3;
+        _layout.RowCount = 4;
         _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // effect list, channel, gear
         _layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // toggle
         _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // colours
-        _layout.Controls.Add(top, 0, 0);
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // brightness
+        _layout.Controls.Add(_topRow, 0, 0);
         _layout.Controls.Add(_toggle, 0, 1);
         _layout.Controls.Add(_colours, 0, 2);
+        _layout.Controls.Add(_brightnessRow, 0, 3);
         Controls.Add(_layout);
 
         RefreshEffectItems();
@@ -129,7 +200,7 @@ internal sealed class ToggleForm : Form
             Renderer = new TrayMenuRenderer(),
             BackColor = Theme.Surface,
             ForeColor = Theme.Text,
-            Font = new Font("Segoe UI", 9.5F),
+            Font = Theme.Menu,
         };
 
         _trayLighting.Click += OnToggleClick;
@@ -162,20 +233,85 @@ internal sealed class ToggleForm : Form
     {
         string? selected = _effects.Selected?.Key;
 
-        IEnumerable<SelectItem> builtIn = AuraPresets.All.Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode));
+        // With a single channel selected, the effects the controller generates itself are left
+        // out: it runs them across all of its channels at once, so offering them here would
+        // silently change the other headers too. The one already running stays listed, otherwise
+        // the closed control could not show what the channel is doing.
+        bool oneChannel = Target.Channel >= 0;
+        byte running = Displayed.Mode;
+
+        var effects = AuraPresets.All
+            .Where(p => !oneChannel || p.PerChannel || p.Mode == running)
+            .Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode))
+            .ToList();
+
+        if (oneChannel && effects.Count < AuraPresets.All.Count)
+        {
+            effects.Add(new SelectItem("channel-effect-hint", Strings.ChannelEffectHint, null, IsHint: true));
+        }
+
         IEnumerable<SelectItem> custom = AuraCustomPresets.Load().Select(p => new SelectItem(
             CustomKey(p.Name), p.Name, null,
-            p.Entries.Select(e => Color.FromArgb(e.Red, e.Green, e.Blue)).ToArray()));
+            p.Entries.Select(e => Color.FromArgb(e.Red, e.Green, e.Blue)).ToArray(),
+            Editable: true));
 
-        _effects.SetItems(builtIn.Concat(custom));
+        // The last row creates a preset, so the feature lives where the presets themselves are
+        // rather than behind the gear.
+        var create = new SelectItem(NewPresetKey, Strings.ButtonNewCustomPreset, null, IsAction: true);
+
+        _effects.SetItems(effects.Concat(custom).Append(create));
 
         if (selected != null)
         {
             _effects.ShowSelection(selected);
         }
+
+        FitEffectList();
     }
 
-    private static string CustomKey(string name) => "custom:" + name;
+    private static string CustomKey(string name) => CustomPrefix + name;
+
+    private static CustomPreset? FindCustomPreset(string name) =>
+        AuraCustomPresets.Load().Find(p => p.Name == name);
+
+    /// <summary>Opens the editor for a new preset, or for the one the pencil was clicked on.</summary>
+    private void OpenPresetEditor(CustomPreset? preset)
+    {
+        var editor = new CustomPresetEditor(preset, _devices, _state);
+        editor.PresetsChanged += (_, _) =>
+        {
+            RefreshEffectItems();
+            Render();
+        };
+        editor.FormClosed += (_, _) => editor.Dispose();
+
+        editor.Open(new Point(Right + 8, Top), this);
+    }
+
+    /// <summary>
+    /// Deletes a preset the drop down asked to remove. The list there has already made the
+    /// user confirm it.
+    /// </summary>
+    private void DeleteCustomPreset(string name)
+    {
+        List<CustomPreset> presets = AuraCustomPresets.Load();
+        if (presets.RemoveAll(p => p.Name == name) == 0)
+        {
+            return;
+        }
+
+        AuraCustomPresets.Save(presets);
+
+        // The lighting keeps running, but it is no longer a named preset.
+        if (_state.CustomPreset == name)
+        {
+            _state = _state with { CustomPreset = "" };
+            _state.Save();
+        }
+
+        RefreshEffectItems();
+        Render();
+    }
 
     /// <summary>Talking to the controller happens after the window is up, never before.</summary>
     private async void OnShown(object? sender, EventArgs e)
@@ -187,7 +323,12 @@ internal sealed class ToggleForm : Form
             HideToTray();
         }
 
+        // Locked while the first discovery runs. Two discoveries at once fight over the
+        // controller's answers - each one's handshake times out waiting for the other's reply -
+        // and the loser concludes there is no controller at all.
+        SetBusy(true);
         _devices = await Task.Run(AuraDevice.ListDevices);
+        SetBusy(false);
 
         if (_devices.Count == 0)
         {
@@ -196,6 +337,11 @@ internal sealed class ToggleForm : Form
             _effects.Enabled = false;
             _channel.Enabled = false;
             _colours.Enabled = false;
+            _brightness.Enabled = false;
+
+            // The tray entry has to go grey too, or it stays clickable and every click just
+            // raises the same balloon about there being no controller.
+            _trayLighting.Enabled = false;
             return;
         }
 
@@ -205,19 +351,122 @@ internal sealed class ToggleForm : Form
         await ApplyStartAction();
     }
 
+    /// <summary>
+    /// Every switchable target: all channels together, then - on machines with more than one
+    /// controller - each controller as a whole, then every single channel. One controller with
+    /// four channels is exactly the case the old per-controller list had nothing to offer.
+    /// </summary>
     private void SetUpChannelSelector()
     {
+        string? selected = _channel.Selected?.Key;
+        bool several = _devices.Count > 1;
+
         var items = new List<SelectItem> { new(AuraSettings.ChannelAll, Strings.ChannelAll, null) };
-        items.AddRange(_devices.Select(d => new SelectItem(d.Key, d.Name, null)));
+
+        if (several)
+        {
+            items.AddRange(_devices.Select(d => new SelectItem(DevicePrefix + d.Key, d.Name, null)));
+        }
+
+        // Read once for the whole list rather than per channel.
+        Dictionary<string, string> chosen = AuraChannelNames.All();
+
+        foreach (AuraDeviceSummary device in _devices)
+        {
+            items.AddRange(device.Channels.Select(channel => new SelectItem(
+                $"{ChannelPrefix}{device.Key}|{channel.Index}",
+                ChannelLabels.For(device, channel, several, chosen),
+                null, Renamable: true)));
+        }
 
         _channel.SetItems(items);
-        _channel.ShowSelection(AuraSettings.ChannelAll);
-        _channel.Visible = _devices.Count > 1;
+        _channel.ShowSelection(selected ?? AuraSettings.ChannelAll);
+        _channel.Visible = items.Count > 2;
+
+        // Measured from the actual labels: channels can be renamed to anything, and on a
+        // multi-controller board the name is prefixed too, so a fixed width would clip them.
+        if (_channel.Visible)
+        {
+            // Kept as narrow as its own longest label: the effect list takes the rest of the row,
+            // and that is where a long preset name would otherwise be cut off. The list it opens
+            // stays wider than the button, since it has room to spare.
+            _channel.Width = Math.Clamp(_channel.PreferredWidthForItems(withIcon: false) + 6, 92, 190);
+            _channel.PopupWidth = Math.Max(_channel.Width, 200);
+        }
+
+        FitEffectList();
+    }
+
+    /// <summary>
+    /// The effect list takes whatever the row has left. Its own entries are translated, so the
+    /// drop down is opened at least as wide as the longest of them even when the closed control
+    /// has to be narrower.
+    /// </summary>
+    private void FitEffectList() =>
+        _effects.PopupWidth = Math.Clamp(_effects.PreferredWidthForItems() + 52, 252, 340);
+
+    /// <summary>Splits a "ch:&lt;deviceKey&gt;|&lt;index&gt;" key back into its two parts.</summary>
+    private static (string DeviceKey, int Channel)? ParseChannelKey(string key)
+    {
+        if (!key.StartsWith(ChannelPrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        string rest = key[ChannelPrefix.Length..];
+        int separator = rest.LastIndexOf('|');
+        if (separator > 0 && int.TryParse(rest[(separator + 1)..],
+                NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+        {
+            return (rest[..separator], index);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// What the next switch applies to: no key means every controller, a channel of -1 means
+    /// every channel of the one named.
+    /// </summary>
+    private (string? DeviceKey, int Channel) Target
+    {
+        get
+        {
+            if (!_channel.Visible || _channel.Selected?.Key is not string key || key == AuraSettings.ChannelAll)
+            {
+                return (null, -1);
+            }
+
+            if (key.StartsWith(DevicePrefix, StringComparison.Ordinal))
+            {
+                return (key[DevicePrefix.Length..], -1);
+            }
+
+            return ParseChannelKey(key) is (string deviceKey, int channel) ? (deviceKey, channel) : (null, -1);
+        }
+    }
+
+    /// <summary>Opens the small popup that gives one channel a name of its own.</summary>
+    private void OpenChannelRename(SelectItem item)
+    {
+        if (ParseChannelKey(item.Key) is not (string deviceKey, int channelIndex))
+        {
+            return;
+        }
+
+        var popup = new RenamePopup(item.Text);
+        popup.Renamed += (_, name) =>
+        {
+            AuraChannelNames.Set(deviceKey, channelIndex, name);
+            SetUpChannelSelector();
+        };
+        popup.FormClosed += (_, _) => popup.Dispose();
+        popup.Open(_channel.PointToScreen(new Point(0, _channel.Height + 4)), this);
     }
 
     private void UpdateTitle()
     {
-        int channels = _devices.Sum(d => d.Channels);
+        int channels = _devices.Sum(d => d.Channels.Count);
         Text = $"{Strings.WindowTitle} - " + string.Format(CultureInfo.CurrentCulture, Strings.StatusChannels, channels);
     }
 
@@ -238,15 +487,69 @@ internal sealed class ToggleForm : Form
 
     private Color CurrentColour => Color.FromArgb(_state.Red, _state.Green, _state.Blue);
 
-    /// <summary>Null for "all controllers", otherwise the HID key of the one selected.</summary>
-    private string? TargetDeviceKey =>
-        _channel.Visible && _channel.Selected?.Key is string key && key != AuraSettings.ChannelAll ? key : null;
+    /// <summary>
+    /// The effect, colour, power and brightness the window is showing. With a single channel or a
+    /// single controller selected that is what was last set for it, so switching the selector
+    /// brings its own look back; with "all channels" selected it is the global one the toggle and
+    /// the command line share.
+    /// </summary>
+    private (byte Mode, Color Colour, bool On, byte Brightness) Displayed
+    {
+        get
+        {
+            (string? deviceKey, int channel) = Target;
+            if (deviceKey == null)
+            {
+                return (_state.Mode, CurrentColour, _state.On, _state.Brightness);
+            }
+
+            Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
+
+            if (channel >= 0)
+            {
+                return AuraChannelStates.Get(remembered, deviceKey, channel) is ChannelLighting one
+                    ? Look(one)
+                    : (_state.Mode, CurrentColour, _state.On, _state.Brightness);
+            }
+
+            // A whole controller counts as on while any of its channels is, and shows the look of
+            // the first channel that has one of its own.
+            ChannelLighting? first = null;
+            var anyOn = false;
+
+            foreach (AuraChannel own in _devices.Find(d => d.Key == deviceKey)?.Channels ?? new List<AuraChannel>())
+            {
+                if (AuraChannelStates.Get(remembered, deviceKey, own.Index) is not ChannelLighting look)
+                {
+                    // Never set on its own, so it is following the board - which is lit.
+                    anyOn = true;
+                    continue;
+                }
+
+                first ??= look;
+                anyOn |= look.On;
+            }
+
+            return first == null
+                ? (_state.Mode, CurrentColour, _state.On, _state.Brightness)
+                : Look(first with { On = anyOn });
+        }
+    }
+
+    /// <summary>One channel's record as the window shows it, brightness resolved.</summary>
+    private (byte Mode, Color Colour, bool On, byte Brightness) Look(ChannelLighting look) => (
+        look.Mode,
+        Color.FromArgb(look.Red, look.Green, look.Blue),
+        look.On,
+        look.Brightness == 0 ? _state.Brightness : look.Brightness);
 
     private void OnToggleClick(object? sender, EventArgs e)
     {
-        bool target = !_state.On;
-        string? deviceKey = TargetDeviceKey;
-        _ = Run(() => Program.Switch(target, deviceKey));
+        // Switches whatever the button is showing, which for a single channel is that channel
+        // rather than the whole board.
+        bool target = !Displayed.On;
+        (string? deviceKey, int channel) = Target;
+        _ = Run(() => Program.Switch(target, deviceKey, channel));
     }
 
     private void OnEffectChosen(object? sender, EventArgs e)
@@ -256,11 +559,10 @@ internal sealed class ToggleForm : Form
             return;
         }
 
-        if (_effects.Selected.Key.StartsWith("custom:", StringComparison.Ordinal))
+        if (_effects.Selected.Key.StartsWith(CustomPrefix, StringComparison.Ordinal))
         {
-            string name = _effects.Selected.Text;
-            CustomPreset? preset = AuraCustomPresets.Load().Find(p => p.Name == name);
-            if (preset != null)
+            // A custom preset names its own channels, so the selector does not apply to it.
+            if (FindCustomPreset(_effects.Selected.Text) is CustomPreset preset)
             {
                 _ = Run(() => Program.ApplyCustomPreset(preset));
             }
@@ -270,19 +572,37 @@ internal sealed class ToggleForm : Form
 
         if (AuraPresets.Find(_effects.Selected.Key) is AuraPreset built)
         {
-            string? deviceKey = TargetDeviceKey;
-            _ = Run(() => Program.ApplyPreset(built, CurrentColour, deviceKey));
+            // The colour that goes with it is the one on show, which for a single channel is
+            // that channel's own rather than whatever was last set board-wide.
+            Color colour = Displayed.Colour;
+            (string? deviceKey, int channel) = Target;
+            _ = Run(() => Program.ApplyPreset(built, colour, deviceKey, channel));
         }
     }
 
     private void OnColourPicked(object? sender, EventArgs e)
     {
-        if (AuraPresets.ByMode(_state.Mode) is AuraPreset preset && preset.UsesColour)
+        if (AuraPresets.ByMode(Displayed.Mode) is AuraPreset preset && preset.UsesColour)
         {
             Color colour = _colours.Colour;
-            string? deviceKey = TargetDeviceKey;
-            _ = Run(() => Program.ApplyPreset(preset, colour, deviceKey));
+            (string? deviceKey, int channel) = Target;
+            _ = Run(() => Program.ApplyPreset(preset, colour, deviceKey, channel));
         }
+    }
+
+    private void ShowBrightnessValue() => _brightnessValue.Text =
+        string.Format(CultureInfo.CurrentCulture, Strings.BrightnessValue, _brightness.Value);
+
+    /// <summary>
+    /// Sent once the knob is released, for whatever the selector points at - one channel, one
+    /// controller or the whole board, which is also what hands single channels back to the
+    /// board-wide brightness.
+    /// </summary>
+    private void OnBrightnessCommitted(object? sender, EventArgs e)
+    {
+        var percent = (byte)_brightness.Value;
+        (string? deviceKey, int channel) = Target;
+        _ = Run(() => Program.SetBrightness(percent, deviceKey, channel));
     }
 
     /// <summary>
@@ -293,6 +613,14 @@ internal sealed class ToggleForm : Form
         if (_settingsPopup != null)
         {
             _settingsPopup.Close();
+            return;
+        }
+
+        // Pressing the gear while the panel is open deactivates it, so it has already closed and
+        // cleared itself by the time this click arrives - and the guard above would reopen it.
+        // A click that lands right after that close is the second half of the same gesture.
+        if (Environment.TickCount64 - _settingsClosedAt < 250)
+        {
             return;
         }
 
@@ -311,14 +639,10 @@ internal sealed class ToggleForm : Form
                 RefreshTexts();
             }
         };
-        popup.PresetsChanged += (_, _) =>
-        {
-            RefreshEffectItems();
-            Render();
-        };
         popup.FormClosed += (_, _) =>
         {
             _settingsPopup = null;
+            _settingsClosedAt = Environment.TickCount64;
             popup.Dispose();
         };
 
@@ -354,7 +678,43 @@ internal sealed class ToggleForm : Form
             RestoreFromTray();
         }
 
+        // Windows announces a light or dark switch by broadcasting this to every window. The work
+        // is deferred to the message loop rather than done here, so it happens after WinForms has
+        // finished reacting to the same broadcast.
+        if (m.Msg == SettingChange && !IsDisposed &&
+            Marshal.PtrToStringUni(m.LParam) == "ImmersiveColorSet")
+        {
+            BeginInvoke(FollowSystemTheme);
+        }
+
         base.WndProc(ref m);
+    }
+
+    /// <summary>
+    /// Re-colours the window, its panels and the notification area menu after Windows switched
+    /// theme, instead of leaving it half dark until the next start.
+    /// </summary>
+    private void FollowSystemTheme()
+    {
+        Theme.Forget();
+        if (_dark == Theme.Dark)
+        {
+            // Something else about the colour scheme changed - the accent colour, say.
+            return;
+        }
+
+        _dark = Theme.Dark;
+        Theme.Retint(this);
+
+        if (_tray.ContextMenuStrip is ContextMenuStrip menu)
+        {
+            // Not part of the window's own control tree, and it paints from a colour table that is
+            // read per item, so it only needs its own two colours moved over.
+            menu.BackColor = Theme.Surface;
+            menu.ForeColor = Theme.Text;
+        }
+
+        Render();
     }
 
     /// <summary>Sends the window to the notification area, where the tray menu takes over.</summary>
@@ -415,6 +775,11 @@ internal sealed class ToggleForm : Form
         _effects.Enabled = !busy;
         _channel.Enabled = !busy;
         _colours.Enabled = !busy;
+        _brightness.Enabled = !busy;
+
+        // Requests that arrive while a switch is in flight are dropped, so the tray entry says
+        // so instead of looking like it did nothing.
+        _trayLighting.Enabled = !busy && _devices.Count > 0;
         UseWaitCursor = busy;
     }
 
@@ -425,6 +790,8 @@ internal sealed class ToggleForm : Form
         _channel.AccessibleName = Strings.ChannelAccessibleName;
         _gear.AccessibleName = Strings.SettingsAccessibleName;
         _toggle.AccessibleName = Strings.ButtonAccessibleName;
+        _brightnessLabel.Text = Strings.SettingBrightness;
+        _brightness.AccessibleName = Strings.SettingBrightness;
 
         RefreshEffectItems();
         if (_devices.Count > 0)
@@ -449,12 +816,17 @@ internal sealed class ToggleForm : Form
 
     private void Render()
     {
-        Color colour = CurrentColour;
+        (byte mode, Color colour, bool on, byte brightness) = Displayed;
+        bool wholeBoard = Target.DeviceKey == null;
+
         string effectKey;
         string displayName;
         bool usesColour;
 
-        if (_state.CustomPreset.Length > 0)
+        // A custom preset is a bundle across channels, so it only names itself while the
+        // selector is on "all channels"; with one channel picked, that channel's effect is
+        // the honest thing to show.
+        if (wholeBoard && _state.CustomPreset.Length > 0)
         {
             effectKey = CustomKey(_state.CustomPreset);
             displayName = _state.CustomPreset;
@@ -462,15 +834,20 @@ internal sealed class ToggleForm : Form
         }
         else
         {
-            AuraPreset preset = AuraPresets.ByMode(_state.Mode) ?? AuraPresets.All[0];
+            AuraPreset preset = AuraPresets.ByMode(mode) ?? AuraPresets.All[0];
             effectKey = preset.Key;
             displayName = preset.DisplayName;
             usesColour = preset.UsesColour;
         }
 
-        _toggle.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
+        (byte red, byte green, byte blue) = AuraState.Dim(colour.R, colour.G, colour.B, brightness);
+
+        _toggle.Text = on ? Strings.ButtonStateOn : Strings.ButtonStateOff;
         _toggle.Animate = _settings.Animate;
-        _toggle.Show(_state.On, _state.Mode, colour);
+
+        // The button previews what the lighting actually looks like, brightness included; the
+        // chips and the list icons keep showing the pure colour, because that is the choice.
+        _toggle.Show(on, mode, Color.FromArgb(red, green, blue));
 
         _effects.Colour = colour;
         _effects.ShowSelection(effectKey);
@@ -479,12 +856,35 @@ internal sealed class ToggleForm : Form
         _colours.Visible = usesColour;
         _colours.Invalidate();
 
+        _brightness.Value = brightness;
+        ShowBrightnessValue();
+        _brightnessRow.Visible = usesColour;
+
         _trayLighting.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
         _trayLighting.Checked = _state.On;
-        _tray.Text = $"{Strings.WindowTitle} — {(_state.On ? displayName : Strings.ButtonStateOff)}";
+        _tray.Text = $"{Strings.WindowTitle} - {(_state.On ? displayName : Strings.ButtonStateOff)}";
 
-        // The window only reserves room for the chips when an effect actually uses them.
-        int wanted = usesColour ? 218 : 176;
+        ResizeToContent(usesColour);
+    }
+
+    /// <summary>
+    /// Room for the chips and the brightness slider is only reserved for the effects that carry
+    /// a colour - the firmware colours the rest itself, so neither control would do anything
+    /// there. The height is measured rather than hardcoded: at a larger display scale, or in
+    /// German, the rows grow and a fixed number would eat into the button until it collapsed.
+    /// </summary>
+    private void ResizeToContent(bool usesColour)
+    {
+        int wanted = Padding.Vertical
+            + _topRow.PreferredSize.Height
+            + _toggle.Margin.Vertical + ToggleHeight;
+
+        if (usesColour)
+        {
+            wanted += _colours.Height + _colours.Margin.Vertical;
+            wanted += _brightnessRow.PreferredSize.Height + _brightnessRow.Margin.Vertical;
+        }
+
         if (ClientSize.Height != wanted)
         {
             ClientSize = new Size(ClientSize.Width, wanted);

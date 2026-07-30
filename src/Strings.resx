@@ -54,13 +54,10 @@
     <value>Switch mainboard lighting on or off</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: aura [-on | -off | -preset &lt;name&gt; [colour]]   (without an argument the toggle window opens)</value>
+    <value>Usage: aura [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt;]   (without an argument the toggle window opens)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
     <value>Presets: {0}</value>
-  </data>
-  <data name="StatusController" xml:space="preserve">
-    <value>{0} · {1} channels</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>No controller found</value>
@@ -153,13 +150,37 @@
     <value>Aura Controller #{0}</value>
   </data>
   <data name="ChannelAll" xml:space="preserve">
-    <value>All controllers</value>
+    <value>All channels</value>
   </data>
   <data name="ChannelAccessibleName" xml:space="preserve">
-    <value>Which controller to switch</value>
+    <value>Which channel to switch</value>
   </data>
-  <data name="SettingCustomPresets" xml:space="preserve">
-    <value>Custom presets</value>
+  <data name="ChannelOnboard" xml:space="preserve">
+    <value>Onboard</value>
+  </data>
+  <data name="ChannelHeader" xml:space="preserve">
+    <value>ARGB {0}</value>
+  </data>
+  <data name="ChannelQualified" xml:space="preserve">
+    <value>{0} - {1}</value>
+  </data>
+  <data name="ChannelEffectHint" xml:space="preserve">
+    <value>One dynamic effect per controller</value>
+  </data>
+  <data name="ChannelRenameSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ChannelRenameReset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="SettingBrightness" xml:space="preserve">
+    <value>Brightness</value>
+  </data>
+  <data name="ColourAccessibleName" xml:space="preserve">
+    <value>Effect colour</value>
+  </data>
+  <data name="BrightnessValue" xml:space="preserve">
+    <value>{0} %</value>
   </data>
   <data name="ButtonNewCustomPreset" xml:space="preserve">
     <value>New preset</value>
@@ -170,11 +191,26 @@
   <data name="CustomPresetSave" xml:space="preserve">
     <value>Save</value>
   </data>
+  <data name="CustomPresetCreate" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="CustomPresetReplace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
   <data name="CustomPresetDelete" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="CustomPresetConfirmDelete" xml:space="preserve">
+    <value>Delete for good?</value>
+  </data>
+  <data name="CustomPresetDiscard" xml:space="preserve">
+    <value>Discard</value>
+  </data>
   <data name="CustomPresetNew" xml:space="preserve">
-    <value>New</value>
+    <value>New preset</value>
+  </data>
+  <data name="CustomPresetEdit" xml:space="preserve">
+    <value>Edit preset</value>
   </data>
   <data name="CustomPresetNoDevices" xml:space="preserve">
     <value>No controller found.</value>

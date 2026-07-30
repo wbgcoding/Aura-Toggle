@@ -20,7 +20,6 @@ internal sealed class SettingsPopup : Form
     private readonly Select _language = new();
     private readonly Label _startActionLabel;
     private readonly Label _languageLabel;
-    private readonly PillButton _newPreset = new();
     private readonly Layout _layout;
 
     private bool _childOpen;
@@ -35,7 +34,7 @@ internal sealed class SettingsPopup : Form
         StartPosition = FormStartPosition.Manual;
         BackColor = Theme.Surface;
         ForeColor = Theme.Text;
-        Font = new Font("Segoe UI", 9F);
+        Font = Theme.Ui;
         DoubleBuffered = true;
         Padding = new Padding(14, 12, 14, 12);
 
@@ -45,12 +44,12 @@ internal sealed class SettingsPopup : Form
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 9,
+            RowCount = 8,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        for (int row = 0; row < 9; row++)
+        for (int row = 0; row < 8; row++)
         {
             _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
@@ -66,14 +65,6 @@ internal sealed class SettingsPopup : Form
         _languageLabel = AddLabel(6, Strings.SettingLanguage);
         AddSelect(7, _language, Languages(), settings.Language);
 
-        _newPreset.Dock = DockStyle.Top;
-        _newPreset.Height = 32;
-        _newPreset.Text = Strings.ButtonNewCustomPreset;
-        _newPreset.Margin = new Padding(0, 14, 0, 0);
-        _newPreset.Click += (_, _) => OpenPresetEditor(null);
-        _layout.Controls.Add(_newPreset, 0, 8);
-        _layout.SetColumnSpan(_newPreset, 2);
-
         Controls.Add(_layout);
 
         _autoStart.CheckedChanged += (_, _) => AuraSettings.AutoStart = _autoStart.Checked;
@@ -81,16 +72,17 @@ internal sealed class SettingsPopup : Form
         _minimiseOnClose.CheckedChanged += (_, _) => Apply();
         _animate.CheckedChanged += (_, _) => Apply();
 
-        ClientSize = new Size(276, _layout.PreferredSize.Height + Padding.Vertical);
+        // Width measured too, not just height: the labels are translated and do not ellipsise,
+        // so a fixed 276 clipped the longer German ones once the font grew with the display scale.
+        ClientSize = new Size(
+            Math.Max(276, _layout.PreferredSize.Width + Padding.Horizontal),
+            _layout.PreferredSize.Height + Padding.Vertical);
     }
 
     public AuraSettings Settings { get; private set; }
 
     /// <summary>Raised whenever a switch is flipped, because there is no OK button.</summary>
     public event EventHandler<AuraSettings>? Changed;
-
-    /// <summary>Raised after a custom preset was saved or deleted in the editor this opens.</summary>
-    public event EventHandler? PresetsChanged;
 
     protected override CreateParams CreateParams
     {
@@ -171,6 +163,10 @@ internal sealed class SettingsPopup : Form
         toggle.BackColor = Theme.Surface;
         toggle.Margin = new Padding(10, 2, 0, 2);
 
+        // The switch and its label are separate controls, so the switch has to carry the text
+        // itself or a screen reader announces an unnamed checkbox.
+        toggle.AccessibleName = text;
+
         _layout.Controls.Add(label, 0, row);
         _layout.Controls.Add(toggle, 1, row);
     }
@@ -204,7 +200,6 @@ internal sealed class SettingsPopup : Form
     {
         _startActionLabel.Text = Strings.SettingStartAction;
         _languageLabel.Text = Strings.SettingLanguage;
-        _newPreset.Text = Strings.ButtonNewCustomPreset;
 
         string selectedAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone;
         _startAction.SetItems(StartActions());
@@ -213,21 +208,6 @@ internal sealed class SettingsPopup : Form
         string selectedLanguage = _language.Selected?.Key ?? AuraSettings.LanguageAuto;
         _language.SetItems(Languages());
         _language.ShowSelection(selectedLanguage);
-    }
-
-    private void OpenPresetEditor(CustomPreset? preset)
-    {
-        var editor = new CustomPresetEditor(preset);
-        _childOpen = true;
-        editor.PresetsChanged += (_, _) => PresetsChanged?.Invoke(this, EventArgs.Empty);
-        editor.FormClosed += (_, _) =>
-        {
-            _childOpen = false;
-            editor.Dispose();
-            Activate();
-        };
-
-        editor.Open(PointToScreen(new Point(Width + 8, 0)), this);
     }
 
     /// <summary>

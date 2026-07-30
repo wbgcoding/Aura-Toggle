@@ -7,42 +7,56 @@ using System.Text.Json;
 namespace AuraToggle;
 
 /// <summary>
-/// What one device should be set to as part of a custom preset. Matched at apply time by
+/// What one channel should be set to as part of a custom preset. Matched at apply time by
 /// <see cref="DeviceKey"/> (the HID path, stable for as long as the controller stays in the
-/// same USB port); <see cref="DeviceLabel"/> is only for display, in case that device is not
-/// connected when the preset is shown again.
+/// same USB port) and <see cref="Channel"/>; <see cref="Label"/> is only for display, in case
+/// that controller is not connected when the preset is shown again.
 /// </summary>
-internal sealed record CustomPresetEntry(string DeviceKey, string DeviceLabel, byte Mode, byte Red, byte Green, byte Blue);
+/// <param name="Brightness">
+/// The percentage this channel's colour is scaled to, or 0 to leave the channel at whatever
+/// brightness it already has - the same meaning as in <see cref="ChannelLighting"/>.
+/// </param>
+internal sealed record CustomPresetEntry(
+    string DeviceKey, int Channel, string Label, byte Mode, byte Red, byte Green, byte Blue,
+    byte Brightness = 0);
 
 /// <summary>
-/// A user-defined bundle of effects, one per device, applied together under one name. Lets a
-/// machine with more than one controller run a different effect and colour on each at once.
+/// A user-defined bundle of effects, one per channel, applied together under one name. Lets the
+/// onboard zone, each ARGB header and each further controller run a different effect and
+/// colour at the same time.
 /// </summary>
 internal sealed record CustomPreset(string Name, List<CustomPresetEntry> Entries);
 
 /// <summary>Custom presets, kept in %LOCALAPPDATA%\aura-toggle\presets.json.</summary>
 internal static class AuraCustomPresets
 {
-    private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "aura-toggle", "presets.json");
+    private const string FileName = "presets.json";
 
     public static List<CustomPreset> Load()
     {
-        string path = FilePath;
-        if (!File.Exists(path))
+        var presets = new List<CustomPreset>();
+
+        using JsonDocument? document = AuraFiles.Read(FileName, JsonValueKind.Array);
+        if (document == null)
         {
-            return new List<CustomPreset>();
+            return presets;
         }
 
         try
         {
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
-            var presets = new List<CustomPreset>();
-
             foreach (JsonElement item in document.RootElement.EnumerateArray())
             {
-                string name = item.TryGetProperty("name", out JsonElement n) ? n.GetString() ?? "" : "";
-                if (name.Length == 0 || !item.TryGetProperty("entries", out JsonElement entriesElement))
+                // Every element and every property is checked for its kind: this file is plain
+                // text in the user's profile, so anything at all can be in it.
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                string name = Text(item, "name");
+                if (name.Length == 0 ||
+                    !item.TryGetProperty("entries", out JsonElement entriesElement) ||
+                    entriesElement.ValueKind != JsonValueKind.Array)
                 {
                     continue;
                 }
@@ -50,10 +64,23 @@ internal static class AuraCustomPresets
                 var entries = new List<CustomPresetEntry>();
                 foreach (JsonElement entry in entriesElement.EnumerateArray())
                 {
+                    if (entry.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
                     entries.Add(new CustomPresetEntry(
-                        entry.TryGetProperty("deviceKey", out JsonElement k) ? k.GetString() ?? "" : "",
-                        entry.TryGetProperty("deviceLabel", out JsonElement l) ? l.GetString() ?? "" : "",
-                        Byte(entry, "mode"), Byte(entry, "red"), Byte(entry, "green"), Byte(entry, "blue")));
+                        Text(entry, "deviceKey"),
+                        // Missing channel means an entry written before presets went
+                        // per-channel: -1 keeps its old meaning of "the whole controller".
+                        entry.TryGetProperty("channel", out JsonElement c) && c.TryGetInt32(out int index)
+                            ? index
+                            : -1,
+                        Text(entry, "label"),
+                        Byte(entry, "mode"), Byte(entry, "red"), Byte(entry, "green"), Byte(entry, "blue"),
+                        // Missing brightness means an entry written before presets carried one:
+                        // 0 leaves the channel at whatever brightness it already has.
+                        Byte(entry, "brightness")));
                 }
 
                 if (entries.Count > 0)
@@ -64,51 +91,46 @@ internal static class AuraCustomPresets
 
             return presets;
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
-            return new List<CustomPreset>();
+            return presets;
         }
     }
+
+    private static string Text(JsonElement element, string name) =>
+        element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? ""
+            : "";
 
     private static byte Byte(JsonElement element, string name) =>
         element.TryGetProperty(name, out JsonElement value) && value.TryGetByte(out byte parsed) ? parsed : (byte)0;
 
-    public static void Save(List<CustomPreset> presets)
+    public static void Save(List<CustomPreset> presets) => AuraFiles.Write(FileName, writer =>
     {
-        try
+        writer.WriteStartArray();
+        foreach (CustomPreset preset in presets)
         {
-            string path = FilePath;
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-
-            using FileStream stream = File.Create(path);
-            using var writer = new Utf8JsonWriter(stream);
-
-            writer.WriteStartArray();
-            foreach (CustomPreset preset in presets)
+            writer.WriteStartObject();
+            writer.WriteString("name", preset.Name);
+            writer.WriteStartArray("entries");
+            foreach (CustomPresetEntry entry in preset.Entries)
             {
                 writer.WriteStartObject();
-                writer.WriteString("name", preset.Name);
-                writer.WriteStartArray("entries");
-                foreach (CustomPresetEntry entry in preset.Entries)
-                {
-                    writer.WriteStartObject();
-                    writer.WriteString("deviceKey", entry.DeviceKey);
-                    writer.WriteString("deviceLabel", entry.DeviceLabel);
-                    writer.WriteNumber("mode", entry.Mode);
-                    writer.WriteNumber("red", entry.Red);
-                    writer.WriteNumber("green", entry.Green);
-                    writer.WriteNumber("blue", entry.Blue);
-                    writer.WriteEndObject();
-                }
-
-                writer.WriteEndArray();
+                writer.WriteString("deviceKey", entry.DeviceKey);
+                writer.WriteNumber("channel", entry.Channel);
+                writer.WriteString("label", entry.Label);
+                writer.WriteNumber("mode", entry.Mode);
+                writer.WriteNumber("red", entry.Red);
+                writer.WriteNumber("green", entry.Green);
+                writer.WriteNumber("blue", entry.Blue);
+                writer.WriteNumber("brightness", entry.Brightness);
                 writer.WriteEndObject();
             }
 
             writer.WriteEndArray();
+            writer.WriteEndObject();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
-    }
+
+        writer.WriteEndArray();
+    });
 }

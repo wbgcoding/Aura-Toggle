@@ -6,7 +6,14 @@ using System.Text;
 namespace AuraToggle;
 
 /// <summary>One lighting effect the controller can run.</summary>
-internal sealed record AuraPreset(string Key, byte Mode, string ResourceKey, bool UsesColour)
+/// <param name="PerChannel">
+/// Whether a single channel can run this effect while its neighbours run something else. The
+/// effects the firmware generates itself take the whole controller with them - setting the
+/// rainbow on one header puts every header of that controller into it - so the window leaves
+/// them out while a single channel is selected instead of letting the choice quietly spread.
+/// </param>
+internal sealed record AuraPreset(string Key, byte Mode, string ResourceKey, bool UsesColour,
+    bool PerChannel = true)
 {
     public string DisplayName => Strings.Preset(ResourceKey);
 
@@ -25,12 +32,12 @@ internal static class AuraPresets
         new AuraPreset("static", 1, "PresetStatic", UsesColour: true),
         new AuraPreset("breathing", 2, "PresetBreathing", UsesColour: true),
         new AuraPreset("flashing", 3, "PresetFlashing", UsesColour: true),
-        new AuraPreset("spectrum-cycle", 4, "PresetSpectrumCycle", UsesColour: false),
-        new AuraPreset("rainbow", 5, "PresetRainbow", UsesColour: false),
-        new AuraPreset("rainbow-breathing", 6, "PresetRainbowBreathing", UsesColour: false),
+        new AuraPreset("spectrum-cycle", 4, "PresetSpectrumCycle", UsesColour: false, PerChannel: false),
+        new AuraPreset("rainbow", 5, "PresetRainbow", UsesColour: false, PerChannel: false),
+        new AuraPreset("rainbow-breathing", 6, "PresetRainbowBreathing", UsesColour: false, PerChannel: false),
         new AuraPreset("chase-fade", 7, "PresetChaseFade", UsesColour: true),
         new AuraPreset("chase", 9, "PresetChase", UsesColour: true),
-        new AuraPreset("wave", 11, "PresetWave", UsesColour: false),
+        new AuraPreset("wave", 11, "PresetWave", UsesColour: false, PerChannel: false),
     };
 
     /// <summary>All preset names, for the usage line.</summary>

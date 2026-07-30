@@ -45,20 +45,20 @@ internal sealed record AuraSettings(
     /// </summary>
     public const string AutoStartArgument = "-autostart";
 
-    private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "aura-toggle", "settings.json");
+    private const string FileName = "settings.json";
 
     public static AuraSettings Load()
     {
-        string path = FilePath;
-        if (!File.Exists(path))
+        // A damaged or unreadable settings file must not stop the tool from switching lights -
+        // and this runs before anything else in Main, so throwing here means never starting.
+        using JsonDocument? document = AuraFiles.Read(FileName, JsonValueKind.Object);
+        if (document == null)
         {
             return Default;
         }
 
         try
         {
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
             JsonElement root = document.RootElement;
 
             return new AuraSettings(
@@ -68,9 +68,8 @@ internal sealed record AuraSettings(
                 Animate: Flag(root, "animate", Default.Animate),
                 Language: Text(root, "language", LanguageAuto));
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
-            // A damaged or unreadable settings file must not stop the tool from switching lights.
             return Default;
         }
     }
@@ -85,32 +84,16 @@ internal sealed record AuraSettings(
             ? value.GetBoolean()
             : fallback;
 
-    public void Save()
+    public void Save() => AuraFiles.Write(FileName, writer =>
     {
-        try
-        {
-            SaveCore();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
-    }
-
-    private void SaveCore()
-    {
-        string path = FilePath;
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-
-        string json = "{" +
-            $"\"startMinimised\":{(StartMinimised ? "true" : "false")}," +
-            $"\"minimiseOnClose\":{(MinimiseOnClose ? "true" : "false")}," +
-            $"\"startAction\":{JsonSerializer.Serialize(StartAction)}," +
-            $"\"animate\":{(Animate ? "true" : "false")}," +
-            $"\"language\":{JsonSerializer.Serialize(Language)}" +
-            "}";
-
-        File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-    }
+        writer.WriteStartObject();
+        writer.WriteBoolean("startMinimised", StartMinimised);
+        writer.WriteBoolean("minimiseOnClose", MinimiseOnClose);
+        writer.WriteString("startAction", StartAction);
+        writer.WriteBoolean("animate", Animate);
+        writer.WriteString("language", Language);
+        writer.WriteEndObject();
+    });
 
     /// <summary>
     /// Whether Windows starts the tool at logon. Backed by the per-user Run key, so no
@@ -135,6 +118,13 @@ internal sealed record AuraSettings(
         {
             try
             {
+                // Without a path to point the Run entry at there is nothing to write, and
+                // falling through to DeleteValue would silently turn autostart off instead.
+                if (value && Environment.ProcessPath == null)
+                {
+                    return;
+                }
+
                 using RegistryKey key = Registry.CurrentUser.CreateSubKey(RunKey);
                 if (value && Environment.ProcessPath is string exe)
                 {

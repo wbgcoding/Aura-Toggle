@@ -78,7 +78,30 @@ internal static class Strings
 
     public static string ChannelAccessibleName => Get("ChannelAccessibleName");
 
-    public static string SettingCustomPresets => Get("SettingCustomPresets");
+    public static string ChannelOnboard => Get("ChannelOnboard");
+
+    /// <summary>"ARGB {0}" - the header number.</summary>
+    public static string ChannelHeader => Get("ChannelHeader");
+
+    /// <summary>"{0} - {1}" - controller name and channel name, on multi-controller boards.</summary>
+    public static string ChannelQualified => Get("ChannelQualified");
+
+    /// <summary>
+    /// Says why the firmware-driven effects are missing from the list while a single channel is
+    /// selected: the controller runs them across all of its channels at once.
+    /// </summary>
+    public static string ChannelEffectHint => Get("ChannelEffectHint");
+
+    public static string ChannelRenameSave => Get("ChannelRenameSave");
+
+    public static string ChannelRenameReset => Get("ChannelRenameReset");
+
+    public static string SettingBrightness => Get("SettingBrightness");
+
+    public static string ColourAccessibleName => Get("ColourAccessibleName");
+
+    /// <summary>"{0} %" - the brightness read-out.</summary>
+    public static string BrightnessValue => Get("BrightnessValue");
 
     public static string ButtonNewCustomPreset => Get("ButtonNewCustomPreset");
 
@@ -86,9 +109,19 @@ internal static class Strings
 
     public static string CustomPresetSave => Get("CustomPresetSave");
 
+    public static string CustomPresetCreate => Get("CustomPresetCreate");
+
+    public static string CustomPresetReplace => Get("CustomPresetReplace");
+
     public static string CustomPresetDelete => Get("CustomPresetDelete");
 
+    public static string CustomPresetConfirmDelete => Get("CustomPresetConfirmDelete");
+
+    public static string CustomPresetDiscard => Get("CustomPresetDiscard");
+
     public static string CustomPresetNew => Get("CustomPresetNew");
+
+    public static string CustomPresetEdit => Get("CustomPresetEdit");
 
     public static string CustomPresetNoDevices => Get("CustomPresetNoDevices");
 
