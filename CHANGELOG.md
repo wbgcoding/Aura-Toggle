@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The window title is just "Aura Toggle". It used to carry the channel count as well, which said
+  nothing a look at the channel selector does not.
+- The documentation is English only. The German README is gone; the interface itself stays
+  bilingual.
+
+### Removed
+
+- "Open log folder" from the settings panel. The README names the path under Troubleshooting, and
+  the error dialog still offers the button where it actually helps - next to the details of a
+  failure worth reporting.
+- The diagnostic log lines about window layout and window placement, written while a display-scale
+  bug was being tracked down. That bug is fixed; the lines were noise in every log since.
+
+### Fixed
+
+- The "Details" link in the error dialog did nothing when clicked with the mouse: the click was
+  handled twice and folded the details shut again in the same motion. Keyboard use was unaffected.
+- The screen-edge margin popups keep, and the separators between channels in the preset editor,
+  now scale with the display instead of staying at their 100 % size.
+
 ## [1.1.0] - 2026-08-09
 
 First public release. Aura Toggle switches the Aura lighting of an ASUS mainboard on and off
@@ -17,7 +41,8 @@ from a single portable executable — no background service, no driver, no admin
   on, the button animates the effect that is actually running, brightness included.
 - Nine built-in effects: static, breathing, flashing, spectrum cycle, rainbow, rainbow breathing,
   chase with a fading tail, chase and wave. They apply the moment they are picked.
-- Ten colour chips plus a full colour picker for the five effects that take a colour.
+- Nine colour chips plus a free-choice chip that opens a full colour picker, for the five effects
+  that take a colour.
 - Brightness from 10 to 100 % for those five effects, either for the whole board or for a single
   channel, so one header can run dimmed next to one at full brightness.
 - A channel selector: all channels at once, the onboard zone, a single ARGB header, or one whole

@@ -907,9 +907,14 @@ internal abstract class PopupForm : Form
         }
     }
 
-    private Point OnScreen(Point at, Rectangle screen) => new(
-        Math.Max(screen.Left + 4, Math.Min(at.X, screen.Right - Width - 4)),
-        Math.Max(screen.Top + 4, Math.Min(at.Y, screen.Bottom - Height - 4)));
+    private Point OnScreen(Point at, Rectangle screen)
+    {
+        int margin = this.Scaled(4);
+
+        return new Point(
+            Math.Max(screen.Left + margin, Math.Min(at.X, screen.Right - Width - margin)),
+            Math.Max(screen.Top + margin, Math.Min(at.Y, screen.Bottom - Height - margin)));
+    }
 }
 
 /// <summary>Base for the flat, rounded controls in this window.</summary>

@@ -20,7 +20,6 @@ internal sealed class SettingsPopup : PopupForm
     private readonly ToggleSwitch _hotkeyEnabled = new();
     private readonly PillButton _hotkeyRecord = new();
     private readonly Label _hotkeyHint;
-    private readonly PillButton _openLog = new();
     private readonly PillButton _reset = new();
     private readonly ArmedButton _resetArm;
     private readonly Label _startActionLabel;
@@ -56,12 +55,12 @@ internal sealed class SettingsPopup : PopupForm
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 12,
+            RowCount = 11,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        for (int row = 0; row < 12; row++)
+        for (int row = 0; row < _layout.RowCount; row++)
         {
             _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
@@ -84,8 +83,7 @@ internal sealed class SettingsPopup : PopupForm
         _hotkeyHint.ForeColor = Theme.Danger;
         _hotkeyHint.Visible = false;
 
-        AddButton(10, _openLog, Strings.SettingOpenLog, Theme.NeutralSoft, Theme.Text);
-        AddButton(11, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
+        AddButton(10, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
 
@@ -102,7 +100,6 @@ internal sealed class SettingsPopup : PopupForm
         _animate.CheckedChanged += (_, _) => Apply();
         _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
         _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
-        _openLog.Click += (_, _) => AuraFiles.OpenFolder();
 
         _resetArm = new ArmedButton(_reset, Strings.SettingReset, Strings.SettingResetConfirm);
         _resetArm.Confirmed += (_, _) => OnResetConfirmed();
@@ -373,7 +370,6 @@ internal sealed class SettingsPopup : PopupForm
         _startAction.AccessibleName = Strings.SettingStartAction;
         _languageLabel.Text = Strings.SettingLanguage;
         _language.AccessibleName = Strings.SettingLanguage;
-        _openLog.Text = Strings.SettingOpenLog;
         _hotkeyHint.Text = Strings.SettingHotkeyConflict;
         _hotkeyRecord.Text = _recordingHotkey ? Strings.HotkeyRecordPrompt : HotkeyText(_pendingHotkey);
         _resetArm.Disarm();
