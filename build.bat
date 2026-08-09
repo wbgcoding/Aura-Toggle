@@ -127,10 +127,12 @@ exit /b 1
 
 :checksums
 REM Printed for a quick look, and written into dist as SHA256SUMS.txt too - the standard
-REM "<hash>  <filename>" format, so `sha256sum -c` or a manual compare both just work.
+REM "<hash>  <filename>" format, so `sha256sum -c` or a manual compare both just work. Written
+REM with LF line endings on purpose: Set-Content would end each line with CRLF, and sha256sum
+REM then looks for a file whose name ends in a carriage return and reports every line as missing.
 echo.
 echo Checksums:
-powershell -NoProfile -Command "$h = Get-ChildItem -LiteralPath '%ROOT%dist' -File -Filter *.exe | ForEach-Object { [pscustomobject]@{ H = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(); N = $_.Name } }; $h | ForEach-Object { '  {0}  {1}' -f $_.H, $_.N }; ($h | ForEach-Object { '{0}  {1}' -f $_.H, $_.N }) | Set-Content -LiteralPath '%ROOT%dist\SHA256SUMS.txt' -Encoding ascii"
+powershell -NoProfile -Command "$h = Get-ChildItem -LiteralPath '%ROOT%dist' -File -Filter *.exe | ForEach-Object { [pscustomobject]@{ H = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(); N = $_.Name } }; $h | ForEach-Object { '  {0}  {1}' -f $_.H, $_.N }; [IO.File]::WriteAllText('%ROOT%dist\SHA256SUMS.txt', (($h | ForEach-Object { '{0}  {1}' -f $_.H, $_.N }) -join [string][char]10) + [char]10, [Text.Encoding]::ASCII)"
 exit /b 0
 
 :version
