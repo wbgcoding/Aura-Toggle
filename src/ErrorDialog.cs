@@ -1,7 +1,6 @@
 using System;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
 
 namespace AuraToggle;
@@ -48,14 +47,11 @@ internal sealed class ErrorDialog : PopupForm
         _heading.Text = Strings.ErrorTitle;
         _heading.Font = Theme.Heading;
         _heading.ForeColor = Theme.Text;
-        _heading.Location = new Point(Pad, Pad);
         Controls.Add(_heading);
 
         _body.Text = bodyText;
         _body.ForeColor = Theme.TextMuted;
-        _body.MaximumSize = new Size(DialogWidth - (Pad * 2), 0);
         _body.AutoSize = true;
-        _body.Location = new Point(Pad, _heading.Bottom + this.Scaled(8));
         Controls.Add(_body);
 
         _detailsToggle.AutoSize = true;
@@ -65,7 +61,6 @@ internal sealed class ErrorDialog : PopupForm
         _detailsToggle.VisitedLinkColor = Theme.Accent;
         _detailsToggle.LinkBehavior = LinkBehavior.NeverUnderline;
         _detailsToggle.BackColor = Theme.Surface;
-        _detailsToggle.Location = new Point(Pad, _body.Bottom + this.Scaled(10));
         // Both: a mouse click on a LinkLabel raises Click, Enter on the focused link raises only
         // LinkClicked - wiring one of them left the details unreachable from the other.
         _detailsToggle.Click += (_, _) => ToggleDetails();
@@ -81,33 +76,25 @@ internal sealed class ErrorDialog : PopupForm
         // The text already carries \r\n from Environment.NewLine and Exception.ToString() on
         // Windows; normalising through a bare \n first stops that from doubling to \r\r\n.
         _details.Text = detailText.Replace("\r\n", "\n").Replace("\n", "\r\n");
-        _details.Location = new Point(Pad, _detailsToggle.Bottom + this.Scaled(6));
-        _details.Height = DetailsHeight;
         _details.Visible = false;
         Controls.Add(_details);
 
         _copy.Text = Strings.ErrorCopyDetails;
         _copy.Fill = Theme.NeutralSoft;
         _copy.ForeColor = Theme.Text;
-        _copy.Height = this.Scaled(30);
         _copy.Click += (_, _) => CopyDetails();
         Controls.Add(_copy);
-        _copy.FitToText(14);
 
         _openLog.Text = Strings.ErrorOpenLog;
         _openLog.Fill = Theme.NeutralSoft;
         _openLog.ForeColor = Theme.Text;
-        _openLog.Height = this.Scaled(30);
         _openLog.Click += (_, _) => AuraFiles.OpenFolder();
         Controls.Add(_openLog);
-        _openLog.FitToText(14);
 
         _close.Text = Strings.ErrorClose;
         _close.Primary = true;
-        _close.Height = this.Scaled(30);
         _close.Click += (_, _) => Close();
         Controls.Add(_close);
-        _close.FitToText(18);
 
         Reflow();
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
@@ -127,11 +114,6 @@ internal sealed class ErrorDialog : PopupForm
         {
             if (!IsDisposed)
             {
-                // The buttons' own widths were fitted to their (untranslated by a DPI change, but
-                // still 96 dpi sized) text at the old scale.
-                _copy.FitToText(14);
-                _openLog.FitToText(14);
-                _close.FitToText(18);
                 Reflow();
             }
         });
@@ -154,20 +136,20 @@ internal sealed class ErrorDialog : PopupForm
     /// else is a bug, whose raw message means nothing to the user, so the body stays the generic
     /// <see cref="Strings.ErrorUnexpected"/> and the real text goes into the detail area instead.
     /// </remarks>
-    public static void Report(Exception ex, string context, IWin32Window? owner, Action? onClosed = null,
+    public static ErrorDialog? Report(Exception ex, string context, IWin32Window? owner, Action? onClosed = null,
         bool requireMessageLoop = true)
     {
         AuraLog.Error(context, ex);
 
         if (requireMessageLoop && !Application.MessageLoop)
         {
-            return;
+            return null;
         }
 
         string body = ex is AuraNotFoundException or IOException ? ex.Message : Strings.ErrorUnexpected;
 
         string details = AuraFiles.Redact(string.Join(Environment.NewLine,
-            $"Aura Toggle {Assembly.GetExecutingAssembly().GetName().Version}",
+            $"Aura Toggle {Program.VersionText}",
             $"Channels on record: {SafeChannelCount()}",
             "",
             ex.ToString()));
@@ -179,6 +161,7 @@ internal sealed class ErrorDialog : PopupForm
         }
 
         dialog.Open(owner);
+        return dialog;
     }
 
     private static int SafeChannelCount()
@@ -212,8 +195,29 @@ internal sealed class ErrorDialog : PopupForm
         }
     }
 
+    /// <summary>
+    /// The one place every position and size in this dialog is computed, so a display-scale change
+    /// only has to run it again: everything here is derived from the current dpi, nothing is left
+    /// holding the number it was given when the window was built.
+    /// </summary>
     private void Reflow()
     {
+        _heading.Location = new Point(Pad, Pad);
+
+        _body.MaximumSize = new Size(DialogWidth - (Pad * 2), 0);
+        _body.Location = new Point(Pad, _heading.Bottom + this.Scaled(8));
+
+        _detailsToggle.Location = new Point(Pad, _body.Bottom + this.Scaled(10));
+
+        _details.Location = new Point(Pad, _detailsToggle.Bottom + this.Scaled(6));
+        _details.Height = DetailsHeight;
+
+        // Height before width: the buttons fit their own width to the text at the current scale.
+        _copy.Height = _openLog.Height = _close.Height = this.Scaled(30);
+        _copy.FitToText(14);
+        _openLog.FitToText(14);
+        _close.FitToText(18);
+
         // The three buttons are translated text, so their combined width is not known until they
         // are all sized - a fixed dialog width clipped or overlapped them in German. The body
         // still wraps at the plain DialogWidth; that only leaves it narrower than a wider dialog,

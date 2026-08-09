@@ -247,6 +247,20 @@ internal sealed class Select : FlatControl
     public int PopupWidth { get; set; }
 
     /// <summary>
+    /// True for a list that takes whatever its row has left rather than claiming a width of its
+    /// own. It then reports no preferred width at all, so a layout cannot treat the width it
+    /// happened to have on the display it came from as a floor the row must not shrink below -
+    /// which is what pushed the gear off the right-hand edge after a display-scale change. A list
+    /// this narrow shortens its own text, which is the intended result; a list that claims a width
+    /// (the channel selector, in a column sized to fit) leaves this off.
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool TakesWhatIsLeft { get; set; }
+
+    public override Size GetPreferredSize(Size proposedSize) =>
+        TakesWhatIsLeft ? new Size(0, Height) : base.GetPreferredSize(proposedSize);
+
+    /// <summary>
     /// The width this control needs for its longest entry, icon, chevron and padding included.
     /// Measured rather than assumed: the entries are translated, and a channel can be renamed to
     /// anything, so any fixed number ends up clipping somebody's text.

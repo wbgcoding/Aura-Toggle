@@ -41,6 +41,15 @@ internal static class Program
     /// </summary>
     private static ToggleForm? _mainForm;
 
+    /// <summary>
+    /// The version as the release carries it - "1.1.0", not the four part assembly version
+    /// "1.1.0.0", so what the tool reports matches the tag and the setup's file name.
+    /// </summary>
+    internal static string VersionText =>
+        Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion.Split('+')[0]
+        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?";
+
     [STAThread]
     private static int Main(string[] args)
     {
@@ -54,7 +63,7 @@ internal static class Program
 
         // The language choice also governs usage and error output on the command line.
         Strings.Override = AuraSettings.Load().Language;
-        AuraLog.Info($"Start {Assembly.GetExecutingAssembly().GetName().Version}");
+        AuraLog.Info($"Start {VersionText}");
 
         // Opens one popup directly - for visual/interactive review without a real controller or
         // a click-path through the main window, e.g. to screenshot it. Bypasses the single-
@@ -62,7 +71,7 @@ internal static class Program
         // running. Not a documented end-user flag, so it is not in Usage().
         if (args.Length >= 1 && Normalise(args[0]) == "review")
         {
-            return RunReview(args.Length >= 2 ? Normalise(args[1]) : "");
+            return RunReview(args.Length >= 2 ? Normalise(args[1]) : "", args.Length >= 3 ? args[2] : "");
         }
 
         LaunchedAtStartup = args.Length == 1 && args[0] == AuraSettings.AutoStartArgument;
@@ -136,11 +145,11 @@ internal static class Program
     /// settings.json, same as it would from the main window - this is a shortcut to the real
     /// control, not a sandboxed mock of it.
     /// </summary>
-    private static int RunReview(string surface)
+    private static int RunReview(string surface, string argument)
     {
-        if (surface is not ("settings" or "error" or "layout"))
+        if (surface is not ("settings" or "error" or "editor" or "layout"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|layout");
+            WriteError("Usage: AuraToggle -review settings|error|editor|layout [scale%]");
             return 2;
         }
 
@@ -151,12 +160,22 @@ internal static class Program
 
         if (surface == "layout")
         {
-            return ReviewLayout();
+            return ReviewLayout(argument);
         }
 
-        if (surface == "error")
+        Form? shown = null;
+
+        if (surface == "editor")
         {
-            ErrorDialog.Report(new IOException("Sample error for review - the LED controller did not answer in time."),
+            var editor = new CustomPresetEditor(null, ReviewControllers(), AuraState.Load());
+            editor.FormClosed += (_, _) => Application.Exit();
+            editor.Open(new Point(60, 60), owner: null);
+            shown = editor;
+        }
+        else if (surface == "error")
+        {
+            shown = ErrorDialog.Report(
+                new IOException("Sample error for review - the LED controller did not answer in time."),
                 "Review", owner: null, onClosed: Application.Exit, requireMessageLoop: false);
         }
         else
@@ -171,6 +190,20 @@ internal static class Program
             popup.FormClosed += (_, _) => Application.Exit();
             popup.Show();
             popup.Activate();
+            shown = popup;
+        }
+
+        // These two carry no measurement report of their own - what matters for them is that a
+        // display-scale change puts their spacing back at the new scale rather than leaving it as
+        // the display they opened on had it, which the totals below make visible.
+        Queue<int> scales = ParseScales(argument);
+        if (shown != null && scales.Count > 0)
+        {
+            var reports = new List<string>();
+            void Report(string heading) => WriteReport(reports, heading, DescribeSpacing(shown));
+
+            Report($"as opened, {shown.DeviceDpi * 100 / 96}%");
+            MoveThroughScales(shown, scales, Report);
         }
 
         Application.Run();
@@ -178,49 +211,108 @@ internal static class Program
     }
 
     /// <summary>
-    /// Opens the real window against stand-in controllers and prints what it measured, so a
-    /// "cut off on the right" complaint can be reproduced and proved fixed at any display scale
-    /// without a controller and without reading pixels off a screenshot. Two controllers with
-    /// three channels each: enough to force the channel selector into the top row, which is the
-    /// widest the row ever gets and therefore the case that overflows first.
+    /// Every scaled distance a surface holds, added up, next to the size it fitted itself to. Two
+    /// numbers rather than a layout report: for a panel of stacked rows, spacing that did not
+    /// follow a display-scale change is exactly what this total shows.
     /// </summary>
-    private static int ReviewLayout()
+    private static string DescribeSpacing(Form form)
     {
-        ToggleForm.ReviewDevices = new List<AuraDeviceSummary>
+        static IEnumerable<Control> Tree(Control root)
         {
-            new("review-1", "Aura Controller 1", new List<AuraChannel>
+            foreach (Control child in root.Controls)
             {
-                new(0, Onboard: true, Header: 0),
-                new(1, Onboard: false, Header: 1),
-                new(2, Onboard: false, Header: 2),
-            }),
-            new("review-2", "Aura Controller 2", new List<AuraChannel>
-            {
-                new(0, Onboard: true, Header: 0),
-                new(1, Onboard: false, Header: 1),
-            }),
-        };
+                yield return child;
+
+                foreach (Control descendant in Tree(child))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+
+        int margins = Tree(form).Sum(control => control.Margin.Horizontal + control.Margin.Vertical);
+
+        return $"dpi           {form.DeviceDpi} ({form.DeviceDpi * 100 / 96}%)" + Environment.NewLine
+            + $"clientsize    {form.ClientSize.Width}x{form.ClientSize.Height}" + Environment.NewLine
+            + $"padding       {form.Padding.Left},{form.Padding.Top}" + Environment.NewLine
+            + $"margins       {margins} px over {Tree(form).Count()} controls";
+    }
+
+    /// <summary>
+    /// One scale, or several separated by commas for a round trip (<c>-review layout 150,100</c>).
+    /// Anything outside the range a display can actually be set to is ignored rather than
+    /// rejected: this is a review switch, not a documented option.
+    /// </summary>
+    private static Queue<int> ParseScales(string argument) =>
+        new(argument.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => int.TryParse(part.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture,
+                out int scale) ? scale : 0)
+            .Where(scale => scale is >= 100 and <= 400));
+
+    /// <summary>
+    /// Prints one measurement pass and keeps every pass so far in
+    /// <c>%TEMP%\aura-layout.txt</c> - this is a WinExe, so when it is started by anything that
+    /// owns no console (a scheduled task, a test runner) the console output goes nowhere.
+    /// </summary>
+    private static void WriteReport(List<string> reports, string heading, string body)
+    {
+        string report = $"--- {heading} ---{Environment.NewLine}{body}";
+        WriteLine(report);
+        reports.Add(report);
+
+        try
+        {
+            File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-layout.txt"),
+                string.Join(Environment.NewLine, reports));
+        }
+        catch (Exception ex) when (AuraFiles.IsExpected(ex))
+        {
+            // A report that cannot be written is not worth failing the review over.
+        }
+    }
+
+    /// <summary>
+    /// Two controllers with three and two channels: enough to force the channel selector into the
+    /// main window's top row - the widest that row ever gets, and so the case that overflows
+    /// first - and enough to give the preset editor more than one block of rows.
+    /// </summary>
+    private static List<AuraDeviceSummary> ReviewControllers() => new()
+    {
+        new("review-1", "Aura Controller 1", new List<AuraChannel>
+        {
+            new(0, Onboard: true, Header: 0),
+            new(1, Onboard: false, Header: 1),
+            new(2, Onboard: false, Header: 2),
+        }),
+        new("review-2", "Aura Controller 2", new List<AuraChannel>
+        {
+            new(0, Onboard: true, Header: 0),
+            new(1, Onboard: false, Header: 1),
+        }),
+    };
+
+    /// <summary>
+    /// Opens the real window against stand-in controllers and prints what it measured, so a
+    /// "cut off on the right" report can be reproduced and proved fixed at any display scale
+    /// without a controller and without reading pixels off a screenshot.
+    /// </summary>
+    private static int ReviewLayout(string scaleArgument)
+    {
+        ToggleForm.ReviewDevices = ReviewControllers();
 
         var form = new ToggleForm();
+        var reports = new List<string>();
+
+        void Report(string heading) => WriteReport(reports, heading, form.DescribeLayout());
+
         form.Shown += async (_, _) =>
         {
             // The window measures itself after discovery, which OnShown runs asynchronously -
             // reading straight away would report the sizes from before the channel selector
             // appeared, which is exactly the measurement in question.
             await Task.Yield();
-            string report = form.DescribeLayout();
-            WriteLine(report);
-
-            // Also on disk: this is a WinExe, so when it is started by anything that owns no
-            // console - a scheduled task, a test runner - the lines above go nowhere.
-            try
-            {
-                File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-layout.txt"), report);
-            }
-            catch (Exception ex) when (AuraFiles.IsExpected(ex))
-            {
-                // A report that cannot be written is not worth failing the review over.
-            }
+            Report($"as opened, {form.DeviceDpi * 100 / 96}%");
+            MoveThroughScales(form, ParseScales(scaleArgument), Report);
 
             // Left open on purpose: the numbers above say whether anything overflows, the window
             // itself is what shows how the result actually looks at this display scale.
@@ -228,6 +320,86 @@ internal static class Program
 
         Application.Run(form);
         return 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr wParam, ref Rect lParam);
+
+    /// <summary>Windows' "your window is now on a display at another scale" notification.</summary>
+    private const uint DpiChangedMessage = 0x02E0;
+
+    /// <summary>
+    /// Puts the window through exactly what dragging it onto a second monitor at
+    /// <paramref name="scale"/> percent does - the message Windows itself sends, with the window
+    /// rectangle it would suggest - and reports what the layout measured afterwards. The point of
+    /// doing it this way: the process keeps the system dpi it started with, so the mismatch
+    /// between window dpi and text dpi that only ever appeared on a real second monitor is
+    /// reproduced on a single display, and a "cut off on the right" report becomes a number here
+    /// instead of something only a second physical monitor could show.
+    /// </summary>
+    /// <summary>
+    /// Walks the window through several scales in turn, so a round trip - out to the second
+    /// monitor and back - is one run. A window that does not come back to the size it started at
+    /// is exactly what the last report of the run says.
+    /// </summary>
+    private static void MoveThroughScales(Form form, Queue<int> scales, Action<string> report)
+    {
+        if (scales.Count == 0)
+        {
+            return;
+        }
+
+        MoveToSimulatedScale(form, scales.Dequeue(), report, () => MoveThroughScales(form, scales, report));
+    }
+
+    private static void MoveToSimulatedScale(Form form, int scale, Action<string> report, Action? next = null)
+    {
+        int target = 96 * scale / 100;
+        int from = form.DeviceDpi;
+        Rectangle bounds = form.Bounds;
+        var suggested = new Rect
+        {
+            Left = bounds.Left,
+            Top = bounds.Top,
+            Right = bounds.Left + bounds.Width * target / from,
+            Bottom = bounds.Top + bounds.Height * target / from,
+        };
+
+        SendMessage(form.Handle, DpiChangedMessage, new IntPtr((target << 16) | target), ref suggested);
+
+        // The window re-measures itself on a timer after a scale change, so one reading straight
+        // afterwards proves nothing; these cover every attempt it makes plus a margin.
+        var passes = new Queue<int>(new[] { 0, 250, 600, 1200, 2000 });
+        var clock = new System.Windows.Forms.Timer { Interval = 50 };
+        int elapsed = 0;
+        clock.Tick += (_, _) =>
+        {
+            elapsed += clock.Interval;
+            if (passes.Count == 0 || form.IsDisposed)
+            {
+                clock.Stop();
+                clock.Dispose();
+
+                if (!form.IsDisposed)
+                {
+                    next?.Invoke();
+                }
+
+                return;
+            }
+
+            if (elapsed >= passes.Peek())
+            {
+                report($"{passes.Dequeue()} ms after the move to {scale}%");
+            }
+        };
+        clock.Start();
     }
 
     /// <summary>
@@ -301,7 +473,7 @@ internal static class Program
 
         if (command == "version" && rest.Count == 1)
         {
-            WriteLine(Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?");
+            WriteLine(VersionText);
             return 0;
         }
 
@@ -574,7 +746,7 @@ internal static class Program
     /// </summary>
     private static int PrintHelp()
     {
-        WriteLine($"Aura Toggle {Assembly.GetExecutingAssembly().GetName().Version}");
+        WriteLine($"Aura Toggle {VersionText}");
         WriteLine("Switches ASUS Aura mainboard lighting. Nothing is written to the controller's");
         WriteLine("flash, so a reboot always restores the BIOS lighting.");
         WriteLine("");
@@ -1236,8 +1408,8 @@ internal static class Program
     /// <summary>
     /// Lights one channel red at full brightness, unmistakably its own colour, and holds every
     /// other channel of the same controller at a faint white so the right header is obvious. Full
-    /// off was tried first, but on boards where the RGB headers share one bus (channels 2-4 on
-    /// Ben's board) an "off" neighbour can still catch stray colour from whichever header is
+    /// off was tried first, but on boards where the RGB headers share one bus (channels 2-4 on the
+    /// reference board) an "off" neighbour can still catch stray colour from whichever header is
     /// actually driving the bus, so a dark header no longer proved it was not the one lit red - a
     /// faint white neighbour stays visibly distinct from the bright red target either way. A
     /// blink was tried before that, but toggling a channel between red and off in a loop ran into

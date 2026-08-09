@@ -61,6 +61,17 @@ internal sealed class ToggleForm : Form
     /// <summary>WM_SETTINGCHANGE, which is how a light or dark theme switch arrives.</summary>
     private const int SettingChange = 0x001A;
 
+    /// <summary>WM_ENTERSIZEMOVE and WM_EXITSIZEMOVE: the window is following the mouse.</summary>
+    private const int EnterSizeMove = 0x0231;
+
+    private const int ExitSizeMove = 0x0232;
+
+    /// <summary>
+    /// True between those two, so nothing here resizes or repositions a window the user is still
+    /// holding on to - a drag from one display to another crosses a scale change halfway.
+    /// </summary>
+    private bool _userMoving;
+
     private readonly EffectButton _toggle = new();
     private readonly Select _effects = new();
     private readonly Select _channel = new();
@@ -117,6 +128,7 @@ internal sealed class ToggleForm : Form
 
         _effects.AccessibleName = Strings.PresetAccessibleName;
         _effects.Dock = DockStyle.Fill;
+        _effects.TakesWhatIsLeft = true;
         _effects.PopupWidth = 252; // room for a preset name next to its edit and delete buttons
         _effects.SelectionChanged += OnEffectChosen;
         _effects.ActionPicked += (_, _) => OpenPresetEditor(null);
@@ -145,6 +157,18 @@ internal sealed class ToggleForm : Form
 
         _gear.AccessibleName = Strings.SettingsAccessibleName;
         _gear.Click += OnSettingsClick;
+
+        // A display-scale change reaches these two in their own time: WinForms updates a child's
+        // own dpi and replaces its font after this window has already been told, so the widths
+        // measured in between are still the old display's - and consistently so, which is why no
+        // check could tell. Re-measuring when the control itself reports the change is what an
+        // unrelated later action (the switch, another move) was doing by accident every time it
+        // appeared to fix itself.
+        foreach (Control control in new Control[] { _effects, _channel })
+        {
+            control.DpiChangedAfterParent += (_, _) => QueueSettle();
+            control.FontChanged += (_, _) => QueueSettle();
+        }
 
         _toggle.Dock = DockStyle.Fill;
         _toggle.Font = Theme.Display;
@@ -190,9 +214,9 @@ internal sealed class ToggleForm : Form
         {
             // Not AutoSize: that would make the row's own preferred width - swayed by whatever
             // _effects last measured, including a stale figure surviving a display-scale change -
-            // a floor Dock=Fill can grow past but never shrink below. Ben's log caught exactly
-            // that: "effects w=243 preferred=209", the panel refusing to give the row back to 209
-            // even though the window was already sized for it, pushing the gear off the edge.
+            // a floor Dock=Fill can grow past but never shrink below. A log from the field caught
+            // exactly that: "effects w=243 preferred=209", the panel refusing to give the row back
+            // to 209 even though the window was already sized for it, pushing the gear off the edge.
             // Only Height is ever read from this row (ResizeToContent), and GetPreferredSize()
             // answers that without opting the row's own width into the same floor.
             Dock = DockStyle.Fill,
@@ -214,13 +238,16 @@ internal sealed class ToggleForm : Form
 
         _layout.Dock = DockStyle.Fill;
         _layout.ColumnCount = 1;
+        // Explicitly the full width, not the default: an unstyled column is sized to fit its
+        // content, which makes whatever the top row last measured a floor the window cannot shrink
+        // below. After a move to a display at another scale that floor still belonged to the old
+        // one, and the row it forced open pushed the gear past the right-hand edge.
+        _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         _layout.RowCount = 4;
         // Absolute, not AutoSize: a RowStyle.AutoSize row asks its cell's control for a preferred
-        // height, but _topRow is a Dock=Fill child of this row and that combination made the row
-        // engine guess rather than measure - a fresh header confirmed it, headless, no window ever
-        // shown: the exact same _topRow reported PreferredSize.Height = 34 throughout, yet this
-        // row's own AutoSize allocation gave it 100, starving the toggle row below it down to a
-        // sliver. Told the true number instead, kept current by ResizeToContent on every render.
+        // height, but _topRow is a Dock=Fill child of this row and that combination makes the row
+        // engine guess rather than measure - the row reports 34 px and is handed 100, starving the
+        // toggle row below it. Told the true number instead, kept current by ResizeToContent.
         _topRowHeight = new RowStyle(SizeType.Absolute, _topRow.PreferredSize.Height);
         _layout.RowStyles.Add(_topRowHeight);                        // effect list, channel, gear
         _layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // toggle
@@ -424,6 +451,13 @@ internal sealed class ToggleForm : Form
         if (Program.LaunchedAtStartup)
         {
             HideToTray();
+        }
+        else
+        {
+            // A fresh install hands off to this process through the installer's own de-elevated
+            // relaunch, which does not carry the right to activate a window - without this the
+            // very first start opened behind the installer instead of in front of it.
+            ForegroundWindow.Claim(this);
         }
 
         ApplyHotkeySetting(popup: null);
@@ -970,6 +1004,14 @@ internal sealed class ToggleForm : Form
     }
 
     /// <summary>
+    /// How many times <see cref="SettleAfterDpiChange"/> re-measures before it gives up. The
+    /// measurement it repeats is now right on the first pass (the stale layout it used to read is
+    /// refreshed in <see cref="ResizeToContent"/>), so this is a backstop rather than the fix:
+    /// a few spaced-out attempts cost nothing, and the log says so if one is ever needed.
+    /// </summary>
+    private const int MaxDpiSettleAttempts = 5;
+
+    /// <summary>
     /// Dragged onto a display with a different scale. WinForms rescales the controls' own bounds,
     /// but not the widths this window measured for the display it was on before - and not the
     /// metrics inside a custom paint, which read the current dpi and so only need a repaint. The
@@ -978,26 +1020,87 @@ internal sealed class ToggleForm : Form
     protected override void OnDpiChanged(DpiChangedEventArgs e)
     {
         base.OnDpiChanged(e);
+        QueueSettle();
+    }
 
-        // Queued rather than run here: WinForms is still working through its own rescale, and
-        // measuring against controls it has not finished with gives the old sizes back.
-        BeginInvoke(() =>
+    /// <summary>
+    /// Re-measures once the current round of messages is through. Queued rather than run on the
+    /// spot: WinForms is still working through its own rescale while it raises these, and
+    /// measuring against controls it has not finished with gives the old display's sizes back.
+    /// </summary>
+    private void QueueSettle()
+    {
+        if (!IsHandleCreated || IsDisposed)
         {
-            if (IsDisposed)
+            return;
+        }
+
+        BeginInvoke(() => SettleAfterDpiChange(1));
+    }
+
+    /// <summary>
+    /// Re-applies every dpi-dependent measurement, then checks what the complaint is actually
+    /// about - whether anything is short of room, the effect list's own text included - instead of
+    /// trusting that one pass was enough.
+    /// </summary>
+    private void SettleAfterDpiChange(int attempt)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        // Still on the mouse: measuring a window that is halfway between two displays measures
+        // neither of them. Letting go queues this again.
+        if (_userMoving)
+        {
+            return;
+        }
+
+        ApplyScaledMetrics();
+
+        if (_devices.Count > 0)
+        {
+            SetUpChannelSelector();
+        }
+
+        FitEffectList();
+        Render();
+
+        // "Nothing overflows" is only worth believing once the controls agree with the window
+        // about which display they are on. Until they do, every width here - the room measured
+        // and the room needed alike - comes from the same stale dpi, so they always match and the
+        // check always passes, which is exactly how the layout could be left wrong.
+        bool settled = _effects.DeviceDpi == DeviceDpi && _channel.DeviceDpi == DeviceDpi;
+        bool clipped = RightOverflow().Any(measured => measured.Overflow > 0);
+
+        if (settled && !clipped)
+        {
+            return;
+        }
+
+        if (attempt >= MaxDpiSettleAttempts)
+        {
+            // Out of attempts. Only actual clipping is worth a line: a child that never reports
+            // the new dpi is what the review harness's simulated move always looks like, since
+            // Windows answers a child's own dpi query with the display it is really on.
+            if (clipped)
             {
-                return;
+                AuraLog.Warn($"Layout still clipped after a display-scale change:"
+                    + $"{Environment.NewLine}{DescribeLayout()}");
             }
 
-            ApplyScaledMetrics();
+            return;
+        }
 
-            if (_devices.Count > 0)
-            {
-                SetUpChannelSelector();
-            }
-
-            FitEffectList();
-            Render();
-        });
+        var retry = new System.Windows.Forms.Timer { Interval = 200 };
+        retry.Tick += (_, _) =>
+        {
+            retry.Stop();
+            retry.Dispose();
+            SettleAfterDpiChange(attempt + 1);
+        };
+        retry.Start();
     }
 
     private void OnResize(object? sender, EventArgs e)
@@ -1099,6 +1202,20 @@ internal sealed class ToggleForm : Form
         if (HotKey.IsHotKeyMessage(m.Msg, m.WParam) && !IsDisposed)
         {
             _ = Run(() => Program.Switch(!_state.On));
+        }
+
+        // The window is being dragged or resized by hand. Dragging it from one display to another
+        // crosses a scale change halfway through, and measuring - let alone repositioning - a
+        // window that is still following the mouse only fights the user. Everything waits for the
+        // drag to end, and then runs once.
+        if (m.Msg == EnterSizeMove)
+        {
+            _userMoving = true;
+        }
+        else if (m.Msg == ExitSizeMove)
+        {
+            _userMoving = false;
+            QueueSettle();
         }
 
         base.WndProc(ref m);
@@ -1472,32 +1589,33 @@ internal sealed class ToggleForm : Form
             wanted += _brightnessRow.PreferredSize.Height + _brightnessRow.Margin.Vertical;
         }
 
-        if (ClientSize.Height != wanted || ClientSize.Width != WantedWidth)
+        // Measured once: the property behind it walks every entry in the effect list.
+        int width = WantedWidth;
+        if (ClientSize.Height != wanted || ClientSize.Width != width)
         {
-            ClientSize = new Size(WantedWidth, wanted);
+            ClientSize = new Size(width, wanted);
             KeepOnScreen();
         }
 
-        // A live DPI change rescales fonts and control bounds through WinForms' own rounding,
-        // which does not always agree with WantedWidth's floor-based arithmetic to the exact
-        // pixel - the gap that kept leaving the top row a few pixels short after a monitor with a
-        // different scale. Measured and corrected here instead of only ever being logged, so a
-        // display-scale round trip cannot leave the window clipped.
-        int overflow = RightOverflow().Select(measured => measured.Overflow).DefaultIfEmpty(0).Max();
-        if (overflow > 0)
-        {
-            ClientSize = new Size(ClientSize.Width + overflow, ClientSize.Height);
-            KeepOnScreen();
-        }
-
-        LogIfClipped();
+        // The panels inside the window keep the width they had before a display-scale change:
+        // WinForms rescales their bounds itself, and the client size set above does not re-run the
+        // dock pass for them afterwards. The effect list is then a few pixels narrower than the
+        // width this window was just sized for and ellipsises its own longest entry - "cut off on
+        // the right after moving to the other monitor", with nothing actually sticking out of the
+        // window, which is why every overflow check missed it. Measured on the review harness
+        // (-review layout 100 from a 150 % display): 473 px of panel inside a 479 px content box,
+        // effect list 237 where it needed 243. One layout pass here brings both up to date.
+        PerformLayout();
     }
 
     /// <summary>
     /// How far each visible top-row/colour-strip control's right edge sits past the content box,
-    /// in pixels - zero or negative once it fits. The one place that measures this, shared by the
-    /// self-correction in <see cref="ResizeToContent"/> above and the report
-    /// <see cref="DescribeLayout"/> builds below, so both always agree on what "clipped" means.
+    /// in pixels - zero or negative once it fits. Measured, never corrected: a window that grows
+    /// itself out of a bad measurement keeps the extra width when the measurement was only wrong
+    /// because a display-scale change was still in flight, which is how a trip to the second
+    /// monitor and back left the window permanently wider. The check drives the settle in
+    /// <see cref="SettleAfterDpiChange"/>, which re-measures instead, and the report
+    /// <see cref="DescribeLayout"/> builds below.
     /// </summary>
     private IEnumerable<(string Name, int Right, int Overflow)> RightOverflow()
     {
@@ -1513,26 +1631,16 @@ internal sealed class ToggleForm : Form
             int right = control.Right - atForm.X;
             yield return (name, right, right - (ClientSize.Width - Padding.Right));
         }
-    }
 
-    /// <summary>
-    /// Catches the top row spilling past the right edge - the second-monitor-scaling complaint
-    /// that keeps resurfacing and cannot be reproduced here (Hyper-V only ever offers one
-    /// display). Reuses <see cref="DescribeLayout"/>'s own clip check rather than a separate one,
-    /// so the numbers in the log are exactly what <c>-review layout</c> would have shown live.
-    /// </summary>
-    private void LogIfClipped()
-    {
-        if (!IsHandleCreated)
+        // The other shape of the same complaint: everything sits inside the window, but the effect
+        // list was handed less room than its longest entry needs and cuts the text off itself.
+        // Reported in the same pixels-too-few units so one check covers both, and only while the
+        // window can still grow at all - at the maximum width a shortened entry is the intended
+        // result (see WantedWidth), not a fault.
+        int missing = _effects.PreferredWidthForItems(includeHints: false) - _effects.Width;
+        if (_effects.Visible && missing > 0 && ClientSize.Width < this.Scaled(MaxWidth))
         {
-            return;
-        }
-
-        string report = DescribeLayout();
-        if (report.Contains("CLIPPED", StringComparison.Ordinal) ||
-            report.Contains("OVERFLOW", StringComparison.Ordinal))
-        {
-            AuraLog.Warn($"Layout clipped on this display:{Environment.NewLine}{report}");
+            yield return ("effects room", _effects.Right, missing);
         }
     }
 
@@ -1540,12 +1648,24 @@ internal sealed class ToggleForm : Form
     /// Pulls the window back into the working area after it has grown. It is centred at its
     /// starting size, before the channel selector has widened it, so it grows to the right from
     /// a position chosen for a narrower window - on a small screen at a high display scale that
-    /// pushed its right-hand edge, gear and all, off the side. The popups already do this for
-    /// themselves; the main window never did.
+    /// pushed its right-hand edge, gear and all, off the side.
     /// </summary>
+    /// <remarks>
+    /// A window lying across two displays is left exactly where it is. Pulling it onto the display
+    /// it happened to overlap most put it fully on the other monitor, which changed the display
+    /// scale, which re-measured and pulled it back - the window ping-ponged between the two for as
+    /// long as it took to land, and every measurement in between was taken mid-flight. That is
+    /// what left the layout wrong until something later (the on/off switch) measured it again on a
+    /// window that had finally stopped moving.
+    /// </remarks>
     private void KeepOnScreen()
     {
-        if (!IsHandleCreated || !Visible || WindowState != FormWindowState.Normal)
+        if (!IsHandleCreated || !Visible || WindowState != FormWindowState.Normal || _userMoving)
+        {
+            return;
+        }
+
+        if (Screen.AllScreens.Count(display => display.Bounds.IntersectsWith(Bounds)) > 1)
         {
             return;
         }
@@ -1606,7 +1726,10 @@ internal sealed class ToggleForm : Form
         var lines = new List<string>
         {
             $"dpi           {DeviceDpi} ({DeviceDpi * 100 / 96}%)  text measured at {Theme.TextDpi}"
-                + (DeviceDpi == Theme.TextDpi ? "" : " - CORRECTED, window is off the system scale"),
+                + (DeviceDpi == Theme.TextDpi ? "" : " - window is off the system scale, so the"
+                    + " font carries the difference"),
+            $"font          {_effects.Font.SizeInPoints:0.##}pt height={_effects.Font.Height} "
+                + $"(baseline {Theme.Ui.SizeInPoints:0.##}pt height={Theme.Ui.Height})",
             $"clientsize    {ClientSize.Width}x{ClientSize.Height}",
             $"padding       {Padding.Left},{Padding.Top},{Padding.Right},{Padding.Bottom}",
             $"width bounds  min={this.Scaled(MinWidth)} max={this.Scaled(MaxWidth)} wanted={WantedWidth}",
@@ -1617,6 +1740,14 @@ internal sealed class ToggleForm : Form
             $"  colours     w={_colours.Width}",
             $"  margins     effects={_effects.Margin.Right} toggle={_toggle.Margin.Top} "
                 + $"colours={_colours.Margin.Top} brightness={_brightnessRow.Margin.Top}",
+            $"  panels      layout w={_layout.Width} margin={_layout.Margin.Horizontal} "
+                + $"toprow w={_topRow.Width} margin={_topRow.Margin.Horizontal} "
+                + $"window w={Width} display w={DisplayRectangle.Width}",
+            $"  columns     effects x={_effects.Left} channel x={_channel.Left} gear x={_gear.Left}",
+            $"  child dpi   effects={_effects.DeviceDpi} channel={_channel.DeviceDpi}"
+                + (_effects.DeviceDpi == DeviceDpi && _channel.DeviceDpi == DeviceDpi
+                    ? ""
+                    : " - STALE, still on the display this window came from"),
         };
 
         // The real question behind the complaint: does anything actually stick out past the right
@@ -1625,7 +1756,8 @@ internal sealed class ToggleForm : Form
         {
             if (rightOverflow > 0)
             {
-                lines.Add($"CLIPPED {name}: right={right} exceeds {ClientSize.Width - Padding.Right}");
+                lines.Add($"CLIPPED {name}: {rightOverflow} px short "
+                    + $"(right={right}, limit={ClientSize.Width - Padding.Right})");
             }
         }
 
@@ -1687,7 +1819,13 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
 
         e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         using var brush = new SolidBrush(Theme.Accent);
-        e.Graphics.FillEllipse(brush, e.ImageRectangle.X + 5, e.ImageRectangle.Y + 5, 9, 9);
+
+        // Sized from the box the menu gave it rather than in fixed pixels: a renderer is not a
+        // control, so it has no dpi of its own to scale against - but that box already carries the
+        // menu's, which is the same thing one step earlier.
+        Rectangle box = e.ImageRectangle;
+        int dot = Math.Max(4, Math.Min(box.Width, box.Height) / 2);
+        e.Graphics.FillEllipse(brush, box.X + ((box.Width - dot) / 2), box.Y + ((box.Height - dot) / 2), dot, dot);
     }
 
     private sealed class TrayColours : ProfessionalColorTable

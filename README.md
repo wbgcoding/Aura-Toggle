@@ -4,9 +4,8 @@
 
 **Turn off ASUS RGB — without Armoury Crate.**
 
-One executable · no install · no background service · nothing written to your board
-
-[Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) · [Is it safe?](#-is-this-safe-for-my-mainboard) · [Deutsch](README.de.md)
+[Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) ·
+[Changelog](CHANGELOG.md) · [Deutsch](README.de.md)
 
 <img src="docs/preview-dark.png" alt="The Aura Toggle window" width="360">
 
@@ -18,7 +17,6 @@ One executable · no install · no background service · nothing written to your
 |---|---|---|
 | Size | ~580 KB | Hundreds of MB |
 | Background service | None | Always running |
-| Account | None | Sign-in required |
 
 **Quickstart:**
 
@@ -37,7 +35,7 @@ of two routes:
 
 | Option | What it costs |
 |---|---|
-| Armoury Crate | Background service, auto-start, account, updater, hundreds of MB |
+| Armoury Crate | Background service, auto-start, updater, hundreds of MB |
 | BIOS | A reboot to switch off, another reboot to switch back on |
 | **Aura Toggle** | One click. Delete the file when you no longer need it |
 
@@ -45,36 +43,40 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 
 ## ✨ What it does
 
-- 🔌 Switches **every** channel: onboard zone, 12 V RGB headers, all addressable ARGB headers
+- 🔌 Switches **every** channel the board reports: the onboard zone and all addressable ARGB headers
 - 🎯 Or **one channel at a time** — the onboard zone steady white while an ARGB header breathes red
 - 🎨 Nine built-in effects with a colour picker, applied instantly
 - 🔆 **Brightness** for the colour effects, 10 – 100 %, per channel or for the whole board
 - 🧩 **Custom presets** — a name, one effect and colour per channel, saved and reusable
-- 🖥️ One window: a button that **animates the running effect** and switches it
+- 🖥️ One window: a button that animates the running effect and switches it
 - 📌 Lives in the notification area, right-click for on/off
 - ⌨️ Full command line with exit codes — scheduled tasks, scripts, shortcuts
 - 🔥 A global hotkey, configurable, switches the whole board from anywhere
-- 🔒 No admin rights, no driver, no network, no telemetry
-- 🇩🇪 EN German and English, switchable independently of Windows
+- 🔒 No admin rights, no driver, no telemetry — the application makes no network connections at all
 
 ## 🚫 What it can't do
 
-- No speed or direction for the running-light effects — the controller has no such setting
 - No individual LED control — an effect and colour apply to a whole channel, not one LED
 - Only one dynamic effect per controller — spectrum cycle, rainbow, rainbow breathing and wave
   run across every channel of a controller at once, not one at a time
 - Only mainboard lighting — no GPU, RAM, fans or other Aura Sync devices
+- No channel of its own for a plain (non-addressable) 12 V RGB header — only what the board
+  reports as its onboard zone is switched
+- Can't read the current effect back from the controller — it remembers what it last set instead
 
 ## 📥 Download
+
+**➡️ [Latest release](https://github.com/wbgcoding/aura-toggle/releases/latest)** — both files are
+attached there, along with `SHA256SUMS.txt` to check them against.
 
 | | Size | Needs |
 |---|---|---|
 | **Portable** `AuraToggle.exe` | ~580 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| **Installer** | ~2.3 MB | Nothing — it fetches the runtime if you lack it |
+| **Installer** `AuraToggle-Setup-<version>.exe` | ~2.3 MB | Nothing — it fetches the runtime if you lack it |
 
 Portable: download, double click, done. Installer: for everyone or just for you, optional
 autostart and desktop shortcut, clean uninstall. If the .NET 10 Desktop Runtime is missing it
-asks once, downloads it from Microsoft and installs it — no 60 MB bundle in every download.
+asks once, downloads it from Microsoft and installs it.
 
 ## 🚀 Using it
 
@@ -158,10 +160,6 @@ schtasks /create /tn "LEDs off" /tr "C:\tools\AuraToggle.exe -off" /sc daily /st
 schtasks /create /tn "LEDs on"  /tr "C:\tools\AuraToggle.exe -on"  /sc daily /st 08:00
 ```
 
-Two ready-made shortcuts, **Aura On** and **Aura Off**, sit next to the executable in the portable
-download. They carry a relative path, so the folder can be moved anywhere. The installer does not
-add them — it puts the application in the Start menu and nothing else.
-
 ## 🎨 Effects
 
 | Name | Looks like | Colour |
@@ -179,9 +177,6 @@ add them — it puts the application in the Start menu and nothing else.
 Names are forgiving: casing, spaces, hyphens and underscores are ignored, and the translated
 names work too. An unknown name prints the list.
 
-> There is **no speed or direction** setting. The controller has none — its effect command
-> carries a channel and a mode, nothing else.
->
 > **Brightness** works by scaling the colour that is sent, so it applies to the five effects
 > marked ✅ above. The other four are generated inside the controller's own firmware, which
 > takes no colour and no brightness — nothing can dim those short of switching them off.
@@ -191,19 +186,6 @@ names work too. An unknown name prints the list.
 > controller, shared by all of its channels: set the rainbow on a single header and every header
 > of that controller runs it. The window still offers all nine with a single channel selected, but
 > flags it with a hint rather than letting the choice quietly spread.
-
-## 🔒 Is this safe for my mainboard?
-
-**Yes**, and the reason matters.
-
-The Aura controller keeps its configuration in its own flash, and that flash is what your board
-applies at power-on. Aura Toggle **never sends the command that writes to it**. Only volatile
-effect commands, which live in the controller's RAM.
-
-- ✅ Your BIOS lighting settings stay untouched
-- ✅ After a reboot the lighting is back, even if you shut down with it off
-- ✅ Uninstalling means deleting one file
-- ✅ No kernel driver, no admin rights — it is a standard USB HID device
 
 ## 💻 Requirements
 
@@ -218,8 +200,7 @@ directly, not by a model list, so it either works or reports no controller found
 ## 🛠️ Troubleshooting
 
 **"No AURA LED controller found"**
-No Aura USB controller on the board, or lighting is off in the BIOS. Look for hardware id
-`USB\VID_0B05` under Human Interface Devices in Device Manager.
+No Aura USB controller on the board, or lighting is off in the BIOS.
 
 **"The AURA LED controller is in use by another program"**
 Armoury Crate, OpenRGB or SignalRGB hold it open. Close them — two programs cannot drive the
@@ -280,9 +261,11 @@ State lives in `%LOCALAPPDATA%\aura-toggle` — `state.json` for the last effect
 `settings.json` for your preferences, `presets.json` for custom presets, `channel-state.json`
 for what each channel was last set to including its own brightness, `channel-names.json` for
 channels you renamed, and `log.txt` (rotated to `log.old.txt` past 200 KB) for start-up, version
-and error entries. Portable and installed builds share them, every write goes through a
-temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete the
-folder.
+and error entries. The per-channel files are keyed by the controller's device path, so the entries
+survive a reboot. Portable and installed builds share the folder, every write goes through a
+temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete it.
+Nothing in there is ever sent anywhere, and your user name is replaced with `%USERPROFILE%` in
+anything the log or the error dialog writes out.
 
 ## 📄 Licence and trademarks
 

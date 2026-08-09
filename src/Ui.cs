@@ -13,6 +13,34 @@ using System.Windows.Forms;
 
 namespace AuraToggle;
 
+/// <summary>
+/// Every fixed distance a surface sets, kept as the call that produced it so a display-scale
+/// change can run them all again at the new scale. The main window computes its metrics in one
+/// place and calls that method again (<c>ApplyScaledMetrics</c>); a panel that builds its rows
+/// through helpers has them spread over the construction instead and records them here as it
+/// goes. Recomputed from the 96 dpi constants every time, never scaled from whatever is there
+/// now, so a trip to another display and back lands on the same numbers it started with.
+/// </summary>
+internal sealed class ScaledMetrics
+{
+    private readonly List<Action> _metrics = new();
+
+    /// <summary>Applies one metric now and keeps it for the next display-scale change.</summary>
+    public void Add(Action metric)
+    {
+        _metrics.Add(metric);
+        metric();
+    }
+
+    public void Reapply()
+    {
+        foreach (Action metric in _metrics)
+        {
+            metric();
+        }
+    }
+}
+
 /// <summary>Colours and drawing helpers, following the Windows light or dark theme.</summary>
 internal static class Theme
 {
@@ -266,7 +294,16 @@ internal static class Theme
     /// <see cref="Control.DeviceDpi"/> rather than the primary monitor's keeps it right on a
     /// second screen at a different scale.
     /// </remarks>
-    public static int Scaled(this Control control, int length) => length * control.DeviceDpi / 96;
+    public static int Scaled(this Control control, int length) => length * DpiOf(control) / 96;
+
+    /// <summary>
+    /// The dpi of the window <paramref name="control"/> sits in, rather than the control's own.
+    /// Windows tells a window about a display-scale change before it tells the controls inside it,
+    /// so for a while the two disagree - and a layout measured half in one scale and half in the
+    /// other is wrong in a way that looks perfectly consistent to any check. One dpi for the whole
+    /// window means the measurement is right from the first pass, whenever the children catch up.
+    /// </summary>
+    private static int DpiOf(Control control) => (control.TopLevelControl ?? control).DeviceDpi;
 
     /// <summary>
     /// The dpi GDI measures text at, which is the process-wide system dpi and does not follow a
@@ -289,17 +326,19 @@ internal static class Theme
     /// is on.
     /// </summary>
     /// <remarks>
-    /// <see cref="TextRenderer.MeasureText(string, Font)"/> measures against a screen device
-    /// context, and that context carries the system dpi - one number for the whole process. The
-    /// text itself is drawn per monitor, so on a display scaled differently from the system one
-    /// the measurement comes back for the wrong size: on a 150 % second monitor with a 100 %
-    /// primary, every measured width was a third too small, and the window sized from it cut its
-    /// own top row off on the right. Correcting by the ratio fixes that and is a no-op
-    /// (<c>DeviceDpi == SystemDpi</c>) whenever the window is on a display at the system scale,
-    /// which is the ordinary single-monitor case.
+    /// Deliberately just the measurement, with no display-scale correction on top of it. Both
+    /// measuring and drawing turn the font's point size into pixels against the system dpi, and
+    /// the font itself is the part that follows the display: WinForms replaces every control's
+    /// font with a rescaled copy on a scale change (visible in <c>-review layout</c>, where the
+    /// same font reads 9 pt on a 150 % display and 6 pt on a 100 % one). Scaling the result by the
+    /// display's dpi as well applied that same factor twice, which is why the window came out
+    /// half again as wide as it needed to be on a second monitor at 150 % - the text was measured
+    /// as if it were both bigger and on a bigger display, and everything in the row was stretched
+    /// to fill the extra room. The fixed distances around the text still go through
+    /// <see cref="Scaled"/>; that is the one place the display scale belongs.
     /// </remarks>
     public static int MeasuredWidth(this Control control, string text, Font font) =>
-        TextRenderer.MeasureText(text, font).Width * control.DeviceDpi / SystemDpi;
+        TextRenderer.MeasureText(text, font).Width;
 
     /// <summary>The drawing quality every custom control in this window paints with.</summary>
     public static void Prepare(Graphics g)
@@ -1074,5 +1113,91 @@ internal static class WindowDrag
                 SendMessage(window.Handle, NonClientLeftButtonDown, (IntPtr)HitCaption, IntPtr.Zero);
             };
         }
+    }
+}
+
+/// <summary>
+/// Brings this process's own window out in front when it is first shown. DO NOT REMOVE OR WEAKEN
+/// THIS - a window opening behind Setup has come back three times, and each of the two mechanisms
+/// below is here because the other one is not enough on its own:
+/// <list type="number">
+/// <item>
+/// Windows only lets the current foreground process, or one it started directly, activate a
+/// window. Setup hands off through a de-elevated relaunch, so this process is neither. Attaching
+/// this thread's input queue to the foreground window's for the one call is the standard way
+/// around that - the same trick the taskbar relies on to switch windows for the user.
+/// </item>
+/// <item>
+/// That trick cannot work against Setup itself: Setup runs elevated, and a process at a lower
+/// integrity level is not allowed to attach to its input queue or take the foreground from it.
+/// Raising the window to the top of the z-order does not need any of those rights, so that is
+/// what actually puts it in front of the wizard. Set and immediately cleared, so this ends up a
+/// normal window rather than one that stays on top of everything.
+/// </item>
+/// </list>
+/// </summary>
+internal static class ForegroundWindow
+{
+    private static readonly IntPtr TopMost = new(-1);
+    private static readonly IntPtr NoTopMost = new(-2);
+
+    private const uint NoMove = 0x0002;
+    private const uint NoSize = 0x0001;
+    private const uint NoActivate = 0x0010;
+    private const uint ShowWindow = 0x0040;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr window);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    [DllImport("user32.dll")]
+    private static extern bool AttachThreadInput(uint attachId, uint attachToId, bool attach);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y,
+        int width, int height, uint flags);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    public static void Claim(Form window)
+    {
+        IntPtr handle = window.Handle;
+        if (GetForegroundWindow() == handle)
+        {
+            return;
+        }
+
+        uint currentThread = GetCurrentThreadId();
+        uint foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), out _);
+        bool attached = foregroundThread != 0 && foregroundThread != currentThread &&
+            AttachThreadInput(currentThread, foregroundThread, true);
+
+        try
+        {
+            SetForegroundWindow(handle);
+        }
+        finally
+        {
+            if (attached)
+            {
+                AttachThreadInput(currentThread, foregroundThread, false);
+            }
+        }
+
+        if (GetForegroundWindow() == handle)
+        {
+            return;
+        }
+
+        // Still behind something that would not hand the foreground over - an elevated Setup is
+        // exactly that case. Being visible in front is what matters here, not owning the focus.
+        SetWindowPos(handle, TopMost, 0, 0, 0, 0, NoMove | NoSize | NoActivate | ShowWindow);
+        SetWindowPos(handle, NoTopMost, 0, 0, 0, 0, NoMove | NoSize | NoActivate | ShowWindow);
     }
 }
