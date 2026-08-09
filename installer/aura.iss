@@ -92,7 +92,6 @@ Name: "autostart"; Description: "{cm:AutoStart}"; Flags: unchecked
 Source: "..\dist\{#AppExe}"; DestDir: "{app}"; DestName: "{#AppExe}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\README.de.md"; DestDir: "{app}"; Flags: ignoreversion
 ; Never installed to the target machine - only extracted to {tmp} on demand, to check the
 ; downloaded .NET runtime installer's signature before PrepareToInstall runs it elevated.
 Source: "verify-signature.ps1"; DestDir: "{tmp}"; Flags: dontcopy

@@ -526,7 +526,7 @@ internal sealed class ToggleForm : Form
         }
 
         SetUpChannelSelector();
-        UpdateTitle();
+        Text = Strings.WindowTitle;
 
         // Re-measured now that the selector is there: the width worked out in the constructor was
         // for a row without it, and the selector is the widest thing that ever joins that row.
@@ -774,12 +774,6 @@ internal sealed class ToggleForm : Form
 
             cts.Dispose();
         }
-    }
-
-    private void UpdateTitle()
-    {
-        int channels = _devices.Sum(d => d.Channels.Count);
-        Text = $"{Strings.WindowTitle} - " + string.Format(CultureInfo.CurrentCulture, Strings.StatusChannels, channels);
     }
 
     /// <summary>
@@ -1074,22 +1068,8 @@ internal sealed class ToggleForm : Form
         bool settled = _effects.DeviceDpi == DeviceDpi && _channel.DeviceDpi == DeviceDpi;
         bool clipped = RightOverflow().Any(measured => measured.Overflow > 0);
 
-        if (settled && !clipped)
+        if ((settled && !clipped) || attempt >= MaxDpiSettleAttempts)
         {
-            return;
-        }
-
-        if (attempt >= MaxDpiSettleAttempts)
-        {
-            // Out of attempts. Only actual clipping is worth a line: a child that never reports
-            // the new dpi is what the review harness's simulated move always looks like, since
-            // Windows answers a child's own dpi query with the display it is really on.
-            if (clipped)
-            {
-                AuraLog.Warn($"Layout still clipped after a display-scale change:"
-                    + $"{Environment.NewLine}{DescribeLayout()}");
-            }
-
             return;
         }
 
@@ -1453,12 +1433,12 @@ internal sealed class ToggleForm : Form
         if (_devices.Count > 0)
         {
             SetUpChannelSelector();
-            UpdateTitle();
+            Text = Strings.WindowTitle;
         }
         else
         {
-            // The "no controller" title is a translated string too, so it has to follow the
-            // language just like the one with a channel count in it.
+            // The "no controller" title is a translated string too, so it has to follow a
+            // language change like everything else on the window.
             Text = $"{Strings.WindowTitle} - {Strings.StatusControllerMissing}";
         }
 
@@ -1671,18 +1651,9 @@ internal sealed class ToggleForm : Form
         }
 
         Rectangle screen = Screen.FromControl(this).WorkingArea;
-        Point wanted = Location;
         Location = new Point(
             Math.Max(screen.Left, Math.Min(Location.X, screen.Right - Width)),
             Math.Max(screen.Top, Math.Min(Location.Y, screen.Bottom - Height)));
-
-        // Logged rather than silent: a window that only fits on screen by being shoved off its
-        // content-driven position is the other shape the "cut off" reports could be - content
-        // that fits the window fine, but a window that no longer fits the display it landed on.
-        if (Location != wanted)
-        {
-            AuraLog.Info($"Kept on screen: moved from {wanted} to {Location} (working area {screen}).");
-        }
     }
 
     /// <summary>

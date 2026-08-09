@@ -42,7 +42,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="WindowTitle" xml:space="preserve">
-    <value>Aura</value>
+    <value>Aura Toggle</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
     <value>An</value>
@@ -133,9 +133,6 @@
   </data>
   <data name="StartActionOff" xml:space="preserve">
     <value>Ausschalten</value>
-  </data>
-  <data name="StatusChannels" xml:space="preserve">
-    <value>{0} Kan&#228;le</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>&#214;ffnen</value>
@@ -259,9 +256,6 @@
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
     <value>Wirklich alles zur&#252;cksetzen?</value>
-  </data>
-  <data name="SettingOpenLog" xml:space="preserve">
-    <value>Logordner &#246;ffnen</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Globaler Hotkey (Ein/Aus)</value>

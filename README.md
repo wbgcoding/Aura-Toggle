@@ -5,7 +5,7 @@
 **Turn off ASUS RGB — without Armoury Crate.**
 
 [Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) ·
-[Changelog](CHANGELOG.md) · [Deutsch](README.de.md)
+[Troubleshooting](#-troubleshooting) · [Changelog](CHANGELOG.md)
 
 <img src="docs/preview-dark.png" alt="The Aura Toggle window" width="360">
 
@@ -95,7 +95,7 @@ asks once, downloads it from Microsoft and installs it.
    one header on its own, or set the whole board at once, which hands every channel back to the
    board-wide value.
 6. **⚙️ Gear** — autostart, minimise instead of close, lighting at start, a global hotkey,
-   animation on/off, language, open the log folder, reset everything back to first-run defaults.
+   animation on/off, language, reset everything back to first-run defaults.
 
 Minimising sends the window to the notification area. Right click the icon there to toggle the
 lighting, reopen or quit.
@@ -210,6 +210,18 @@ same controller.
 The controller cannot report which effect is running, so the tool remembers what it set last.
 On the very first switch-on it falls back to the ASUS rainbow. Reboot, or just pick the effect
 you want.
+
+**Still stuck — where the log is**
+Start-up, version and every error land in a plain text file:
+
+```
+%LOCALAPPDATA%\aura-toggle\log.txt
+```
+
+Paste that path into the Explorer address bar or into Win+R. It rolls over to `log.old.txt` past
+200 KB, holds no personal data — your user name is replaced with `%USERPROFILE%` — and the last
+few lines are usually enough to say why a controller could not be reached. Attach them to a bug
+report.
 
 ## 🔨 Building
 

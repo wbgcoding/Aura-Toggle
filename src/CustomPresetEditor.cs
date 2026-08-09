@@ -9,8 +9,8 @@ namespace AuraToggle;
 
 /// <summary>
 /// Creates or edits one custom preset: a name plus, for every channel the machine has, a
-/// built-in effect and a colour. Saving applies nothing by itself - the preset appears in the
-/// effect list like any other, and is switched to from there.
+/// built-in effect, a colour and a brightness. Saving switches the board to the preset and adds
+/// it to the effect list, where it can be picked again like any built-in effect.
 /// </summary>
 internal sealed class CustomPresetEditor : PopupForm
 {
@@ -293,11 +293,13 @@ internal sealed class CustomPresetEditor : PopupForm
             var rule = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 1,
                 BackColor = Theme.Border,
             };
             _metrics.Add(() =>
-                rule.Margin = new Padding(this.Scaled(2), this.Scaled(6), this.Scaled(2), 0));
+            {
+                rule.Height = this.Scaled(1);
+                rule.Margin = new Padding(this.Scaled(2), this.Scaled(6), this.Scaled(2), 0);
+            });
             _root.Controls.Add(rule);
         }
 

@@ -58,8 +58,6 @@ internal static class Strings
 
     public static string PresetAccessibleName => Get("PresetAccessibleName");
 
-    public static string StatusChannels => Get("StatusChannels");
-
     public static string TrayOpen => Get("TrayOpen");
 
     public static string TrayExit => Get("TrayExit");
@@ -166,8 +164,6 @@ internal static class Strings
     public static string SettingReset => Get("SettingReset");
 
     public static string SettingResetConfirm => Get("SettingResetConfirm");
-
-    public static string SettingOpenLog => Get("SettingOpenLog");
 
     public static string SettingHotkey => Get("SettingHotkey");
 

@@ -61,9 +61,10 @@ internal sealed class ErrorDialog : PopupForm
         _detailsToggle.VisitedLinkColor = Theme.Accent;
         _detailsToggle.LinkBehavior = LinkBehavior.NeverUnderline;
         _detailsToggle.BackColor = Theme.Surface;
-        // Both: a mouse click on a LinkLabel raises Click, Enter on the focused link raises only
-        // LinkClicked - wiring one of them left the details unreachable from the other.
-        _detailsToggle.Click += (_, _) => ToggleDetails();
+        // LinkClicked only. It fires for a mouse click on the link and for Enter on the focused
+        // one alike, while Click fires on top of the mouse case - handling both toggled the
+        // details open and shut again in the same click. The label is nothing but this one link,
+        // so there is no part of it a click could land on that LinkClicked would miss.
         _detailsToggle.LinkClicked += (_, _) => ToggleDetails();
         Controls.Add(_detailsToggle);
 
