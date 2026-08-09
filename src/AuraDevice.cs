@@ -293,7 +293,10 @@ internal sealed class AuraDevice : IDisposable
         // A device that answers with a shorter report gets the rest padded with zeroes rather
         // than crashing the lookup below.
         var configTable = new byte[60];
-        Array.Copy(configReply, 4, configTable, 0, Math.Clamp(configReply.Length - 4, 0, 60));
+        if (configReply.Length > 4)
+        {
+            Array.Copy(configReply, 4, configTable, 0, Math.Min(configReply.Length - 4, 60));
+        }
 
         // The firmware string itself is not kept: answering 0x82 at all is the protocol probe,
         // and nothing in the tool has a use for the version.

@@ -634,6 +634,138 @@ Test-Case "window opens, closes and leaves no process behind" {
     Assert-Equal 0 $leftover.Count "leftover processes"
 }
 
+# The complaint that came back three times: after the window is moved to a monitor at another
+# display scale, the effect list is handed less room than its own longest entry needs and cuts the
+# text off. "-review layout <scale>" puts the window through exactly that move, so it is a check
+# here rather than something only a second physical monitor could show.
+# The popups measure their own spacing when they open. One left open across a display-scale change
+# has to put it back at the new scale, which is what these two paddings prove: 14/12 and 16/14 at
+# 96 dpi, so exactly double at 200 %.
+foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "editor"; Padding = "32,28" })) {
+    Test-Case "the $($surface.Name) popup rescales when the display scale changes" {
+        $report = Join-Path $env:TEMP "aura-layout.txt"
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+        $process = Start-Process $Exe -ArgumentList "-review", $surface.Name, "200" -PassThru
+        try {
+            Start-Sleep -Seconds 5
+            if (-not (Test-Path $report)) { throw "no report was written" }
+
+            $last = (Get-Content $report -Raw) -split "--- " | Select-Object -Last 1
+            if ($last -notmatch "dpi\s+192") { throw "the popup never reached 192 dpi:`n$last" }
+            if ($last -notmatch "padding\s+$($surface.Padding)") {
+                throw "padding did not follow the scale (expected $($surface.Padding)):`n$last"
+            }
+        }
+        finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            [void]$process.WaitForExit(5000)
+            Remove-Item $report -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+# Out to another display and back has to land on the size it started at - the window is meant to
+# follow the scale, not to grow a little on every trip. Two stops at the same scale with a
+# different one in between, so the check holds whatever scale this machine itself runs at.
+Test-Case "the window comes back to the same size after a round trip" {
+    $report = Join-Path $env:TEMP "aura-layout.txt"
+    Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+    $process = Start-Process $Exe -ArgumentList "-review", "layout", "150,200,150" -PassThru
+    try {
+        Start-Sleep -Seconds 20
+        if (-not (Test-Path $report)) { throw "no layout report was written" }
+
+        $blocks = @((Get-Content $report -Raw) -split "--- " | Where-Object { $_ -match "move to 150%" })
+        if ($blocks.Count -lt 2) { throw "the report has no two stops at 150 %" }
+
+        $widths = @($blocks[0], $blocks[-1] | ForEach-Object {
+            if ($_ -notmatch "clientsize\s+(\d+)x") { throw "no client size in:`n$_" }
+            [int]$Matches[1]
+        })
+
+        if ($widths[0] -ne $widths[1]) {
+            throw "width $($widths[0]) px on the way out, $($widths[1]) px on the way back"
+        }
+    }
+    finally {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        [void]$process.WaitForExit(5000)
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# The same window, only scaled: twice the display scale is twice the width, give or take rounding.
+# Measuring text against the display scale as well as through its own font made it half again as
+# wide as it should be on a second monitor, with everything in the row stretched to fill the room.
+Test-Case "the window is only as wide as the display scale asks for" {
+    $report = Join-Path $env:TEMP "aura-layout.txt"
+    Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+    $process = Start-Process $Exe -ArgumentList "-review", "layout", "100,200" -PassThru
+    try {
+        Start-Sleep -Seconds 14
+        if (-not (Test-Path $report)) { throw "no layout report was written" }
+
+        $blocks = @((Get-Content $report -Raw) -split "--- ")
+        $at100 = @($blocks | Where-Object { $_ -match "move to 100%" }) | Select-Object -Last 1
+        $at200 = @($blocks | Where-Object { $_ -match "move to 200%" }) | Select-Object -Last 1
+        if (-not $at100 -or -not $at200) { throw "the report is missing one of the two stops" }
+        if ($at100 -notmatch "clientsize\s+(\d+)x") { throw "no client size at 100 %" }
+        $narrow = [int]$Matches[1]
+        if ($at200 -notmatch "clientsize\s+(\d+)x") { throw "no client size at 200 %" }
+        $wide = [int]$Matches[1]
+
+        $ratio = $wide / $narrow
+        if ([Math]::Abs($ratio - 2) -gt 0.03) {
+            throw "$narrow px at 100 % but $wide px at 200 % - ratio $([Math]::Round($ratio, 3)), expected 2"
+        }
+    }
+    finally {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        [void]$process.WaitForExit(5000)
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+    }
+}
+
+foreach ($scale in 100, 125, 200) {
+    Test-Case "the layout survives a move to a display at $scale %" {
+        $report = Join-Path $env:TEMP "aura-layout.txt"
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+        $process = Start-Process $Exe -ArgumentList "-review", "layout", $scale -PassThru
+        try {
+            Start-Sleep -Seconds 5
+            if (-not (Test-Path $report)) { throw "no layout report was written" }
+
+            # Only the last pass matters: the earlier ones are the window on its way there.
+            $last = (Get-Content $report -Raw) -split "--- " | Select-Object -Last 1
+            if ($last -match "CLIPPED") {
+                throw "clipped after the move:`n$last"
+            }
+            if ($last -notmatch "clientsize\s+(\d+)x" ) { throw "no client size in:`n$last" }
+            $width = [int]$Matches[1]
+            if ($last -notmatch "width bounds\s+min=\d+ max=(\d+)") { throw "no width bounds in:`n$last" }
+            $max = [int]$Matches[1]
+            if ($last -notmatch "effects\s+w=(\d+) preferred=(\d+)") {
+                throw "the report says nothing about the effect list:`n$last"
+            }
+
+            # At the maximum width a shortened entry is the intended result, not a defect: the
+            # window is capped on purpose rather than growing with a forty-character preset name.
+            if ($width -lt $max -and [int]$Matches[1] -lt [int]$Matches[2]) {
+                throw "effect list got $($Matches[1]) px for text needing $($Matches[2]) px"
+            }
+        }
+        finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            [void]$process.WaitForExit(5000)
+            Remove-Item $report -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 }
 finally {
     # Runs even when a test throws or the run is interrupted: leave the machine on the default

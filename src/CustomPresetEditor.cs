@@ -26,6 +26,10 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly ArmedButton _deleteArm;
     private readonly string? _editing;
 
+    /// <summary>Every scaled distance this editor sets, so a display-scale change can put them all
+    /// back at the new scale instead of leaving the rows measured for the old one.</summary>
+    private readonly ScaledMetrics _metrics = new();
+
     /// <summary>Read once rather than on every keystroke of the name field.</summary>
     private readonly HashSet<string> _existingNames;
 
@@ -55,7 +59,8 @@ internal sealed class CustomPresetEditor : PopupForm
         ForeColor = Theme.Text;
         Font = Theme.Ui;
         AccessibleName = Strings.CustomPresetAccessibleName;
-        Padding = new Padding(this.Scaled(16), this.Scaled(14), this.Scaled(16), this.Scaled(14));
+        _metrics.Add(() =>
+            Padding = new Padding(this.Scaled(16), this.Scaled(14), this.Scaled(16), this.Scaled(14)));
 
         _root = new Layout
         {
@@ -72,6 +77,11 @@ internal sealed class CustomPresetEditor : PopupForm
         _scroll.Controls.Add(_root);
         Controls.Add(_scroll);
 
+        // WinForms reaches the rows after it has told this window about a display-scale change, so
+        // the spacing has to be put back when they say so too, not only when the window does.
+        _root.DpiChangedAfterParent += (_, _) => Resettle();
+        _root.FontChanged += (_, _) => Resettle();
+
         // Heading on the left, a discard button on the right: closing without saving needs a
         // visible way out, not just the Escape key.
         var header = new Layout
@@ -81,8 +91,8 @@ internal sealed class CustomPresetEditor : PopupForm
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, 0, 0, this.Scaled(8)),
         };
+        _metrics.Add(() => header.Margin = new Padding(0, 0, 0, this.Scaled(8)));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
@@ -94,8 +104,8 @@ internal sealed class CustomPresetEditor : PopupForm
             Font = Theme.Heading,
             ForeColor = Theme.Text,
             BackColor = Theme.Surface,
-            Margin = new Padding(this.Scaled(2), this.Scaled(2), 0, 0),
         };
+        _metrics.Add(() => heading.Margin = new Padding(this.Scaled(2), this.Scaled(2), 0, 0));
         header.Controls.Add(heading, 0, 0);
 
         var discard = new DeleteButton
@@ -113,7 +123,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _name.PlaceholderText = Strings.CustomPresetNamePlaceholder;
         _name.AccessibleName = Strings.CustomPresetNamePlaceholder;
         _name.MaxLength = 40;
-        _name.Margin = new Padding(0, 0, 0, this.Scaled(10));
+        _metrics.Add(() => _name.Margin = new Padding(0, 0, 0, this.Scaled(10)));
         _name.Text = preset?.Name ?? "";
         _name.Accepted += (_, e) =>
         {
@@ -128,15 +138,16 @@ internal sealed class CustomPresetEditor : PopupForm
 
         if (devices.Count == 0)
         {
-            _root.Controls.Add(new Label
+            var empty = new Label
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 Text = Strings.CustomPresetNoDevices,
                 ForeColor = Theme.TextMuted,
                 BackColor = Theme.Surface,
-                Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(10)),
-            });
+            };
+            _metrics.Add(() => empty.Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(10)));
+            _root.Controls.Add(empty);
         }
 
         Dictionary<string, string> chosen = AuraChannelNames.All();
@@ -157,8 +168,8 @@ internal sealed class CustomPresetEditor : PopupForm
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, this.Scaled(6), 0, 0),
         };
+        _metrics.Add(() => buttons.Margin = new Padding(0, this.Scaled(6), 0, 0));
         buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         buttons.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
@@ -166,7 +177,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _save.Primary = true;
         _save.Font = Theme.Action; // the one action this panel leads with, so it says so
         _save.DesignHeight = 40;
-        _save.Width = this.Scaled(130);
+        _metrics.Add(() => _save.Width = this.Scaled(130));
         _save.Dock = DockStyle.Left;
         _save.BackColor = Theme.Surface;
         _save.Click += (_, _) => SaveAndClose();
@@ -175,11 +186,14 @@ internal sealed class CustomPresetEditor : PopupForm
 
         _delete.Text = Strings.CustomPresetDelete;
         _delete.DesignHeight = 40;
-        _delete.Width = this.Scaled(96);
         _delete.Fill = Theme.NeutralSoft;
         _delete.ForeColor = Theme.Danger;
         _delete.BackColor = Theme.Surface;
-        _delete.Margin = new Padding(this.Scaled(8), 0, 0, 0);
+        _metrics.Add(() =>
+        {
+            _delete.Width = this.Scaled(96);
+            _delete.Margin = new Padding(this.Scaled(8), 0, 0, 0);
+        });
         _delete.Visible = _editing != null;
 
         _deleteArm = new ArmedButton(_delete, Strings.CustomPresetDelete, Strings.CustomPresetConfirmDelete, 16);
@@ -276,28 +290,34 @@ internal sealed class CustomPresetEditor : PopupForm
         // the first keeps them apart once the list is long enough to scroll.
         if (_rows.Count > 0)
         {
-            _root.Controls.Add(new Panel
+            var rule = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 1,
                 BackColor = Theme.Border,
-                Margin = new Padding(this.Scaled(2), this.Scaled(6), this.Scaled(2), 0),
-            });
+            };
+            _metrics.Add(() =>
+                rule.Margin = new Padding(this.Scaled(2), this.Scaled(6), this.Scaled(2), 0));
+            _root.Controls.Add(rule);
         }
 
-        _root.Controls.Add(new Label
+        var caption = new Label
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            // Wraps rather than clips: a channel can be renamed to anything up to 30 characters,
-            // and in this weight that outgrows the panel well before the limit.
-            MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0),
             Text = label,
             Font = Theme.Subheading,
             ForeColor = Theme.Text,
             BackColor = Theme.Surface,
-            Margin = new Padding(this.Scaled(2), this.Scaled(10), 0, this.Scaled(6)),
+        };
+        _metrics.Add(() =>
+        {
+            // Wraps rather than clips: a channel can be renamed to anything up to 30 characters,
+            // and in this weight that outgrows the panel well before the limit.
+            caption.MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0);
+            caption.Margin = new Padding(this.Scaled(2), this.Scaled(10), 0, this.Scaled(6));
         });
+        _root.Controls.Add(caption);
 
         var effect = new Select
         {
@@ -305,8 +325,8 @@ internal sealed class CustomPresetEditor : PopupForm
             DesignHeight = 32,
             BackColor = Theme.Surface,
             AccessibleName = label,
-            Margin = new Padding(0, 0, 0, this.Scaled(8)),
         };
+        _metrics.Add(() => effect.Margin = new Padding(0, 0, 0, this.Scaled(8)));
         // What this very channel last ran, or the board-wide state when it has never been set
         // on its own.
         ChannelLighting seed = AuraChannelStates.Get(remembered, device.Key, channel.Index)
@@ -321,8 +341,8 @@ internal sealed class CustomPresetEditor : PopupForm
             Anchor = AnchorStyles.Left,
             BackColor = Theme.Surface,
             Colour = Color.FromArgb(seed.Red, seed.Green, seed.Blue),
-            Margin = new Padding(0, 0, 0, this.Scaled(8)),
         };
+        _metrics.Add(() => colours.Margin = new Padding(0, 0, 0, this.Scaled(8)));
         _root.Controls.Add(colours);
 
         // Brightness per channel, laid out like the one in the window so both read the same way.
@@ -331,8 +351,8 @@ internal sealed class CustomPresetEditor : PopupForm
             AutoSize = true,
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, 0, this.Scaled(2), this.Scaled(2)),
         };
+        _metrics.Add(() => brightnessValue.Margin = new Padding(0, 0, this.Scaled(2), this.Scaled(2)));
 
         var brightness = new Slider
         {
@@ -353,18 +373,23 @@ internal sealed class CustomPresetEditor : PopupForm
             ColumnCount = 2,
             RowCount = 2,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, 0, 0, this.Scaled(10)),
         };
         brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        brightnessRow.Controls.Add(new Label
+
+        var brightnessLabel = new Label
         {
             AutoSize = true,
             Text = Strings.SettingBrightness,
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Surface,
-            Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(2)),
-        }, 0, 0);
+        };
+        _metrics.Add(() =>
+        {
+            brightnessRow.Margin = new Padding(0, 0, 0, this.Scaled(10));
+            brightnessLabel.Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(2));
+        });
+        brightnessRow.Controls.Add(brightnessLabel, 0, 0);
         brightnessRow.Controls.Add(brightnessValue, 1, 0);
         brightnessRow.Controls.Add(brightness, 0, 1);
         brightnessRow.SetColumnSpan(brightness, 2);
@@ -608,10 +633,23 @@ internal sealed class CustomPresetEditor : PopupForm
     protected override void OnDpiChanged(DpiChangedEventArgs e)
     {
         base.OnDpiChanged(e);
+        Resettle();
+    }
+
+    /// <summary>Every row's spacing back at the current scale, then the window fitted to what that
+    /// measures - queued, since WinForms is still working through its own rescale.</summary>
+    private void Resettle()
+    {
+        if (!IsHandleCreated || IsDisposed)
+        {
+            return;
+        }
+
         BeginInvoke(() =>
         {
             if (!IsDisposed)
             {
+                _metrics.Reapply();
                 FitToContent();
             }
         });

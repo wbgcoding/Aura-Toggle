@@ -9,7 +9,7 @@
 ; it checks for it and offers to fetch it from Microsoft, once, on the machines that lack it.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.1.0"
 #endif
 
 #define AppName "Aura Toggle"
@@ -24,6 +24,7 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
+AppCopyright=© 2026 BG Coding
 AppPublisherURL={#AppUrl}
 AppSupportURL={#AppUrl}/issues
 AppUpdatesURL={#AppUrl}/releases
@@ -150,8 +151,51 @@ const
   whichever process asks for it next, rather than one this script would have to track down. }
   AnyProcess = $FFFFFFFF;
 
+{ SetWindowPos: the two z-order positions and the flags that leave everything else alone. }
+  TopMost = -1;
+  NoTopMost = -2;
+  KeepPlace = $0053; { SWP_NOSIZE or SWP_NOMOVE or SWP_NOACTIVATE or SWP_SHOWWINDOW }
+
 function AllowSetForegroundWindow(dwProcessId: LongWord): Boolean;
   external 'AllowSetForegroundWindow@user32.dll stdcall';
+
+function SetForegroundWindow(hWnd: HWND): Boolean;
+  external 'SetForegroundWindow@user32.dll stdcall';
+
+function SetWindowPos(hWnd: HWND; hWndInsertAfter: Integer; X, Y, cx, cy: Integer;
+  uFlags: LongWord): Boolean; external 'SetWindowPos@user32.dll stdcall';
+
+{ Setup itself can come up behind whatever the user was looking at: the elevated process that
+  actually runs the wizard is started by the elevation service, not by the window that had the
+  foreground, so Windows does not hand it the foreground automatically. Asking for it is the
+  polite half; raising the window to the top of the z-order and straight back off topmost is the
+  half that works when the request is refused. Same two steps, and the same reason, as
+  ForegroundWindow.Claim in the application - keep both here too. }
+var
+  WizardRaised: Boolean;
+
+procedure BringWizardToFront;
+begin
+  SetForegroundWindow(WizardForm.Handle);
+  SetWindowPos(WizardForm.Handle, TopMost, 0, 0, 0, 0, KeepPlace);
+  SetWindowPos(WizardForm.Handle, NoTopMost, 0, 0, 0, 0, KeepPlace);
+end;
+
+procedure InitializeWizard;
+begin
+  BringWizardToFront;
+end;
+
+{ Again on the first page: InitializeWizard runs before the wizard is on screen, and a window that
+  is not visible yet cannot be raised above anything. }
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if not WizardRaised then
+  begin
+    WizardRaised := True;
+    BringWizardToFront;
+  end;
+end;
 
 { Checks one candidate ".dotnet root\shared\Microsoft.WindowsDesktop.App" for any 10.x - a
   framework dependent build rolls forward to the newest one present, so the exact patch does
@@ -330,12 +374,11 @@ begin
 
   { The [Run] entry below launches the app de-elevated (runasoriginaluser) once the user clicks
     Finish - a different hand-off than a plain child process, which is why it used to open behind
-    whatever window had focus at that point instead of in front: that hand-off does not carry the
-    foreground-activation right an elevated Setup.exe normally passes straight to what it launches.
-    Granted here rather than right before the launch, because Inno gives no hook that runs at that
-    exact point for a [Run] entry - ssDone fires just before the Finished page, with nothing but
-    the wizard itself between here and the user's click, so the grant is still standing when the
-    launch actually happens. }
+    whatever window had focus at that point instead of in front. That hand-off does not go through
+    this elevated Setup.exe directly, so this grant does not reliably reach the process it actually
+    creates - kept anyway as a harmless, no-cost attempt for whichever launch path it does reach.
+    The launched application now claims the foreground itself once its window is up, which does
+    not depend on this grant at all and is the fix this bug actually needed. }
   if CurStep = ssDone then
     AllowSetForegroundWindow(AnyProcess);
 end;
@@ -355,7 +398,11 @@ begin
   Result :=
     (Length(path) > Length(prefix) + Length('\appdata\local')) and
     (Copy(Lowercase(path), 1, Length(prefix)) = prefix) and
-    (Copy(Lowercase(path), Length(path) - 13, 14) = '\appdata\local');
+    (Copy(Lowercase(path), Length(path) - 13, 14) = '\appdata\local') and
+    { Without this the two checks above only constrain both ends of the string: a value like
+      "<sd>\Users\me\..\..\Windows\...\AppData\Local" satisfies them and still walks out of the
+      profile. Nothing legitimate needs a relative step in the middle of this path. }
+    (Pos('..', path) = 0);
 end;
 
 { The LocalAppData constant resolves for whichever account this process is running as - the real

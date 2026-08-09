@@ -48,9 +48,14 @@ internal sealed record AuraState(
         {
             JsonElement root = document.RootElement;
 
+            // An effect number no controller of ours runs is put back to the default here rather
+            // than carried around: it is sent as the default anyway, and keeping it would leave
+            // the window naming one effect while the board runs another.
+            byte mode = AuraFiles.JsonByte(root, "mode", Default.Mode);
+
             return new AuraState(
                 On: AuraFiles.JsonFlag(root, "on", Default.On),
-                Mode: AuraFiles.JsonByte(root, "mode", Default.Mode),
+                Mode: AuraPresets.ByMode(mode) == null ? Default.Mode : mode,
                 Red: AuraFiles.JsonByte(root, "red", Default.Red),
                 Green: AuraFiles.JsonByte(root, "green", Default.Green),
                 Blue: AuraFiles.JsonByte(root, "blue", Default.Blue),

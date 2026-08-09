@@ -302,7 +302,7 @@ internal sealed class HidStream : IDisposable
         {
             if (!write.Wait(WriteTimeoutMs))
             {
-                cancel.Cancel();
+                CancelQuietly(cancel);
                 _writeAbandoned = true;
 
                 // The controller stopped acknowledging writes. Logged here rather than only where
@@ -343,7 +343,7 @@ internal sealed class HidStream : IDisposable
         {
             if (!read.Wait(timeoutMs))
             {
-                cancel.Cancel();
+                CancelQuietly(cancel);
                 _readAbandoned = true;
                 return false;
             }
@@ -355,6 +355,23 @@ internal sealed class HidStream : IDisposable
             // A device that disappears mid-read faults the task. Treat it as no answer;
             // the caller decides what that means.
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Cancels a source that may already have been disposed. The exchange it belongs to can
+    /// complete in the moment between the wait above giving up and this line, and the
+    /// continuation that disposes it then wins the race - a controller that answers right on the
+    /// timeout would otherwise take the whole app down with it.
+    /// </summary>
+    private static void CancelQuietly(CancellationTokenSource cancel)
+    {
+        try
+        {
+            cancel.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
         }
     }
 

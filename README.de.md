@@ -4,9 +4,8 @@
 
 **Mainboard-Beleuchtung aus. Ohne Armoury Crate.**
 
-Eine Datei · keine Installation · kein Hintergrunddienst · nichts wird ins Board geschrieben
-
-[Download](#-download) · [Kommandozeile](#-kommandozeile) · [Effekte](#-effekte) · [Ist das sicher?](#-ist-das-sicher-für-mein-mainboard) · [English](README.md)
+[Download](#-download) · [Kommandozeile](#-kommandozeile) · [Effekte](#-effekte) ·
+[Changelog](CHANGELOG.md) · [English](README.md)
 
 <img src="docs/preview-dark.png" alt="Das Aura-Toggle-Fenster" width="360">
 
@@ -18,7 +17,6 @@ Eine Datei · keine Installation · kein Hintergrunddienst · nichts wird ins Bo
 |---|---|---|
 | Größe | ~580 KB | Hunderte MB |
 | Hintergrunddienst | Keiner | Läuft immer |
-| Konto | Keins | Anmeldung nötig |
 
 **Schnellstart:**
 
@@ -37,7 +35,7 @@ Lichtshow — bedeutet normalerweise einen von zwei Wegen:
 
 | Weg | Was er kostet |
 |---|---|
-| Armoury Crate | Hintergrunddienst, Autostart, Konto, Updater, hunderte MB |
+| Armoury Crate | Hintergrunddienst, Autostart, Updater, hunderte MB |
 | BIOS | Neustart zum Ausschalten, noch ein Neustart zum Einschalten |
 | **Aura Toggle** | Ein Klick. Datei löschen, wenn sie nicht mehr gebraucht wird |
 
@@ -46,37 +44,43 @@ Schalter wert ist.
 
 ## ✨ Was es kann
 
-- 🔌 Schaltet **alle** Kanäle: Onboard-Zone, 12-V-RGB-Header, jeden adressierbaren ARGB-Header
+- 🔌 Schaltet **jeden** Kanal, den das Board meldet: die Onboard-Zone und jeden adressierbaren
+  ARGB-Header
 - 🎯 Oder **einzelne Kanäle** — Onboard-Zone statisch weiß, während ein ARGB-Header rot atmet
 - 🎨 Neun eingebaute Effekte mit Farbwahl, sofort wirksam
 - 🔆 **Helligkeit** für die Farbeffekte, 10 – 100 %, pro Kanal oder für das ganze Board
 - 🧩 **Eigene Presets** — Name, ein Effekt und eine Farbe pro Kanal, gespeichert und wiederverwendbar
-- 🖥️ Ein Fenster: ein Knopf, der den **laufenden Effekt animiert** und ihn umschaltet
+- 🖥️ Ein Fenster: ein Knopf, der den laufenden Effekt animiert und ihn umschaltet
 - 📌 Lebt im Infobereich, Rechtsklick für An/Aus
 - ⌨️ Vollständige Kommandozeile mit Exit-Codes — Aufgabenplanung, Skripte, Verknüpfungen
 - 🔥 Ein globaler Hotkey, frei belegbar, schaltet das ganze Board von überall
-- 🔒 Keine Adminrechte, kein Treiber, kein Netzwerk, keine Telemetrie
-- 🇩🇪 EN Deutsch und Englisch, unabhängig von Windows umschaltbar
+- 🔒 Keine Adminrechte, kein Treiber, keine Telemetrie — die Anwendung baut überhaupt keine
+  Netzwerkverbindung auf
 
 ## 🚫 Was es nicht kann
 
-- Kein Tempo und keine Richtung für die Lauflicht-Effekte — der Controller kennt so etwas nicht
 - Keine einzelne LED ansteuerbar — Effekt und Farbe gelten für einen ganzen Kanal, nicht eine LED
 - Nur ein dynamischer Effekt pro Controller — Spectrum Cycle, Regenbogen, Regenbogen-Atmen und
   Wave laufen auf allen Kanälen eines Controllers gleichzeitig, nicht einzeln
 - Nur Mainboard-Beleuchtung — keine GPU, kein RAM, keine Lüfter oder anderen Aura-Sync-Geräte
+- Kein eigener Kanal für einen einfachen (nicht adressierbaren) 12-V-RGB-Header — geschaltet wird
+  nur das, was das Board als seine Onboard-Zone meldet
+- Kann den aktuellen Effekt nicht vom Controller auslesen — merkt sich stattdessen, was es
+  zuletzt gesetzt hat
 
 ## 📥 Download
+
+**➡️ [Neueste Version](https://github.com/wbgcoding/aura-toggle/releases/latest)** — beide Dateien
+hängen dort dran, dazu `SHA256SUMS.txt` zum Gegenprüfen.
 
 | | Größe | Braucht |
 |---|---|---|
 | **Portable** `AuraToggle.exe` | ~580 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| **Installer** | ~2,3 MB | Nichts — er holt die Runtime bei Bedarf |
+| **Installer** `AuraToggle-Setup-<version>.exe` | ~2,3 MB | Nichts — er holt die Runtime bei Bedarf |
 
 Portable: herunterladen, doppelklicken, fertig. Installer: für alle oder nur für dich, optional
 Autostart und Desktop-Verknüpfung, restlose Deinstallation. Fehlt die .NET 10 Desktop Runtime,
-fragt er einmal, lädt sie bei Microsoft herunter und installiert sie — statt 60 MB Runtime in
-jedem Download mitzuschleppen.
+fragt er einmal, lädt sie bei Microsoft herunter und installiert sie.
 
 ## 🚀 Bedienung
 
@@ -161,10 +165,6 @@ schtasks /create /tn "LEDs aus" /tr "C:\tools\AuraToggle.exe -off" /sc daily /st
 schtasks /create /tn "LEDs an"  /tr "C:\tools\AuraToggle.exe -on"  /sc daily /st 08:00
 ```
 
-Im portablen Download liegen neben der Exe zwei fertige Verknüpfungen, **Aura On** und **Aura Off**.
-Sie enthalten einen relativen Pfad, der Ordner lässt sich also beliebig verschieben. Der Installer
-legt sie nicht an — er trägt nur das Programm selbst ins Startmenü ein.
-
 ## 🎨 Effekte
 
 | Name | Sieht aus wie | Farbe |
@@ -183,9 +183,6 @@ Namen werden großzügig erkannt: Groß-/Kleinschreibung, Leerzeichen, Binde- un
 sind egal, die übersetzten Namen funktionieren ebenfalls. Ein unbekannter Name gibt die Liste
 aus.
 
-> Es gibt **keine Geschwindigkeit und keine Richtung**. Der Controller kennt das nicht — sein
-> Effektbefehl trägt einen Kanal und einen Modus, sonst nichts.
->
 > **Helligkeit** entsteht dadurch, dass die gesendete Farbe skaliert wird, gilt also für die
 > fünf oben mit ✅ markierten Effekte. Die anderen vier erzeugt die Firmware des Controllers
 > selbst; sie nimmt weder Farbe noch Helligkeit an — dimmen lässt sich dort nichts.
@@ -195,19 +192,6 @@ aus.
 > alle seine Kanäle teilen: setzt man den Regenbogen auf einen Header, läuft er auf allen Headern
 > dieses Controllers. Das Fenster bietet trotzdem alle neun bei ausgewähltem Einzelkanal an, weist
 > aber mit einem Hinweis darauf hin, statt die Wahl still auf die Nachbarn auszudehnen.
-
-## 🔒 Ist das sicher für mein Mainboard?
-
-**Ja**, und der Grund ist wichtig.
-
-Der Aura-Controller hält seine Konfiguration im eigenen Flash, und dieser Flash ist das, was
-dein Board beim Einschalten anwendet. Aura Toggle sendet **nie den Befehl, der dort
-hineinschreibt**. Nur flüchtige Effektbefehle, die im RAM des Controllers stehen.
-
-- ✅ Deine BIOS-Beleuchtungseinstellungen bleiben unangetastet
-- ✅ Nach einem Neustart ist die Beleuchtung wieder da, auch wenn du sie vorher ausgeschaltet hast
-- ✅ Deinstallieren heißt: eine Datei löschen
-- ✅ Kein Kerneltreiber, keine Adminrechte — es ist ein normales USB-HID-Gerät
 
 ## 💻 Voraussetzungen
 
@@ -222,8 +206,7 @@ mit dem Gerät erkannt, nicht über eine Modellliste — er funktioniert also en
 ## 🛠️ Wenn etwas klemmt
 
 **„Kein AURA-LED-Controller gefunden“**
-Kein Aura-USB-Controller auf dem Board, oder die Beleuchtung ist im BIOS aus. Im Geräte-Manager
-unter „Eingabegeräte“ nach der Hardware-ID `USB\VID_0B05` schauen.
+Kein Aura-USB-Controller auf dem Board, oder die Beleuchtung ist im BIOS aus.
 
 **„Der AURA-LED-Controller wird von einem anderen Programm belegt“**
 Armoury Crate, OpenRGB oder SignalRGB halten ihn offen. Beenden — zwei Programme können
@@ -283,9 +266,12 @@ Der Zustand liegt unter `%LOCALAPPDATA%\aura-toggle` — `state.json` für den l
 die Helligkeit, `settings.json` für die Einstellungen, `presets.json` für eigene Presets,
 `channel-state.json` für den letzten Stand jedes Kanals samt eigener Helligkeit,
 `channel-names.json` für umbenannte Kanäle, und `log.txt` (rotiert ab 200 KB nach `log.old.txt`)
-für Start, Version und Fehler. Portable und installierte Variante teilen sie sich, jeder
-Schreibvorgang läuft über eine temporäre Datei, damit ein Abbruch keine Datei beschädigt, und die
-Deinstallation fragt, ob der Ordner gelöscht werden soll.
+für Start, Version und Fehler. Die kanalbezogenen Dateien sind nach dem Gerätepfad des Controllers
+abgelegt, damit die Einträge einen Neustart überstehen. Portable und installierte Variante teilen
+sich den Ordner, jeder Schreibvorgang läuft über eine temporäre Datei, damit ein Abbruch keine
+Datei beschädigt, und die Deinstallation fragt, ob der Ordner gelöscht werden soll. Nichts davon
+verlässt jemals den Rechner, und in allem, was Log und Fehlerdialog ausgeben, ist der Benutzername
+durch `%USERPROFILE%` ersetzt.
 
 ## 📄 Lizenz und Marken
 

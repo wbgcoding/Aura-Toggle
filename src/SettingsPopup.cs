@@ -35,6 +35,10 @@ internal sealed class SettingsPopup : PopupForm
     private bool _recordingHotkey;
     private int _pendingHotkey;
 
+    /// <summary>Every scaled distance this panel sets, so a display-scale change can put them all
+    /// back at the new scale instead of leaving the rows measured for the old one.</summary>
+    private readonly ScaledMetrics _metrics = new();
+
     public SettingsPopup(AuraSettings settings)
     {
         Settings = settings;
@@ -43,7 +47,8 @@ internal sealed class SettingsPopup : PopupForm
         AutoScaleMode = AutoScaleMode.Dpi;
         ForeColor = Theme.Text;
         Font = Theme.Ui;
-        Padding = new Padding(this.Scaled(14), this.Scaled(12), this.Scaled(14), this.Scaled(12));
+        _metrics.Add(() =>
+            Padding = new Padding(this.Scaled(14), this.Scaled(12), this.Scaled(14), this.Scaled(12)));
 
         _layout = new Layout
         {
@@ -83,6 +88,9 @@ internal sealed class SettingsPopup : PopupForm
         AddButton(11, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
+
+        _layout.DpiChangedAfterParent += (_, _) => Resettle();
+        _layout.FontChanged += (_, _) => Resettle();
 
         _autoStart.CheckedChanged += (_, _) =>
         {
@@ -167,8 +175,9 @@ internal sealed class SettingsPopup : PopupForm
             Text = text,
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Surface,
-            Margin = new Padding(this.Scaled(2), this.Scaled(10), 0, this.Scaled(4)),
         };
+
+        _metrics.Add(() => label.Margin = new Padding(this.Scaled(2), this.Scaled(10), 0, this.Scaled(4)));
 
         _layout.Controls.Add(label, 0, row);
         _layout.SetColumnSpan(label, 2);
@@ -208,12 +217,16 @@ internal sealed class SettingsPopup : PopupForm
             Text = text,
             ForeColor = Theme.Text,
             BackColor = Theme.Surface,
-            Margin = new Padding(this.Scaled(2), this.Scaled(5), 0, this.Scaled(5)),
         };
 
         toggle.Checked = value;
         toggle.BackColor = Theme.Surface;
-        toggle.Margin = new Padding(this.Scaled(10), this.Scaled(2), 0, this.Scaled(2));
+
+        _metrics.Add(() =>
+        {
+            label.Margin = new Padding(this.Scaled(2), this.Scaled(5), 0, this.Scaled(5));
+            toggle.Margin = new Padding(this.Scaled(10), this.Scaled(2), 0, this.Scaled(2));
+        });
 
         // The switch and its label are separate controls, so the switch has to carry the text
         // itself or a screen reader announces an unnamed checkbox.
@@ -231,7 +244,7 @@ internal sealed class SettingsPopup : PopupForm
         button.ForeColor = fore;
         button.Dock = DockStyle.Top;
         button.DesignHeight = 30;
-        button.Margin = new Padding(0, this.Scaled(8), 0, 0);
+        _metrics.Add(() => button.Margin = new Padding(0, this.Scaled(8), 0, 0));
 
         _layout.Controls.Add(button, 0, row);
         _layout.SetColumnSpan(button, 2);
@@ -402,10 +415,27 @@ internal sealed class SettingsPopup : PopupForm
     protected override void OnDpiChanged(DpiChangedEventArgs e)
     {
         base.OnDpiChanged(e);
+        Resettle();
+    }
+
+    /// <summary>
+    /// Puts every row's spacing back at the current scale, then fits the panel to what that
+    /// measures. Also hung on the rows' own dpi and font changes, not just this window's: WinForms
+    /// reaches the children after it has told the window, and a panel fitted in between is fitted
+    /// to the display it came from.
+    /// </summary>
+    private void Resettle()
+    {
+        if (!IsHandleCreated || IsDisposed)
+        {
+            return;
+        }
+
         BeginInvoke(() =>
         {
             if (!IsDisposed)
             {
+                _metrics.Reapply();
                 FitToContent();
             }
         });
