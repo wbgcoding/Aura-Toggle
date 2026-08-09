@@ -2,15 +2,29 @@
 
 # 💡 Aura Toggle
 
-**Switch your ASUS mainboard lighting off. Without Armoury Crate.**
+**Turn off ASUS RGB — without Armoury Crate.**
 
-One ~740 KB executable · no install · no background service · nothing written to your board
+One executable · no install · no background service · nothing written to your board
 
 [Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) · [Is it safe?](#-is-this-safe-for-my-mainboard) · [Deutsch](README.de.md)
 
 <img src="docs/preview-dark.png" alt="The Aura Toggle window" width="360">
 
 </div>
+
+---
+
+| | Aura Toggle | Armoury Crate |
+|---|---|---|
+| Size | ~580 KB | Hundreds of MB |
+| Background service | None | Always running |
+| Account | None | Sign-in required |
+
+**Quickstart:**
+
+1. Download `AuraToggle.exe` below (or the installer)
+2. Run it — no setup, no admin rights
+3. Click the button
 
 ---
 
@@ -39,15 +53,24 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 - 🖥️ One window: a button that **animates the running effect** and switches it
 - 📌 Lives in the notification area, right-click for on/off
 - ⌨️ Full command line with exit codes — scheduled tasks, scripts, shortcuts
+- 🔥 A global hotkey, configurable, switches the whole board from anywhere
 - 🔒 No admin rights, no driver, no network, no telemetry
-- 🇩🇪 🇬🇧 German and English, switchable independently of Windows
+- 🇩🇪 EN German and English, switchable independently of Windows
+
+## 🚫 What it can't do
+
+- No speed or direction for the running-light effects — the controller has no such setting
+- No individual LED control — an effect and colour apply to a whole channel, not one LED
+- Only one dynamic effect per controller — spectrum cycle, rainbow, rainbow breathing and wave
+  run across every channel of a controller at once, not one at a time
+- Only mainboard lighting — no GPU, RAM, fans or other Aura Sync devices
 
 ## 📥 Download
 
 | | Size | Needs |
 |---|---|---|
-| **Portable** `Aura Toggle.exe` | ~740 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| **Installer** (x64 and ARM64 in one file) | ~2.5 MB | Nothing — it fetches the runtime if you lack it |
+| **Portable** `AuraToggle.exe` | ~580 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| **Installer** | ~2.3 MB | Nothing — it fetches the runtime if you lack it |
 
 Portable: download, double click, done. Installer: for everyone or just for you, optional
 autostart and desktop shortcut, clean uninstall. If the .NET 10 Desktop Runtime is missing it
@@ -69,8 +92,8 @@ asks once, downloads it from Microsoft and installs it — no 60 MB bundle in ev
 5. **Brightness** — appears with the chips, 10 to 100 %, and follows the channel selector: dim
    one header on its own, or set the whole board at once, which hands every channel back to the
    board-wide value.
-6. **⚙️ Gear** — autostart, start minimised, minimise instead of close, lighting at start,
-   animation on/off, language.
+6. **⚙️ Gear** — autostart, minimise instead of close, lighting at start, a global hotkey,
+   animation on/off, language, open the log folder, reset everything back to first-run defaults.
 
 Minimising sends the window to the notification area. Right click the icon there to toggle the
 lighting, reopen or quit.
@@ -89,34 +112,55 @@ title bar of its own but can be dragged by its heading, so it never sits in the 
 ## ⌨️ Command line
 
 ```bat
-"Aura Toggle.exe"                            :: opens the window
-"Aura Toggle.exe" -off                       :: lighting off
-"Aura Toggle.exe" -on                        :: back to the last effect
-"Aura Toggle.exe" -preset rainbow            :: switch to an effect
-"Aura Toggle.exe" -preset static "#20C0FF"   :: effect with a colour
-"Aura Toggle.exe" -brightness 40             :: dim the colour effects, 10 to 100
+AuraToggle.exe                            :: opens the window
+AuraToggle.exe -off                       :: lighting off
+AuraToggle.exe -on                        :: back to the last effect
+AuraToggle.exe -preset rainbow            :: switch to an effect
+AuraToggle.exe -preset static "#20C0FF"   :: effect with a colour
+AuraToggle.exe -brightness 40             :: dim the colour effects, 10 to 100
+AuraToggle.exe -custom "Movie Night"      :: apply a preset saved in the window
+AuraToggle.exe -list                      :: number every controller and channel
+AuraToggle.exe -status                    :: current effect, colour, brightness, on/off
+AuraToggle.exe --version                  :: version number, nothing else
+AuraToggle.exe -help                      :: every command, explained
 ```
 
-`-on`, `--on`, `/on`, `on` — all accepted, any casing. Same for `off`, `preset` and
-`brightness`. Custom presets and single channels are only reachable from the window: a preset is
-a bundle of channels rather than one effect and colour, and a channel means nothing without the
-controller it belongs to.
+`-on`, `--on`, `/on`, `on` — all accepted, any casing. Same for `off`, `preset`, `brightness`,
+`custom`, `list`, `status`, `version` and `help` (also `-h` and `/?`). Creating a custom preset still only happens in the
+window - applying an existing one does not.
+
+**One channel or controller**, with `-on`, `-off`, `-preset` and `-brightness`:
+
+```bat
+AuraToggle.exe -preset static red -channel 2       :: by the number from -list
+AuraToggle.exe -preset static red -channel 1.2     :: controller 1, channel 2
+AuraToggle.exe -preset static red -channel "ARGB 1" :: by its default or renamed name
+AuraToggle.exe -on -device 1                       :: every channel of controller 1
+```
+
+`-channel` accepts a flat number from `-list`, the `<controller>.<channel>` form, the default
+name in either language, or a name given in the window - matched the same forgiving way as preset
+names (casing, spaces and hyphens ignored). Unknown or ambiguous exits `2` and lists the possible
+targets on stderr. `-list` and `-status` are always in English, regardless of the window's
+language, so a script reading them does not break when someone switches it; error messages stay
+translated.
 
 **Exit codes:** `0` ok · `2` bad argument · `3` no controller · `4` controller busy ·
 `5` communication error. Errors go to stderr.
 
 > ⚠️ **PowerShell** does not wait for windowed apps. For the exit code use
-> `Start-Process "Aura Toggle.exe" -ArgumentList "-off" -Wait -NoNewWindow`.
+> `Start-Process AuraToggle.exe -ArgumentList "-off" -Wait -NoNewWindow`.
 
 **Lights out at night, automatically:**
 
 ```bat
-schtasks /create /tn "LEDs off" /tr "\"C:\tools\Aura Toggle.exe\" -off" /sc daily /st 23:30
-schtasks /create /tn "LEDs on"  /tr "\"C:\tools\Aura Toggle.exe\" -on"  /sc daily /st 08:00
+schtasks /create /tn "LEDs off" /tr "C:\tools\AuraToggle.exe -off" /sc daily /st 23:30
+schtasks /create /tn "LEDs on"  /tr "C:\tools\AuraToggle.exe -on"  /sc daily /st 08:00
 ```
 
-Two ready-made shortcuts, **Aura An** and **Aura Aus**, sit next to the executable. They carry
-a relative path, so the folder can be moved anywhere.
+Two ready-made shortcuts, **Aura On** and **Aura Off**, sit next to the executable in the portable
+download. They carry a relative path, so the folder can be moved anywhere. The installer does not
+add them — it puts the application in the Start menu and nothing else.
 
 ## 🎨 Effects
 
@@ -145,8 +189,8 @@ names work too. An unknown name prints the list.
 > Effects can be **mixed** across channels — one header steady red while the next one breathes —
 > but only for the five colour effects. The other four are one effect engine inside the
 > controller, shared by all of its channels: set the rainbow on a single header and every header
-> of that controller runs it. That is why picking a single channel in the window offers the five
-> and says so, rather than letting the choice quietly spread.
+> of that controller runs it. The window still offers all nine with a single channel selected, but
+> flags it with a hint rather than letting the choice quietly spread.
 
 ## 🔒 Is this safe for my mainboard?
 
@@ -163,12 +207,13 @@ effect commands, which live in the controller's RAM.
 
 ## 💻 Requirements
 
-- Windows 10 or 11, 64 bit or ARM64
-- An ASUS mainboard with an Aura USB controller — X470 / Z390 generation onwards, including
-  current AM5 and LGA1700 boards
+- Windows 10 or 11, 64 bit
+- An ASUS mainboard with an onboard Aura USB controller (most ASUS boards with Aura Sync or
+  addressable RGB headers have one, going back several chipset generations)
 
-Developed and verified on a **ROG STRIX Z790-E GAMING WIFI**. The controller is found by
-talking to it, not by a model list, so unlisted ASUS boards of the same family should work.
+Developed and verified on an **ASUS Z790 mainboard**. The controller is found by talking to it
+directly, not by a model list, so it either works or reports no controller found — see
+[Troubleshooting](#-troubleshooting).
 
 ## 🛠️ Troubleshooting
 
@@ -190,11 +235,28 @@ you want.
 Needs the .NET 10 SDK. The installer additionally needs
 [Inno Setup 6](https://jrsoftware.org/isinfo.php).
 
+`build.bat` at the root of the repository is the whole build. Run it with no argument, or double
+click it, and it produces everything a release consists of:
+
 ```bat
-build.bat             :: everything: portable, installer, dist\release ready to upload
-build.bat portable    :: only dist\Aura Toggle.exe, x64
-build.bat installer   :: only the setup for x64 and ARM64
+build.bat                REM everything: portable exe, installer, checksums
+build.bat portable       REM only the portable x64 exe and its two shortcuts
+build.bat installer      REM only the setup
 ```
+
+It empties `dist\` first, so what is left there afterwards is exactly the release: `AuraToggle.exe`,
+the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe` and `SHA256SUMS.txt`. The
+version comes from the project file, not from anything typed twice. Set `NOPAUSE=1` to run it
+from a script without the closing keypress.
+
+The single command behind the portable build, if you would rather not use the script:
+
+```powershell
+dotnet publish AuraToggle.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist
+```
+
+For the Inno Setup installer, pack `installer\aura.iss` with `ISCC.exe` (needs
+[Inno Setup 6](https://jrsoftware.org/isinfo.php)).
 
 Regression suite — it switches the lighting while it runs and leaves it on afterwards:
 
@@ -217,14 +279,16 @@ zone had already switched.
 State lives in `%LOCALAPPDATA%\aura-toggle` — `state.json` for the last effect and brightness,
 `settings.json` for your preferences, `presets.json` for custom presets, `channel-state.json`
 for what each channel was last set to including its own brightness, `channel-names.json` for
-channels you renamed. Portable
-and installed builds share them, every write goes through a temporary file so an interrupted
-save cannot corrupt one, and uninstalling offers to delete the folder.
+channels you renamed, and `log.txt` (rotated to `log.old.txt` past 200 KB) for start-up, version
+and error entries. Portable and installed builds share them, every write goes through a
+temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete the
+folder.
 
 ## 📄 Licence and trademarks
 
-MIT, see [LICENSE](LICENSE). The software comes **without any warranty**, and nobody is liable
-for what it does on your machine.
+[MIT](LICENSE): free to use privately or commercially, pass on and change, no strings attached
+beyond keeping the copyright notice with it. The software comes **without any warranty**, and
+nobody is liable for what it does on your machine.
 
 This is an independent project. It is **not** made, endorsed or supported by ASUSTeK Computer
 Inc. "ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners, used here only

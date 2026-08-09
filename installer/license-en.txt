@@ -1,34 +1,37 @@
-﻿Aura Toggle - licence and what it means for you
+Aura Toggle - License Agreement
 
 
-IN SHORT
+SUMMARY
 
-Aura Toggle is free software. You may use it privately or commercially, pass it on and
-change it. You do not owe anything for it, and nothing is collected from you: the tool has
-no account, no telemetry and no network access of its own.
+Aura Toggle is free, open-source software licensed under the MIT License. You may use it
+for private or commercial purposes, redistribute it, and modify it, all free of charge. The
+application collects no data, requires no account, and makes no network connections of its
+own.
 
-The only thing asked in return is that the copyright line and this licence stay with the
-software if you pass it on.
-
-
-WHAT IT DOES TO YOUR MAINBOARD
-
-Aura Toggle only sends volatile lighting commands. It never writes to the controller's
-flash memory, so your BIOS lighting settings stay untouched and a restart brings them back.
-It needs no administrator rights and installs no driver and no background service.
-
-That said, this is software talking directly to hardware, and it comes with no warranty of
-any kind. If you do not accept that, do not install it.
+The sole condition is that the copyright notice and this license text remain with the
+software if you redistribute it.
 
 
-THIRD PARTY NAMES
+EFFECT ON YOUR MAINBOARD
 
-This is an independent project. It is not made, endorsed or supported by ASUSTeK Computer
-Inc. "ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners, used here
-only to describe which hardware this software talks to.
+Aura Toggle communicates with your mainboard's lighting controller using volatile commands
+only. It never writes to the controller's flash memory: every change is lost on restart, and
+the lighting configured in your BIOS/UEFI is restored automatically. No administrator
+privileges, drivers, or background services are required.
+
+This software communicates directly with hardware and is provided without warranty of any
+kind, as set out in the license below. By installing it, you accept these terms.
 
 
-THE LICENCE ITSELF (MIT)
+THIRD-PARTY TRADEMARKS
+
+Aura Toggle is an independent, unaffiliated project. It is not developed, endorsed, or
+supported by ASUSTeK Computer Inc. "ASUS", "ROG", "TUF", and "Aura" are trademarks of their
+respective owners and are used here solely to identify the hardware this software
+communicates with.
+
+
+MIT LICENSE
 
 Copyright (c) 2026 BG Coding
 

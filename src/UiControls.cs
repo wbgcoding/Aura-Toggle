@@ -6,7 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -49,6 +48,13 @@ internal sealed class EffectButton : FlatControl
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly EffectSurface _surface = new();
 
+    /// <summary>The label's drop-shadow offsets, fixed - hoisted out of OnPaint so a repaint at
+    /// 30 fps does not allocate a new array every time.</summary>
+    private static readonly Point[] ShadowOffsets =
+    {
+        new(0, 1), new(1, 0), new(0, -1), new(-1, 0),
+    };
+
     private bool _on;
     private byte _mode;
     private Color _colour = Color.White;
@@ -59,6 +65,7 @@ internal sealed class EffectButton : FlatControl
     public EffectButton()
     {
         Radius = 16;
+        AccessibleRole = AccessibleRole.PushButton;
         _timer.Tick += (_, _) => Invalidate();
     }
 
@@ -182,7 +189,7 @@ internal sealed class EffectButton : FlatControl
         DrawFocusRing(g, path);
 
         // A soft shadow keeps the label legible even over the brightest frame of an effect.
-        foreach (Point offset in new[] { new Point(0, 1), new Point(1, 0), new Point(0, -1), new Point(-1, 0) })
+        foreach (Point offset in ShadowOffsets)
         {
             TextRenderer.DrawText(g, Text, Font, new Rectangle(offset.X, offset.Y, Width, Height),
                 Color.FromArgb(120, 0, 0, 0),
@@ -196,12 +203,24 @@ internal sealed class EffectButton : FlatControl
 /// <summary>A rounded drop down that opens a themed popup instead of the system list.</summary>
 internal sealed class Select : FlatControl
 {
+    /// <summary>The closed control's own metrics, at 96 dpi - see <see cref="OnPaint"/>.</summary>
+    private const int TextInset = 11;
+    private const int IconWidth = 22;
+    private const int IconHeight = 14;
+    private const int IconGap = 10;
+    private const int ChevronRoom = 26;
+
     private readonly List<SelectItem> _items = new();
+
+    /// <summary>Shared across repaints instead of one throwaway buffer per paint (hover, focus,
+    /// theme change all repaint the closed control, same as <see cref="SelectPopup"/>'s own).</summary>
+    private readonly EffectSurface _icons = new();
 
     public Select()
     {
         Radius = 9;
-        Height = 34;
+        DesignHeight = 34;
+        AccessibleRole = AccessibleRole.ComboBox;
     }
 
     public event EventHandler? SelectionChanged;
@@ -236,18 +255,30 @@ internal sealed class Select : FlatControl
     /// False for a list whose entries carry no icon - the channel selector - so it is not padded
     /// out by room nothing draws in. Every pixel it keeps is one the effect list loses.
     /// </param>
-    public int PreferredWidthForItems(bool withIcon = true)
+    /// <param name="includeHints">
+    /// False for sizing the closed control itself: a hint row can never be picked (see
+    /// <see cref="SelectItem.IsHint"/>), so the closed control never has to show its text and
+    /// measuring it there only made the control - and a window sized from it - grow and shrink
+    /// as the hint row came and went. The popup this opens still needs the true width, since the
+    /// hint really is drawn as a row there; that call keeps the default.
+    /// </param>
+    public int PreferredWidthForItems(bool withIcon = true, bool includeHints = true)
     {
-        using Graphics g = CreateGraphics();
-
         var widest = 0;
         foreach (SelectItem item in _items)
         {
-            widest = Math.Max(widest, TextRenderer.MeasureText(g, item.Text, Font).Width);
+            if (!includeHints && item.IsHint)
+            {
+                continue;
+            }
+
+            widest = Math.Max(widest, this.MeasuredWidth(item.Text, Font));
         }
 
-        // 11 left inset + 22 icon + 10 gap + text + 26 for the chevron.
-        return widest + 11 + (withIcon ? 32 : 0) + 26;
+        // The measured text already grew with the display, so the fixed parts around it have to as
+        // well or the control comes out too narrow for its own longest entry.
+        return widest + this.Scaled(TextInset + ChevronRoom +
+            (withIcon ? IconWidth + IconGap : 0));
     }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -267,6 +298,9 @@ internal sealed class Select : FlatControl
             Selected = _items.FirstOrDefault(item => item.Key == Selected.Key);
         }
 
+        // A list open right now follows along instead of showing what was there a moment ago -
+        // deleting a preset from one of its rows is exactly that case.
+        _popup?.Resync(_items);
         Invalidate();
     }
 
@@ -277,6 +311,18 @@ internal sealed class Select : FlatControl
         Invalidate();
     }
 
+    /// <summary>
+    /// Shared by every <see cref="Select"/> in the process. A sibling drop down still open when
+    /// this one is clicked used to take an extra click or two to get out of the way: the click
+    /// that landed on this control first only deactivated the other popup, and that popup's own
+    /// close raced this one's open. Closing it here, synchronously, before this one is even
+    /// created removes the race - by the time the new popup opens, the old one is fully gone.
+    /// </summary>
+    private static SelectPopup? _openPopup;
+
+    /// <summary>This control's own open list, for pushing item changes into while it is up.</summary>
+    private SelectPopup? _popup;
+
     protected override void OnClick(EventArgs e)
     {
         base.OnClick(e);
@@ -286,7 +332,11 @@ internal sealed class Select : FlatControl
             return;
         }
 
-        var popup = new SelectPopup(_items, Selected, Colour, Math.Max(Width, PopupWidth), Font);
+        _openPopup?.Close();
+
+        var popup = new SelectPopup(_items, Selected, Colour, Math.Max(Width, PopupWidth), Font, DeviceDpi);
+        _openPopup = popup;
+        _popup = popup;
 
         popup.Picked += (_, item) =>
         {
@@ -311,12 +361,26 @@ internal sealed class Select : FlatControl
 
         popup.FormClosed += (_, _) =>
         {
+            if (_openPopup == popup)
+            {
+                _openPopup = null;
+            }
+
+            if (_popup == popup)
+            {
+                _popup = null;
+            }
+
             PopupClosed?.Invoke(this, EventArgs.Empty);
             popup.Dispose();
         };
 
         PopupOpening?.Invoke(this, EventArgs.Empty);
-        popup.Open(PointToScreen(new Point(0, Height + 4)), FindForm());
+
+        // Height + 4 below this control, and the same distance above it when there is no room
+        // below - measured from this control rather than assumed, since the drop downs inside the
+        // popups are shorter than the one in the window.
+        popup.Open(PointToScreen(new Point(0, Height + this.Scaled(4))), FindForm(), Height + this.Scaled(8));
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -337,52 +401,88 @@ internal sealed class Select : FlatControl
 
         DrawFocusRing(g, path);
 
-        int left = 11;
-        var icon = new Rectangle(left, (Height - 14) / 2, 22, 14);
+        // Everything here is custom painted, so nothing grows with the display on its own - the
+        // icon stayed 22x14 next to text that had doubled.
+        int left = this.Scaled(TextInset);
+        var icon = new Rectangle(left, (Height - this.Scaled(IconHeight)) / 2,
+            this.Scaled(IconWidth), this.Scaled(IconHeight));
+
         if (Selected?.Mode is byte mode)
         {
-            EffectPainter.PaintIcon(g, icon, mode, Colour);
-            left = icon.Right + 10;
+            EffectPainter.PaintIcon(g, icon, mode, Colour, _icons);
+            left = icon.Right + this.Scaled(IconGap);
         }
         else if (Selected?.CustomColours is { Length: > 0 } colours)
         {
-            EffectPainter.PaintUserIcon(g, icon, colours);
-            left = icon.Right + 10;
+            EffectPainter.PaintUserIcon(g, icon, colours, _icons);
+            left = icon.Right + this.Scaled(IconGap);
         }
 
-        var text = new Rectangle(left, 0, Math.Max(0, Width - left - 26), Height);
+        var text = new Rectangle(left, 0, Math.Max(0, Width - left - this.Scaled(ChevronRoom)), Height);
         TextRenderer.DrawText(g, Selected?.Text ?? "", Font, text, Enabled ? Theme.Text : Theme.TextMuted,
             TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 
-        PaintChevron(g, new Point(Width - 16, Height / 2), Theme.TextMuted);
+        PaintChevron(g, new Point(Width - this.Scaled(16), Height / 2), Theme.TextMuted);
     }
 
-    internal static void PaintChevron(Graphics g, Point centre, Color colour)
+    private void PaintChevron(Graphics g, Point centre, Color colour)
     {
-        using var pen = new Pen(colour, 1.6f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        int arm = this.Scaled(4);
+        int rise = this.Scaled(2);
+
+        using var pen = new Pen(colour, 1.6f * DeviceDpi / 96f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+        };
+
         g.DrawLines(pen, new[]
         {
-            new Point(centre.X - 4, centre.Y - 2),
-            new Point(centre.X, centre.Y + 2),
-            new Point(centre.X + 4, centre.Y - 2),
+            new Point(centre.X - arm, centre.Y - rise),
+            new Point(centre.X, centre.Y + rise),
+            new Point(centre.X + arm, centre.Y - rise),
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _icons.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }
 
 /// <summary>The themed list that <see cref="Select"/> drops down.</summary>
-internal sealed class SelectPopup : Form
+internal sealed class SelectPopup : PopupForm
 {
-    private const int RowHeight = 30;
-    private const int Inset = 6;
-    private const int Button = 22;
-    private const int ButtonGap = 2;
+    /// <summary>
+    /// The list's own metrics, at 96 dpi. Everything drawn here is custom painted, so nothing
+    /// scales on its own: the numbers are taken through <see cref="Scale"/> against the dpi of the
+    /// control that opened the list, which is by definition the screen it appears on.
+    /// </summary>
+    private const int RowHeightAt96 = 30;
+    private const int InsetAt96 = 6;
+    private const int ButtonAt96 = 22;
+    private const int ButtonGapAt96 = 2;
 
     /// <summary>Separator plus breathing space above the first command row.</summary>
-    private const int ActionGap = 11;
+    private const int ActionGapAt96 = 11;
 
     private readonly List<SelectItem> _items;
     private readonly Color _colour;
-    private readonly int _firstAction;
+
+    // Not readonly: refreshed by OnDpiChanged when this is dragged to a display at another
+    // scale, which is the only time any of these need to change after construction.
+    private int _dpi;
+    private int _rowHeight;
+    private int _inset;
+    private int _button;
+    private int _buttonGap;
+    private int _actionGap;
+    private int _firstAction;
 
     /// <summary>Shared by every icon in the list, instead of one buffer per icon per paint.</summary>
     private readonly EffectSurface _icons = new();
@@ -390,40 +490,133 @@ internal sealed class SelectPopup : Form
     private int _highlighted;
     private int _hovered = -1;
 
+    /// <summary>
+    /// Set once an arrow key has moved the selection, cleared by the next mouse move. The list
+    /// opens with nothing marked at all: marking the current entry made the highlight jump back to
+    /// it whenever the pointer left the rows, which reads as flicker rather than as an answer to
+    /// "which one is running" - the closed control says that already.
+    /// </summary>
+    private bool _keyboard;
+
     /// <summary>How far the list is scrolled, in pixels, when it does not all fit on screen.</summary>
     private int _scroll;
+
+    /// <summary>The full, unscrolled height of every row, recomputed whenever the item list
+    /// changes - unlike <see cref="_maxScroll"/>, which also depends on the screen.</summary>
+    private int _content;
 
     private int _maxScroll;
 
     /// <summary>The row whose delete button is waiting to be confirmed, or -1.</summary>
     private int _confirming = -1;
 
-    public SelectPopup(List<SelectItem> items, SelectItem? selected, Color colour, int width, Font font)
+    /// <param name="dpi">
+    /// The opening control's <see cref="Control.DeviceDpi"/>. Taken from there rather than read
+    /// here: this window has no handle yet, so it has no dpi of its own to ask.
+    /// </param>
+    public SelectPopup(List<SelectItem> items, SelectItem? selected, Color colour, int width, Font font, int dpi)
     {
-        _items = items;
+        // Copied rather than aliased: the caller's own list (Select._items) is cleared and
+        // refilled in place by SetItems, which would otherwise mutate this popup's list out from
+        // under its cached _highlighted/_firstAction indices while it is still open.
+        _items = new List<SelectItem>(items);
         _colour = colour;
-        _highlighted = selected == null ? 0 : Math.Max(0, items.IndexOf(selected));
-        _firstAction = items.FindIndex(item => item.IsAction);
+        _highlighted = selected == null ? 0 : Math.Max(0, _items.IndexOf(selected));
+
+        _dpi = dpi;
+        ComputeMetrics();
 
         Font = font;
-        FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar = false;
-        StartPosition = FormStartPosition.Manual;
-        BackColor = Theme.Surface;
-        DoubleBuffered = true;
-        KeyPreview = true;
+        Measure();
 
-        int content = (items.Count * RowHeight) + (Inset * 2) + (_firstAction >= 0 ? ActionGap : 0);
-
-        // Enough custom presets and the list would be taller than the screen, putting its last
-        // rows out of reach. It stops at the work area and scrolls instead.
-        int room = Screen.PrimaryScreen?.WorkingArea.Height ?? content;
-        int height = Math.Min(content, Math.Max(RowHeight * 3, room - 80));
-        _maxScroll = Math.Max(0, content - height);
-
-        ClientSize = new Size(width, height);
+        // A placeholder height, good enough until Open() knows which screen this actually opens
+        // on and sizes it for real - the constructor cannot know that yet, and guessing the
+        // primary screen was wrong on a second monitor with a shorter work area.
+        ClientSize = new Size(width, Math.Min(_content, _rowHeight * 3));
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+    }
+
+    private int Scale(int length) => length * _dpi / 96;
+
+    private void ComputeMetrics()
+    {
+        _rowHeight = Scale(RowHeightAt96);
+        _inset = Scale(InsetAt96);
+        _button = Scale(ButtonAt96);
+        _buttonGap = Scale(ButtonGapAt96);
+        _actionGap = Scale(ActionGapAt96);
+    }
+
+    /// <summary>
+    /// Dragged onto a display with a different scale: the row metrics were scaled for the dpi
+    /// passed in when this opened, and the list's own height was measured against it.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="_dpi"/> is refreshed here rather than read live from <see cref="Control.DeviceDpi"/>
+    /// in <see cref="Scale"/>: the constructor runs before this window has a handle, and
+    /// <see cref="Control.DeviceDpi"/> is not the screen it is about to open on until then - see
+    /// the constructor's own <c>dpi</c> parameter. This is the one place after construction where
+    /// the handle already exists and the value is trustworthy.
+    /// </remarks>
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        BeginInvoke(() =>
+        {
+            if (!IsDisposed)
+            {
+                _dpi = DeviceDpi;
+                ComputeMetrics();
+                Measure();
+                Fit(Screen.FromControl(this).WorkingArea);
+                _scroll = Math.Clamp(_scroll, 0, _maxScroll);
+                Invalidate();
+            }
+        });
+    }
+
+    /// <summary>Where the command rows start and how tall the whole list wants to be.</summary>
+    private void Measure()
+    {
+        _firstAction = _items.FindIndex(item => item.IsAction);
+        _content = (_items.Count * _rowHeight) + (_inset * 2) + (_firstAction >= 0 ? _actionGap : 0);
+    }
+
+    /// <summary>
+    /// Takes the item list again while the window stays open. Deleting a preset from a row used to
+    /// close the whole list, so removing three of them meant opening it three times - the list is
+    /// where presets are managed, so it has to survive managing them.
+    /// </summary>
+    public void Resync(IEnumerable<SelectItem> items)
+    {
+        _items.Clear();
+        _items.AddRange(items);
+        Measure();
+
+        _confirming = -1;
+        _hovered = -1;
+        _highlighted = Math.Clamp(_highlighted, 0, Math.Max(0, _items.Count - 1));
+
+        Fit(Screen.FromControl(this).WorkingArea);
+        _scroll = Math.Clamp(_scroll, 0, _maxScroll);
+        Invalidate();
+    }
+
+    /// <summary>
+    /// Height for the screen this is on, and how far it can scroll there. The constructor cannot
+    /// know either - a work area shorter than the primary monitor's otherwise let the list claim
+    /// rows past the bottom of the screen instead of scrolling to reach them.
+    /// </summary>
+    private void Fit(Rectangle screen)
+    {
+        int height = Math.Min(_content, Math.Max(_rowHeight * 3, screen.Height - Scale(80)));
+        _maxScroll = Math.Max(0, _content - height);
+
+        if (height != ClientSize.Height)
+        {
+            ClientSize = new Size(ClientSize.Width, height);
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -436,16 +629,6 @@ internal sealed class SelectPopup : Form
         base.Dispose(disposing);
     }
 
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            CreateParams parameters = base.CreateParams;
-            parameters.ClassStyle |= 0x00020000; // CS_DROPSHADOW
-            return parameters;
-        }
-    }
-
     public event EventHandler<SelectItem>? Picked;
 
     /// <summary>The edit button of an editable row was pressed.</summary>
@@ -455,16 +638,16 @@ internal sealed class SelectPopup : Form
     public event EventHandler<SelectItem>? DeleteRequested;
 
     private Rectangle RowRect(int index) => new(
-        Inset,
-        Inset + (index * RowHeight) + (_firstAction >= 0 && index >= _firstAction ? ActionGap : 0) - _scroll,
-        Width - (Inset * 2),
-        RowHeight);
+        _inset,
+        _inset + (index * _rowHeight) + (_firstAction >= 0 && index >= _firstAction ? _actionGap : 0) - _scroll,
+        Width - (_inset * 2),
+        _rowHeight);
 
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         if (_maxScroll > 0)
         {
-            _scroll = Math.Clamp(_scroll - (e.Delta / 120 * RowHeight), 0, _maxScroll);
+            _scroll = Math.Clamp(_scroll - (e.Delta / 120 * _rowHeight), 0, _maxScroll);
             _hovered = IndexAt(e.Location);
             Invalidate();
         }
@@ -481,21 +664,21 @@ internal sealed class SelectPopup : Form
         }
 
         Rectangle row = RowRect(index);
-        if (row.Top < Inset)
+        if (row.Top < _inset)
         {
-            _scroll = Math.Max(0, _scroll - (Inset - row.Top));
+            _scroll = Math.Max(0, _scroll - (_inset - row.Top));
         }
-        else if (row.Bottom > ClientSize.Height - Inset)
+        else if (row.Bottom > ClientSize.Height - _inset)
         {
-            _scroll = Math.Min(_maxScroll, _scroll + (row.Bottom - (ClientSize.Height - Inset)));
+            _scroll = Math.Min(_maxScroll, _scroll + (row.Bottom - (ClientSize.Height - _inset)));
         }
     }
 
-    private static Rectangle ButtonRect(Rectangle row, int fromRight) => new(
-        row.Right - 6 - ((fromRight + 1) * Button) - (fromRight * ButtonGap),
-        row.Y + ((RowHeight - Button) / 2),
-        Button,
-        Button);
+    private Rectangle ButtonRect(Rectangle row, int fromRight) => new(
+        row.Right - _inset - ((fromRight + 1) * _button) - (fromRight * _buttonGap),
+        row.Y + ((_rowHeight - _button) / 2),
+        _button,
+        _button);
 
     private int IndexAt(Point point)
     {
@@ -514,12 +697,14 @@ internal sealed class SelectPopup : Form
     /// Opens the list at a screen position. It is not modal, so a click on the window behind
     /// it, or anywhere else, closes it without picking anything.
     /// </summary>
-    public void Open(Point at, IWin32Window? owner)
+    /// <param name="flipAbove">
+    /// The height of the control this drops from, plus the gap below it, so a list that has to
+    /// open upward clears that control instead of covering it.
+    /// </param>
+    public void Open(Point at, IWin32Window? owner, int flipAbove)
     {
-        Rectangle screen = Screen.FromPoint(at).WorkingArea;
-        int x = Math.Min(at.X, screen.Right - Width - 4);
-        int y = at.Y + Height > screen.Bottom ? at.Y - Height - 42 : at.Y;
-        Location = new Point(Math.Max(screen.Left + 4, x), Math.Max(screen.Top + 4, y));
+        Fit(Screen.FromPoint(at).WorkingArea);
+        Place(at, flipAbove);
 
         if (owner == null)
         {
@@ -531,12 +716,6 @@ internal sealed class SelectPopup : Form
         }
 
         Activate();
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        Theme.RoundWindowCorners(Handle);
     }
 
     protected override void OnDeactivate(EventArgs e)
@@ -586,7 +765,7 @@ internal sealed class SelectPopup : Form
                 break;
 
             case Keys.Delete:
-                if (_items[_highlighted].Editable)
+                if (_highlighted < _items.Count && _items[_highlighted].Editable)
                 {
                     _confirming = _confirming == _highlighted ? -1 : _highlighted;
                     Invalidate();
@@ -632,14 +811,30 @@ internal sealed class SelectPopup : Form
             _highlighted = next;
             _hovered = -1;
             _confirming = -1;
+            _keyboard = true;
             ScrollTo(_highlighted);
             Invalidate();
         }
     }
 
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        // Without this the row the pointer left over stays lit while the mouse is somewhere else
+        // entirely - OnMouseMove only ever fires inside the list.
+        if (_hovered >= 0)
+        {
+            _hovered = -1;
+            Invalidate();
+        }
+
+        base.OnMouseLeave(e);
+    }
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         int hovered = IndexAt(e.Location);
+        _keyboard = false;
+
         if (hovered != _hovered)
         {
             // Only the two rows that changed are repainted. Invalidating the whole list rebuilt
@@ -684,8 +879,10 @@ internal sealed class SelectPopup : Form
             // was: clicking the same spot twice cancels instead of deleting.
             if (index == _confirming && ButtonRect(row, 1).Contains(e.Location))
             {
+                // The list stays open: whoever handles this refills it through Resync, so the row
+                // disappears under the pointer and the next one can be deleted straight away.
+                _confirming = -1;
                 DeleteRequested?.Invoke(this, _items[index]);
-                Close();
                 return;
             }
 
@@ -748,50 +945,54 @@ internal sealed class SelectPopup : Form
             SelectItem item = _items[i];
             Rectangle row = RowRect(i);
             bool confirming = i == _confirming;
+
+            // Hover, or the keyboard's own position once an arrow key has been used - never the
+            // running entry just for being the running entry.
             bool active = !item.IsHint &&
-                (confirming || (_hovered >= 0 ? i == _hovered : i == _highlighted && _confirming < 0));
+                (confirming || i == _hovered || (_keyboard && _hovered < 0 && i == _highlighted && _confirming < 0));
 
             if (i == _firstAction)
             {
                 using var separator = new Pen(Theme.Border);
-                int y = row.Y - (ActionGap / 2);
-                g.DrawLine(separator, row.X + 4, y, row.Right - 4, y);
+                int y = row.Y - (_actionGap / 2);
+                g.DrawLine(separator, row.X + Scale(4), y, row.Right - Scale(4), y);
             }
 
             if (active)
             {
-                using GraphicsPath highlight = Theme.RoundedRectangle(row, 7);
+                using GraphicsPath highlight = Theme.RoundedRectangle(row, Scale(7));
                 using var brush = new SolidBrush(confirming
                     ? Color.FromArgb(Theme.Dark ? 60 : 26, Theme.Danger)
                     : Theme.AccentSoft);
                 g.FillPath(brush, highlight);
             }
 
-            int left = row.X + 8;
-            var icon = new Rectangle(left, row.Y + ((RowHeight - 14) / 2), 22, 14);
+            int left = row.X + Scale(8);
+            int glyph = Scale(14);
+            var icon = new Rectangle(left, row.Y + ((_rowHeight - glyph) / 2), Scale(22), glyph);
 
             if (item.IsAction)
             {
-                PaintPlus(g, new Rectangle(left, row.Y + ((RowHeight - 14) / 2), 14, 14), Theme.Accent);
-                left += 14 + 8;
+                PaintPlus(g, new Rectangle(left, icon.Y, glyph, glyph), Theme.Accent);
+                left += glyph + Scale(8);
             }
             else if (item.Mode is byte mode)
             {
                 EffectPainter.PaintIcon(g, icon, mode, _colour, _icons);
-                left = icon.Right + 10;
+                left = icon.Right + Scale(10);
             }
             else if (item.CustomColours is { Length: > 0 } colours)
             {
                 EffectPainter.PaintUserIcon(g, icon, colours, _icons);
-                left = icon.Right + 10;
+                left = icon.Right + Scale(10);
             }
 
-            int buttons = confirming || item.Editable ? (Button * 2) + ButtonGap + 6
-                : item.Renamable ? Button + 6
-                : 6;
-            var text = new Rectangle(left, row.Y, Math.Max(0, row.Right - left - buttons), RowHeight);
+            int buttons = confirming || item.Editable ? (_button * 2) + _buttonGap + _inset
+                : item.Renamable ? _button + _inset
+                : _inset;
+            var text = new Rectangle(left, row.Y, Math.Max(0, row.Right - left - buttons), _rowHeight);
             TextRenderer.DrawText(g, confirming ? Strings.CustomPresetConfirmDelete : item.Text, Font, text,
-                confirming ? Theme.Danger : item.IsAction ? Theme.Accent : Theme.Text,
+                confirming ? Theme.Danger : item.IsAction ? Theme.Accent : item.IsHint ? Theme.TextMuted : Theme.Text,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 
             if (confirming)
@@ -804,30 +1005,74 @@ internal sealed class SelectPopup : Form
                 PaintGlyphButton(g, ButtonRect(row, 0), Theme.TextMuted, PaintCross);
                 PaintGlyphButton(g, ButtonRect(row, 1), Theme.TextMuted, PaintPencil);
             }
-            else if (item.Renamable && (i == _hovered || i == _highlighted))
+            else if (item.Renamable && (i == _hovered || (_keyboard && i == _highlighted)))
             {
                 // Only shown on hover/keyboard focus - a channel row is mostly just a choice,
                 // and a pencil on every single one would be noise the rest of the time.
                 PaintGlyphButton(g, ButtonRect(row, 0), Theme.TextMuted, PaintPencil);
             }
         }
+
+        if (_maxScroll > 0)
+        {
+            PaintScrollIndicator(g);
+        }
     }
+
+    /// <summary>
+    /// How far down a list too long for the screen currently sits. Drawn only when there is
+    /// something to scroll, in the margin the rows already keep clear on the right, so a list
+    /// that fits looks exactly as it did. Nothing to grab: the wheel and the arrow keys already
+    /// move the list, and a target this narrow would be a poor one to drag.
+    /// </summary>
+    private void PaintScrollIndicator(Graphics g)
+    {
+        int thickness = Scale(3);
+        int edgeGap = Scale(3);
+
+        float track = ClientSize.Height - (_inset * 2);
+        float thumb = Math.Max(_rowHeight, track * ClientSize.Height / _content);
+        float top = _inset + ((track - thumb) * _scroll / _maxScroll);
+        float x = Width - thickness - edgeGap;
+
+        Paint(new RectangleF(x, _inset, thickness, track), Theme.Dark ? 38 : 26);
+        Paint(new RectangleF(x, top, thickness, thumb), Theme.Dark ? 120 : 96);
+
+        void Paint(RectangleF bounds, int alpha)
+        {
+            using GraphicsPath shape = Theme.RoundedRectangle(bounds, thickness / 2f);
+            using var brush = new SolidBrush(Color.FromArgb(alpha, Theme.Text));
+            g.FillPath(brush, shape);
+        }
+    }
+
+    /// <summary>
+    /// The glyphs below take their line weight from the box they are handed rather than from a
+    /// flat number of pixels. The box has already grown with the display, so deriving from it is
+    /// what keeps a pencil or a cross the same weight relative to its button at every scale -
+    /// a fixed 1.6f drew a hairline inside a doubled button.
+    /// </summary>
+    private static Pen GlyphPen(Rectangle box, Color colour, float weight) =>
+        new(colour, Math.Max(1f, box.Width * weight)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
 
     private static void PaintGlyphButton(Graphics g, Rectangle box, Color colour, Action<Graphics, Rectangle, Color> glyph)
     {
-        glyph(g, Rectangle.Inflate(box, -6, -6), colour);
+        // Proportional, for the same reason: a flat -6 left the glyph filling a button that had
+        // doubled around it.
+        int inset = Math.Max(1, box.Width * 6 / 22);
+        glyph(g, Rectangle.Inflate(box, -inset, -inset), colour);
     }
 
     private static void PaintCross(Graphics g, Rectangle box, Color colour)
     {
-        using var pen = new Pen(colour, 1.6f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using Pen pen = GlyphPen(box, colour, 0.16f);
         g.DrawLine(pen, box.Left, box.Top, box.Right, box.Bottom);
         g.DrawLine(pen, box.Right, box.Top, box.Left, box.Bottom);
     }
 
     private static void PaintCheck(Graphics g, Rectangle box, Color colour)
     {
-        using var pen = new Pen(colour, 1.9f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using Pen pen = GlyphPen(box, colour, 0.19f);
         g.DrawLines(pen, new[]
         {
             new PointF(box.Left, box.Top + (box.Height * 0.55f)),
@@ -838,11 +1083,12 @@ internal sealed class SelectPopup : Form
 
     private static void PaintPlus(Graphics g, Rectangle box, Color colour)
     {
-        using var pen = new Pen(colour, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using Pen pen = GlyphPen(box, colour, 0.18f);
         float cx = box.X + (box.Width / 2f);
         float cy = box.Y + (box.Height / 2f);
-        g.DrawLine(pen, box.Left + 1, cy, box.Right - 1, cy);
-        g.DrawLine(pen, cx, box.Top + 1, cx, box.Bottom - 1);
+        float end = box.Width * 0.1f;
+        g.DrawLine(pen, box.Left + end, cy, box.Right - end, cy);
+        g.DrawLine(pen, cx, box.Top + end, cx, box.Bottom - end);
     }
 
     /// <summary>A pencil pointing at the lower left, drawn as a body, a tip and a nib.</summary>
@@ -891,9 +1137,18 @@ internal sealed class ColourStrip : FlatControl
         Color.FromArgb(255, 40, 150),
     };
 
-    private const int Chip = 24;
-    private const int Gap = 9;
-    private const int Inset = 4;
+    private const int ChipAt96 = 24;
+    private const int GapAt96 = 9;
+    private const int InsetAt96 = 4;
+
+    // WinForms scales the control's own bounds on a display change, but nothing inside a custom
+    // paint - so the chips are laid out from the current dpi rather than from flat numbers, or
+    // they would sit in the left half of a strip that has grown to twice the width.
+    private int Chip => this.Scaled(ChipAt96);
+
+    private int Gap => this.Scaled(GapAt96);
+
+    private int Inset => this.Scaled(InsetAt96);
 
     private int _hoveredChip = -1;
 
@@ -959,7 +1214,7 @@ internal sealed class ColourStrip : FlatControl
     {
         for (int i = 0; i <= Palette.Length; i++)
         {
-            if (Rectangle.Inflate(ChipAt(i), 2, 2).Contains(point))
+            if (Rectangle.Inflate(ChipAt(i), Inset / 2, Inset / 2).Contains(point))
             {
                 return i;
             }
@@ -1019,7 +1274,7 @@ internal sealed class ColourStrip : FlatControl
             ColourPicked?.Invoke(this, EventArgs.Empty);
         };
         popup.FormClosed += (_, _) => popup.Dispose();
-        popup.Open(PointToScreen(new Point(box.X, box.Bottom + 6)), FindForm());
+        popup.Open(PointToScreen(new Point(box.X, box.Bottom + this.Scaled(6))), FindForm());
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -1040,10 +1295,10 @@ internal sealed class ColourStrip : FlatControl
 
             if (i == _hoveredChip || active || keyboard)
             {
+                float width = (keyboard && !active ? 1.6f : 2f) * DeviceDpi / 96f;
                 using var ring = new Pen(
-                    active || keyboard ? Theme.Accent : Color.FromArgb(120, Theme.Accent),
-                    keyboard && !active ? 1.6f : 2f);
-                g.DrawEllipse(ring, Rectangle.Inflate(box, 3, 3));
+                    active || keyboard ? Theme.Accent : Color.FromArgb(120, Theme.Accent), width);
+                g.DrawEllipse(ring, Rectangle.Inflate(box, this.Scaled(3), this.Scaled(3)));
             }
 
             if (isCustomChip)
@@ -1058,7 +1313,7 @@ internal sealed class ColourStrip : FlatControl
 
             // Pale chips need a firmer outline, otherwise white vanishes on a light window.
             Color chip = isCustomChip ? Colour : Palette[i];
-            double luminance = ((chip.R * 0.299) + (chip.G * 0.587) + (chip.B * 0.114)) / 255.0;
+            double luminance = EffectPainter.Luminance(chip);
             using var outline = new Pen(Color.FromArgb(luminance > 0.75 ? 120 : 52, 0, 0, 0));
             g.DrawEllipse(outline, box);
         }
@@ -1116,7 +1371,11 @@ internal sealed class TextField : FlatControl
         Radius = 9;
 
         _box.GotFocus += (_, _) => Invalidate();
-        _box.LostFocus += (_, _) => Invalidate();
+        _box.LostFocus += (_, _) =>
+        {
+            Invalidate();
+            Committed?.Invoke(this, EventArgs.Empty);
+        };
 
         // Typing changes the inner box, not this control, so without passing the event on a host
         // watching TextChanged never hears a keystroke - which is what left the preset editor's
@@ -1125,11 +1384,17 @@ internal sealed class TextField : FlatControl
         _box.KeyDown += (_, e) => Accepted?.Invoke(this, e);
         Controls.Add(_box);
 
-        Height = 34;
+        DesignHeight = 34;
     }
 
     /// <summary>Key presses inside the field, so a host can act on Enter.</summary>
     public event KeyEventHandler? Accepted;
+
+    /// <summary>
+    /// The caret has left the field, for a host that applies what was typed on the way out rather
+    /// than only on Enter.
+    /// </summary>
+    public event EventHandler? Committed;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     [AllowNull]
@@ -1182,9 +1447,13 @@ internal sealed class TextField : FlatControl
 
     private void LayOutBox()
     {
-        int height = Math.Min(_box.PreferredHeight, Math.Max(1, Height - 6));
-        _box.SetBounds(SidePadding, Math.Max(0, (Height - height) / 2),
-            Math.Max(1, Width - (SidePadding * 2)), height);
+        // Both the inset and the vertical breathing room are 96 dpi numbers: the inner box
+        // measures itself from the font, which grows, so leaving these flat clipped the text at
+        // its own caret height on a scaled display.
+        int inset = this.Scaled(SidePadding);
+        int height = Math.Min(_box.PreferredHeight, Math.Max(1, Height - this.Scaled(6)));
+        _box.SetBounds(inset, Math.Max(0, (Height - height) / 2),
+            Math.Max(1, Width - (inset * 2)), height);
     }
 
     protected override void OnClick(EventArgs e)
@@ -1216,7 +1485,8 @@ internal sealed class GlyphButton : FlatControl
     public GlyphButton()
     {
         Radius = 8;
-        Size = new Size(30, 30);
+        DesignSize = new Size(30, 30);
+        AccessibleRole = AccessibleRole.PushButton;
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -1250,7 +1520,7 @@ internal sealed class ToggleSwitch : FlatControl
 
     public ToggleSwitch()
     {
-        Size = new Size(38, 22);
+        DesignSize = new Size(38, 22);
         AccessibleRole = AccessibleRole.CheckButton;
     }
 
@@ -1310,10 +1580,11 @@ internal sealed class ToggleSwitch : FlatControl
 
         DrawFocusRing(g, path);
 
-        float knob = Height - 6;
-        float x = _checked ? Width - knob - 3 : 3;
+        float inset = this.Scaled(3);
+        float knob = Height - (inset * 2);
+        float x = _checked ? Width - knob - inset : inset;
         using var knobBrush = new SolidBrush(Color.White);
-        g.FillEllipse(knobBrush, x, 3, knob, knob);
+        g.FillEllipse(knobBrush, x, inset, knob, knob);
     }
 }
 
@@ -1322,7 +1593,7 @@ internal sealed class ToggleSwitch : FlatControl
 /// Opens where <see cref="ColourStrip"/>'s custom chip is clicked, replacing the plain
 /// Windows colour dialog that used to sit there.
 /// </summary>
-internal sealed class ColourPickerPopup : Form
+internal sealed class ColourPickerPopup : PopupForm
 {
     private const int Pad = 14;
     private const int SvSize = 168;
@@ -1333,9 +1604,15 @@ internal sealed class ColourPickerPopup : Form
     // The hue strip is the same for every instance and every hue, so it is built once.
     private static readonly Bitmap HueStripBitmap = BuildHueStrip();
 
-    private readonly TextBox _hex;
-    private readonly Rectangle _svRect = new(Pad, Pad, SvSize, SvSize);
-    private readonly Rectangle _hueRect = new(Pad, Pad + SvSize + Gap, SvSize, HueHeight);
+    private readonly TextField _hex;
+
+    // Computed rather than stored: WinForms scales the window itself for the display it opens on,
+    // and these are painted inside it - held as fixed 96 dpi rectangles they left the picker in
+    // the top left corner of a window twice their size.
+    private Rectangle SvRect => new(this.Scaled(Pad), this.Scaled(Pad), this.Scaled(SvSize), this.Scaled(SvSize));
+
+    private Rectangle HueRect => new(
+        this.Scaled(Pad), this.Scaled(Pad + SvSize + Gap), this.Scaled(SvSize), this.Scaled(HueHeight));
 
     private double _hue;
     private double _saturation;
@@ -1344,6 +1621,7 @@ internal sealed class ColourPickerPopup : Form
     /// <summary>Set once the popup is going away, so a last-moment Leave cannot apply anything.</summary>
     private bool _closing;
     private Bitmap? _svBitmap;
+    private byte[]? _svBuffer;
     private bool _draggingSv;
     private bool _draggingHue;
 
@@ -1351,29 +1629,21 @@ internal sealed class ColourPickerPopup : Form
     {
         (_hue, _saturation, _value) = Theme.ToHsv(initial);
 
-        FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar = false;
-        StartPosition = FormStartPosition.Manual;
-        BackColor = Theme.Surface;
         ForeColor = Theme.Text;
         Font = Theme.Ui;
-        DoubleBuffered = true;
-        KeyPreview = true;
-        ClientSize = new Size(Pad + SvSize + Pad, Pad + SvSize + Gap + HueHeight + Gap + SwatchSize + Pad);
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
 
-        _hex = new TextBox
+        // The project's own field rather than a bare TextBox: the system border and the system
+        // font were the one thing in this window that did not look like the rest of it, and in
+        // dark mode that border reads as a light box around a dark field.
+        _hex = new TextField
         {
-            Location = new Point(Pad + SwatchSize + 10, Pad + SvSize + Gap + HueHeight + Gap + 6),
-            Width = SvSize - SwatchSize - 10,
-            BorderStyle = BorderStyle.FixedSingle,
-            BackColor = Theme.Surface,
-            ForeColor = Theme.Text,
             MaxLength = 7,
             Text = Hex(Current),
+            AccessibleName = Strings.ColourHexAccessibleName,
         };
-        _hex.KeyDown += (_, e) =>
+        _hex.Accepted += (_, e) =>
         {
             if (e.KeyCode == Keys.Enter)
             {
@@ -1381,33 +1651,52 @@ internal sealed class ColourPickerPopup : Form
                 e.SuppressKeyPress = true;
             }
         };
-        _hex.Leave += (_, _) => ApplyHex();
+        _hex.Committed += (_, _) => ApplyHex();
         Controls.Add(_hex);
 
+        Reflow();
         RebuildSvBitmap();
+    }
+
+    /// <summary>Sizes the window and places the hex field - both scale with the display, unlike
+    /// <see cref="SvRect"/>/<see cref="HueRect"/>'s painted geometry only.</summary>
+    private void Reflow()
+    {
+        ClientSize = new Size(
+            this.Scaled(Pad + SvSize + Pad),
+            this.Scaled(Pad + SvSize + Gap + HueHeight + Gap + SwatchSize + Pad));
+
+        // Two pixels above the swatch beside it, so the taller field ends up centred on it.
+        _hex.Location = new Point(
+            this.Scaled(Pad + SwatchSize + 10), this.Scaled(Pad + SvSize + Gap + HueHeight + Gap - 2));
+        _hex.Width = this.Scaled(SvSize - SwatchSize - 10);
+
+        KeepOnScreen();
+    }
+
+    /// <summary>Dragged onto a display with a different scale: the size and the hex field's
+    /// position were both computed for the one it came from.</summary>
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        BeginInvoke(() =>
+        {
+            if (!IsDisposed)
+            {
+                Reflow();
+                Invalidate();
+            }
+        });
     }
 
     public event EventHandler<Color>? ColourChanged;
 
     public Color Current => Theme.FromHsv(_hue, _saturation, _value);
 
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            CreateParams parameters = base.CreateParams;
-            parameters.ClassStyle |= 0x00020000; // CS_DROPSHADOW
-            return parameters;
-        }
-    }
-
     /// <summary>Opens at a screen position. Not modal - a click anywhere else closes it.</summary>
     public void Open(Point at, IWin32Window? owner)
     {
-        Rectangle screen = Screen.FromPoint(at).WorkingArea;
-        int x = Math.Min(at.X, screen.Right - Width - 4);
-        int y = at.Y + Height > screen.Bottom ? at.Y - Height - 6 : at.Y;
-        Location = new Point(Math.Max(screen.Left + 4, x), Math.Max(screen.Top + 4, y));
+        Place(at, this.Scaled(6));
 
         if (owner == null)
         {
@@ -1419,12 +1708,6 @@ internal sealed class ColourPickerPopup : Form
         }
 
         Activate();
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        Theme.RoundWindowCorners(Handle);
     }
 
     protected override void OnDeactivate(EventArgs e)
@@ -1483,18 +1766,20 @@ internal sealed class ColourPickerPopup : Form
     }
 
     /// <summary>
-    /// Rebuilt only when the hue changes (not on every paint), using raw pixel writes rather
-    /// than SetPixel so dragging the hue strip stays smooth.
+    /// Repainted whenever the hue changes, which is once per mouse-move for the whole length of a
+    /// hue drag - so the bitmap and its row buffer are allocated once for the life of the popup
+    /// and rewritten in place. Building a fresh 168x168 bitmap plus an 85 KB array per mouse-move
+    /// is what made dragging the strip stutter. Raw pixel writes rather than SetPixel for the
+    /// same reason.
     /// </summary>
     private void RebuildSvBitmap()
     {
-        _svBitmap?.Dispose();
-        var bitmap = new Bitmap(SvSize, SvSize, PixelFormat.Format24bppRgb);
+        Bitmap bitmap = _svBitmap ??= new Bitmap(SvSize, SvSize, PixelFormat.Format24bppRgb);
         BitmapData data = bitmap.LockBits(new Rectangle(0, 0, SvSize, SvSize), ImageLockMode.WriteOnly,
             PixelFormat.Format24bppRgb);
         try
         {
-            byte[] buffer = new byte[data.Stride * SvSize];
+            byte[] buffer = _svBuffer ??= new byte[data.Stride * SvSize];
             for (int y = 0; y < SvSize; y++)
             {
                 double v = 1.0 - (y / (double)(SvSize - 1));
@@ -1516,8 +1801,6 @@ internal sealed class ColourPickerPopup : Form
         {
             bitmap.UnlockBits(data);
         }
-
-        _svBitmap = bitmap;
     }
 
     private static string Hex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
@@ -1529,11 +1812,8 @@ internal sealed class ColourPickerPopup : Form
             return;
         }
 
-        string text = _hex.Text.Trim().TrimStart('#');
-        if (text.Length == 6 && text.All(Uri.IsHexDigit) &&
-            int.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int rgb))
+        if (Theme.TryParseHex(_hex.Text, out Color colour))
         {
-            var colour = Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
             (_hue, _saturation, _value) = Theme.ToHsv(colour);
             RebuildSvBitmap();
             Invalidate();
@@ -1547,12 +1827,12 @@ internal sealed class ColourPickerPopup : Form
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
-        if (_svRect.Contains(e.Location))
+        if (SvRect.Contains(e.Location))
         {
             _draggingSv = true;
             UpdateFromSv(e.Location);
         }
-        else if (_hueRect.Contains(e.Location))
+        else if (HueRect.Contains(e.Location))
         {
             _draggingHue = true;
             UpdateFromHue(e.Location);
@@ -1589,15 +1869,15 @@ internal sealed class ColourPickerPopup : Form
 
     private void UpdateFromSv(Point at)
     {
-        _saturation = Math.Clamp((at.X - _svRect.X) / (double)(_svRect.Width - 1), 0, 1);
-        _value = 1.0 - Math.Clamp((at.Y - _svRect.Y) / (double)(_svRect.Height - 1), 0, 1);
+        _saturation = Math.Clamp((at.X - SvRect.X) / (double)(SvRect.Width - 1), 0, 1);
+        _value = 1.0 - Math.Clamp((at.Y - SvRect.Y) / (double)(SvRect.Height - 1), 0, 1);
         _hex.Text = Hex(Current);
         Invalidate();
     }
 
     private void UpdateFromHue(Point at)
     {
-        _hue = Math.Clamp((at.X - _hueRect.X) / (double)(_hueRect.Width - 1), 0, 1) * 360.0;
+        _hue = Math.Clamp((at.X - HueRect.X) / (double)(HueRect.Width - 1), 0, 1) * 360.0;
         RebuildSvBitmap();
         _hex.Text = Hex(Current);
         Invalidate();
@@ -1621,28 +1901,30 @@ internal sealed class ColourPickerPopup : Form
 
         if (_svBitmap != null)
         {
-            g.DrawImage(_svBitmap, _svRect);
+            g.DrawImage(_svBitmap, SvRect);
         }
 
         var svMarker = new Point(
-            _svRect.X + (int)(_saturation * (_svRect.Width - 1)),
-            _svRect.Y + (int)((1 - _value) * (_svRect.Height - 1)));
-        PaintRing(g, svMarker, 6, Current);
+            SvRect.X + (int)(_saturation * (SvRect.Width - 1)),
+            SvRect.Y + (int)((1 - _value) * (SvRect.Height - 1)));
+        PaintRing(g, svMarker, this.Scaled(6), Current, DeviceDpi);
 
-        g.DrawImage(HueStripBitmap, _hueRect);
-        int hueX = _hueRect.X + (int)(_hue / 360.0 * (_hueRect.Width - 1));
-        using (var huePen = new Pen(Color.White, 2f))
+        g.DrawImage(HueStripBitmap, HueRect);
+        int hueX = HueRect.X + (int)(_hue / 360.0 * (HueRect.Width - 1));
+        int hueOverhang = this.Scaled(2);
+        using (var huePen = new Pen(Color.White, 2f * DeviceDpi / 96f))
         {
-            g.DrawLine(huePen, hueX, _hueRect.Y - 2, hueX, _hueRect.Bottom + 2);
+            g.DrawLine(huePen, hueX, HueRect.Y - hueOverhang, hueX, HueRect.Bottom + hueOverhang);
         }
-        using (var hueOutline = new Pen(Color.FromArgb(90, 0, 0, 0), 1f))
+        using (var hueOutline = new Pen(Color.FromArgb(90, 0, 0, 0), 1f * DeviceDpi / 96f))
         {
-            g.DrawLine(hueOutline, hueX - 1, _hueRect.Y - 2, hueX - 1, _hueRect.Bottom + 2);
-            g.DrawLine(hueOutline, hueX + 1, _hueRect.Y - 2, hueX + 1, _hueRect.Bottom + 2);
+            g.DrawLine(hueOutline, hueX - 1, HueRect.Y - hueOverhang, hueX - 1, HueRect.Bottom + hueOverhang);
+            g.DrawLine(hueOutline, hueX + 1, HueRect.Y - hueOverhang, hueX + 1, HueRect.Bottom + hueOverhang);
         }
 
-        var swatch = new Rectangle(Pad, _hueRect.Bottom + Gap, SwatchSize, SwatchSize);
-        using (GraphicsPath swatchPath = Theme.RoundedRectangle(swatch, 6))
+        var swatch = new Rectangle(this.Scaled(Pad), HueRect.Bottom + this.Scaled(Gap),
+            this.Scaled(SwatchSize), this.Scaled(SwatchSize));
+        using (GraphicsPath swatchPath = Theme.RoundedRectangle(swatch, this.Scaled(6)))
         using (var swatchBrush = new SolidBrush(Current))
         {
             g.FillPath(swatchBrush, swatchPath);
@@ -1651,7 +1933,7 @@ internal sealed class ColourPickerPopup : Form
         }
     }
 
-    private static void PaintRing(Graphics g, Point at, int radius, Color fill)
+    private static void PaintRing(Graphics g, Point at, int radius, Color fill, int dpi)
     {
         var box = new Rectangle(at.X - radius, at.Y - radius, radius * 2, radius * 2);
         using (var brush = new SolidBrush(fill))
@@ -1659,10 +1941,11 @@ internal sealed class ColourPickerPopup : Form
             g.FillEllipse(brush, box);
         }
 
-        using var white = new Pen(Color.White, 2f);
+        int outlineGrow = Math.Max(1, dpi / 96);
+        using var white = new Pen(Color.White, 2f * dpi / 96f);
         g.DrawEllipse(white, box);
-        using var black = new Pen(Color.FromArgb(140, 0, 0, 0), 1f);
-        g.DrawEllipse(black, Rectangle.Inflate(box, 1, 1));
+        using var black = new Pen(Color.FromArgb(140, 0, 0, 0), 1f * dpi / 96f);
+        g.DrawEllipse(black, Rectangle.Inflate(box, outlineGrow, outlineGrow));
     }
 }
 
@@ -1673,6 +1956,7 @@ internal sealed class PillButton : FlatControl
     {
         Radius = 9;
         ForeColor = Theme.Accent;
+        AccessibleRole = AccessibleRole.PushButton;
     }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -1708,10 +1992,30 @@ internal sealed class PillButton : FlatControl
     /// Wide enough for its own label plus padding, so a longer translation is never clipped -
     /// the button has no ellipsis and no auto-size of its own.
     /// </summary>
+    private int? _fitPadding;
+
     public void FitToText(int padding = 22)
     {
-        using Graphics g = CreateGraphics();
-        Width = Math.Max(Width, TextRenderer.MeasureText(g, Text, Font).Width + (padding * 2));
+        // Measured and assigned outright rather than only grown: a button whose label is later
+        // swapped for a shorter one (the preset editor's Create/Replace/Save button as its name
+        // field is typed into) has to be able to shrink back, not just stay at its widest ever.
+        // The padding is scaled because the measured text already is.
+        _fitPadding = padding;
+        Width = this.MeasuredWidth(Text, Font) + (this.Scaled(padding) * 2);
+    }
+
+    /// <summary>
+    /// A button sized to its label keeps that size until something asks again, so a move to a
+    /// display at another scale left it as wide as the text used to be.
+    /// </summary>
+    protected override void OnDpiChangedAfterParent(EventArgs e)
+    {
+        base.OnDpiChangedAfterParent(e);
+
+        if (_fitPadding is int padding)
+        {
+            FitToText(padding);
+        }
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -1737,13 +2041,97 @@ internal sealed class PillButton : FlatControl
 }
 
 /// <summary>
+/// Arms a <see cref="PillButton"/> on the first click, swapping it to a confirmation label for a
+/// few seconds before a second click fires the real action - no separate confirmation dialog.
+/// Settings' Reset and the preset editor's Delete each used to hand-roll this same timer and
+/// text swap; this is the one copy.
+/// </summary>
+internal sealed class ArmedButton : IDisposable
+{
+    private readonly PillButton _button;
+    private readonly string _idleText;
+    private readonly string _armedText;
+    private readonly int? _fitPadding;
+    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 3000 };
+    private bool _armed;
+
+    /// <param name="button">
+    /// Already carrying its idle label and its own styling (fill, foreground, size) - this only
+    /// adds the arm/confirm behaviour on top.
+    /// </param>
+    /// <param name="fitPadding">
+    /// Re-measures the button to whichever label is now showing, for a button sized to its own
+    /// text rather than docked to fill a row; omit it for a docked button, which needs no refit.
+    /// </param>
+    public ArmedButton(PillButton button, string idleText, string armedText, int? fitPadding = null)
+    {
+        _button = button;
+        _idleText = idleText;
+        _armedText = armedText;
+        _fitPadding = fitPadding;
+
+        // Matches the idle-label width a caller that passes fitPadding would otherwise have to
+        // fit itself right after construction.
+        Refit();
+
+        _button.Click += (_, _) => OnClick();
+        _timer.Tick += (_, _) => Disarm();
+    }
+
+    /// <summary>Fired on the second click while still armed - the confirmed action itself.</summary>
+    public event EventHandler? Confirmed;
+
+    private void OnClick()
+    {
+        if (!_armed)
+        {
+            _armed = true;
+            _button.Text = _armedText;
+            Refit();
+            _timer.Start();
+            return;
+        }
+
+        Disarm();
+        Confirmed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Back to the idle label - the timer expiring, a confirmed click, or a caller
+    /// closing out from under it (a language switch, the popup itself closing) all take this
+    /// path, so the button is never found already armed the next time it is seen.</summary>
+    public void Disarm()
+    {
+        _armed = false;
+        _button.Text = _idleText;
+        Refit();
+        _timer.Stop();
+    }
+
+    private void Refit()
+    {
+        if (_fitPadding is int padding)
+        {
+            _button.FitToText(padding);
+        }
+    }
+
+    public void Dispose() => _timer.Dispose();
+}
+
+/// <summary>
 /// A slim slider. Used for the brightness the effect colour is scaled to before it is sent -
 /// the controller has no brightness of its own.
 /// </summary>
 internal sealed class Slider : FlatControl
 {
-    private const int TrackHeight = 6;
-    private const int Knob = 16;
+    private const int TrackHeightAt96 = 6;
+    private const int KnobAt96 = 16;
+
+    // The control's own height grows with the display; what is painted inside it does not, unless
+    // it is taken from the current dpi like this.
+    private int TrackHeight => this.Scaled(TrackHeightAt96);
+
+    private int Knob => this.Scaled(KnobAt96);
 
     private readonly EffectSurface _surface = new();
     private readonly System.Windows.Forms.Timer _commit = new() { Interval = 250 };
@@ -1751,9 +2139,12 @@ internal sealed class Slider : FlatControl
     private int _value = 100;
     private bool _dragging;
 
+    /// <summary>The value the drag started from, so a click that lands back on it commits nothing.</summary>
+    private int _pressedAt;
+
     public Slider()
     {
-        Height = 24;
+        DesignHeight = 24;
 
         // Arrow keys would otherwise fire one switch at the controller per keypress, and
         // ToggleForm drops every request that arrives while the previous one is still running -
@@ -1824,8 +2215,13 @@ internal sealed class Slider : FlatControl
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
-        _dragging = true;
-        SetFromPoint(e.X);
+        if (e.Button == MouseButtons.Left)
+        {
+            _dragging = true;
+            _pressedAt = _value;
+            SetFromPoint(e.X);
+        }
+
         base.OnMouseDown(e);
     }
 
@@ -1844,7 +2240,13 @@ internal sealed class Slider : FlatControl
         if (_dragging)
         {
             _dragging = false;
-            ValueCommitted?.Invoke(this, EventArgs.Empty);
+
+            // A drag that ends where it started - or a plain click on the knob - has nothing to
+            // send, and every commit costs a full pass over the controller.
+            if (_value != _pressedAt)
+            {
+                ValueCommitted?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         base.OnMouseUp(e);
@@ -1934,26 +2336,28 @@ internal sealed class Slider : FlatControl
             g.FillEllipse(brush, knob);
         }
 
-        using (var outline = new Pen(Hovered || _dragging ? Theme.Accent : Theme.Border, 1.4f))
+        using (var outline = new Pen(Hovered || _dragging ? Theme.Accent : Theme.Border, 1.4f * DeviceDpi / 96f))
         {
             g.DrawEllipse(outline, knob);
         }
 
         if (Focused && ShowFocusCues)
         {
-            using var ring = new Pen(Color.FromArgb(130, Theme.Accent), 2f);
-            g.DrawEllipse(ring, RectangleF.Inflate(knob, 2, 2));
+            float ringGrow = 2f * DeviceDpi / 96f;
+            using var ring = new Pen(Color.FromArgb(130, Theme.Accent), ringGrow);
+            g.DrawEllipse(ring, RectangleF.Inflate(knob, ringGrow, ringGrow));
         }
     }
 }
 
-/// <summary>Small round × button, used to delete a custom preset from its list row.</summary>
+/// <summary>Small round × button, used as a panel's discard/close control.</summary>
 internal sealed class DeleteButton : FlatControl
 {
     public DeleteButton()
     {
         Radius = 6;
-        Size = new Size(22, 22);
+        DesignSize = new Size(22, 22);
+        AccessibleRole = AccessibleRole.PushButton;
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -1973,7 +2377,8 @@ internal sealed class DeleteButton : FlatControl
 
         DrawFocusRing(g, path);
 
-        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, 1.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, 1.5f * DeviceDpi / 96f)
+            { StartCap = LineCap.Round, EndCap = LineCap.Round };
         float m = Width * 0.28f;
         g.DrawLine(pen, m, m, Width - m, Height - m);
         g.DrawLine(pen, Width - m, m, m, Height - m);
@@ -1984,7 +2389,7 @@ internal sealed class DeleteButton : FlatControl
 /// Small popup to give one channel a name of its own. Not modal - a click anywhere else
 /// dismisses it without saving, same as every popup here except the preset editor.
 /// </summary>
-internal sealed class RenamePopup : Form
+internal sealed class RenamePopup : PopupForm
 {
     private const int Pad = 14;
     private const int FieldWidth = 200;
@@ -1995,17 +2400,13 @@ internal sealed class RenamePopup : Form
 
     public RenamePopup(string currentName)
     {
-        FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar = false;
-        StartPosition = FormStartPosition.Manual;
-        BackColor = Theme.Surface;
         ForeColor = Theme.Text;
         Font = Theme.Ui;
-        DoubleBuffered = true;
-        KeyPreview = true;
 
-        _name.Location = new Point(Pad, Pad);
-        _name.Width = FieldWidth;
+        // The popup has no title bar and the field no label beside it, so without this a screen
+        // reader announces an unnamed edit box - every other surface here names its controls.
+        AccessibleName = Strings.ChannelRenameAccessibleName;
+        _name.AccessibleName = Strings.ChannelRenameAccessibleName;
         _name.Text = currentName;
         _name.MaxLength = 30;
         _name.Accepted += (_, e) =>
@@ -2020,49 +2421,71 @@ internal sealed class RenamePopup : Form
 
         _save.Text = Strings.ChannelRenameSave;
         _save.Primary = true;
-        _save.Height = 30;
-        _save.Width = 90;
-        _save.Location = new Point(Pad, _name.Bottom + 10);
+        _save.DesignHeight = 30;
         _save.Click += (_, _) => Commit();
         Controls.Add(_save);
-        _save.FitToText(16);
 
         _reset.Text = Strings.ChannelRenameReset;
-        _reset.Height = 30;
-        _reset.Width = 96;
+        _reset.DesignHeight = 30;
         _reset.Fill = Theme.NeutralSoft;
-        _reset.ForeColor = Theme.TextMuted;
+        _reset.ForeColor = Theme.Text;
         _reset.Click += (_, _) =>
         {
             Renamed?.Invoke(this, "");
             Close();
         };
         Controls.Add(_reset);
-        _reset.FitToText(14);
 
-        // Placed and sized after both buttons know their own width, so "Zurücksetzen" is neither
-        // clipped nor overlapping Save.
-        _reset.Location = new Point(_save.Right + 8, _name.Bottom + 10);
-        ClientSize = new Size(
-            Math.Max(Pad + FieldWidth + Pad, _reset.Right + Pad),
-            _reset.Bottom + Pad);
-        _name.Width = ClientSize.Width - (Pad * 2);
+        Reflow();
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
     }
 
+    /// <summary>Sizes and places every control from the 96 dpi constants - no hand-painted
+    /// geometry of its own like <see cref="ColourPickerPopup"/>, just controls to lay out.</summary>
+    private void Reflow()
+    {
+        int pad = this.Scaled(Pad);
+        int gap = this.Scaled(10);
+
+        _name.Location = new Point(pad, pad);
+        _name.Width = this.Scaled(FieldWidth);
+
+        _save.Width = this.Scaled(90);
+        _save.Location = new Point(pad, _name.Bottom + gap);
+        _save.FitToText(16);
+
+        _reset.Width = this.Scaled(96);
+        _reset.FitToText(14);
+
+        // Placed and sized after both buttons know their own width, so "Zurücksetzen" is neither
+        // clipped nor overlapping Save.
+        _reset.Location = new Point(_save.Right + this.Scaled(8), _name.Bottom + gap);
+        ClientSize = new Size(
+            Math.Max(pad + this.Scaled(FieldWidth) + pad, _reset.Right + pad),
+            _reset.Bottom + pad);
+        _name.Width = ClientSize.Width - (pad * 2);
+
+        KeepOnScreen();
+    }
+
+    /// <summary>Dragged onto a display with a different scale: every position and size above was
+    /// computed for the one it came from.</summary>
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        BeginInvoke(() =>
+        {
+            if (!IsDisposed)
+            {
+                Reflow();
+                Invalidate();
+            }
+        });
+    }
+
     /// <summary>Raised with the new name, or an empty one when Reset was chosen.</summary>
     public event EventHandler<string>? Renamed;
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            CreateParams parameters = base.CreateParams;
-            parameters.ClassStyle |= 0x00020000; // CS_DROPSHADOW
-            return parameters;
-        }
-    }
 
     private void Commit()
     {
@@ -2072,10 +2495,7 @@ internal sealed class RenamePopup : Form
 
     public void Open(Point at, IWin32Window? owner)
     {
-        Rectangle screen = Screen.FromPoint(at).WorkingArea;
-        int x = Math.Min(at.X, screen.Right - Width - 4);
-        int y = at.Y + Height > screen.Bottom ? at.Y - Height - 6 : at.Y;
-        Location = new Point(Math.Max(screen.Left + 4, x), Math.Max(screen.Top + 4, y));
+        Place(at, this.Scaled(6));
 
         if (owner == null)
         {
@@ -2088,12 +2508,6 @@ internal sealed class RenamePopup : Form
 
         Activate();
         _name.FocusInput();
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        Theme.RoundWindowCorners(Handle);
     }
 
     protected override void OnDeactivate(EventArgs e)

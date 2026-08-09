@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>Aura Toggle</AssemblyName>
+    <AssemblyName>AuraToggle</AssemblyName>
     <RootNamespace>AuraToggle</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -16,6 +16,12 @@
     <AssemblyTitle>Aura Toggle</AssemblyTitle>
     <Description>Switches ASUS Aura mainboard lighting on and off.</Description>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <!-- Without this the executable carries the absolute path it was built from, symbol file
+         included, straight into a public download. Mapping the project directory to a relative
+         one keeps the symbols usable for reading a stack trace while shipping nothing about the
+         machine that produced them. -->
+    <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
+    <DeterministicSourcePaths Condition="'$(ContinuousIntegrationBuild)' == ''">false</DeterministicSourcePaths>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +30,8 @@
     <EmbeddedResource Include="src\StringsDe.resx" LogicalName="AuraToggle.StringsDe.resources" />
     <!-- Embedded as well as being the executable icon, so the window can show it crisply. -->
     <EmbeddedResource Include="assets\aura.ico" LogicalName="AuraToggle.aura.ico" />
+    <!-- Dimmed variant shown in the tray while the lighting is off. -->
+    <EmbeddedResource Include="assets\aura-off.ico" LogicalName="AuraToggle.aura-off.ico" />
   </ItemGroup>
 
 </Project>

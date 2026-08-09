@@ -28,6 +28,7 @@ internal static class Hid
     private const uint FILE_SHARE_WRITE = 0x02;
     private const uint OPEN_EXISTING = 3;
     private const uint FILE_FLAG_OVERLAPPED = 0x40000000;
+    private const int ERROR_SHARING_VIOLATION = 32;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct SP_DEVICE_INTERFACE_DATA
@@ -160,9 +161,13 @@ internal static class Hid
             return null;
         }
 
-        IntPtr caps = Marshal.AllocHGlobal(256);
+        // caps is allocated inside the try, not before it: preparsed is already a live unmanaged
+        // handle at this point, so it needs the same finally to free it even if AllocHGlobal itself
+        // is what throws.
+        IntPtr caps = IntPtr.Zero;
         try
         {
+            caps = Marshal.AllocHGlobal(256);
             if (HidP_GetCaps(preparsed, caps) != 0x00110000) // HIDP_STATUS_SUCCESS
             {
                 return null;
@@ -185,7 +190,11 @@ internal static class Hid
         }
         finally
         {
-            Marshal.FreeHGlobal(caps);
+            if (caps != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(caps);
+            }
+
             HidD_FreePreparsedData(preparsed);
         }
     }
@@ -200,6 +209,16 @@ internal static class Hid
         {
             int error = Marshal.GetLastWin32Error();
             handle.Dispose();
+
+            // Only a real sharing violation means another process already has this interface open.
+            // Anything else - the device unplugged between enumeration and here, above all - is not
+            // "busy", and reporting it that way sends the user looking for a program to close that
+            // was never there.
+            if (error != ERROR_SHARING_VIOLATION)
+            {
+                throw new IOException($"Cannot open the LED controller (Windows error {error}).");
+            }
+
             throw new HidAccessException(error);
         }
 
@@ -242,6 +261,13 @@ internal sealed class HidStream : IDisposable
     /// </summary>
     private bool _readAbandoned;
 
+    /// <summary>
+    /// Set once a write has timed out. The abandoned write still owns the stream and the
+    /// caller's buffer, so starting a second WriteAsync on the same stream while it is still
+    /// pending would race it - the same reasoning <see cref="_readAbandoned"/> exists for.
+    /// </summary>
+    private bool _writeAbandoned;
+
     public HidStream(SafeFileHandle handle, HidInfo info)
     {
         Info = info;
@@ -254,16 +280,37 @@ internal sealed class HidStream : IDisposable
     /// <summary>Writes one output report. The buffer must start with the report id.</summary>
     public void Write(byte[] report)
     {
+        if (_writeAbandoned)
+        {
+            // A previous write is still in flight on this stream; starting another would race it.
+            AuraLog.Warn("Hid: write refused, an earlier write on this stream never completed");
+            throw new IOException(Strings.ErrorWriteBusy);
+        }
+
         var cancel = new CancellationTokenSource();
         Task write = _stream.WriteAsync(report, 0, report.Length, cancel.Token);
+
+        // Disposed exactly once, whenever the write itself finally settles - the normal case
+        // (already scheduled here, runs almost immediately) and the abandoned-on-timeout case
+        // (runs later, whenever the controller's answer or the cancellation actually lands) alike.
+        // A second, conditional dispose used to sit in a finally below for the normal case, which
+        // could race this same continuation for the rare write that completes at the exact moment
+        // the timeout below gives up on it.
+        _ = write.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
 
         try
         {
             if (!write.Wait(WriteTimeoutMs))
             {
                 cancel.Cancel();
-                _ = write.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
-                throw new IOException("The LED controller did not accept the report in time.");
+                _writeAbandoned = true;
+
+                // The controller stopped acknowledging writes. Logged here rather than only where
+                // it surfaces, because this stream is now abandoned for the rest of its life and
+                // every later call on it fails for a different-looking reason.
+                AuraLog.Warn($"Hid: write timed out after {WriteTimeoutMs} ms, stream abandoned " +
+                    $"(report {report[1]:X2}, {report.Length} bytes)");
+                throw new IOException(Strings.ErrorWriteTimeout);
             }
 
             write.GetAwaiter().GetResult();
@@ -271,14 +318,7 @@ internal sealed class HidStream : IDisposable
         }
         catch (AggregateException ex)
         {
-            throw new IOException("Writing to the LED controller failed.", ex.InnerException ?? ex);
-        }
-        finally
-        {
-            if (write.IsCompleted)
-            {
-                cancel.Dispose();
-            }
+            throw new IOException(Strings.ErrorWriteGeneric, ex.InnerException ?? ex);
         }
     }
 
@@ -294,17 +334,17 @@ internal sealed class HidStream : IDisposable
         var cancel = new CancellationTokenSource();
         Task<int> read = _stream.ReadAsync(buffer, 0, buffer.Length, cancel.Token);
 
+        // Disposed exactly once, whenever the read itself finally settles - see the identical
+        // comment in Write() above for why this replaced a second, conditional dispose that used
+        // to sit in a finally below.
+        _ = read.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
+
         try
         {
             if (!read.Wait(timeoutMs))
             {
                 cancel.Cancel();
                 _readAbandoned = true;
-
-                // The read is still in flight. Observing it keeps its failure from surfacing
-                // later as an unobserved task exception, and disposes the token source once
-                // nothing references it any more.
-                _ = read.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
                 return false;
             }
 
@@ -315,13 +355,6 @@ internal sealed class HidStream : IDisposable
             // A device that disappears mid-read faults the task. Treat it as no answer;
             // the caller decides what that means.
             return false;
-        }
-        finally
-        {
-            if (read.IsCompleted)
-            {
-                cancel.Dispose();
-            }
         }
     }
 

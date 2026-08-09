@@ -1,38 +1,42 @@
-﻿Aura Toggle - Lizenz und was sie für Sie bedeutet
+Aura Toggle - Lizenzvereinbarung
 
 
-KURZ GESAGT
+ZUSAMMENFASSUNG
 
-Aura Toggle ist freie Software. Sie dürfen es privat wie gewerblich nutzen, weitergeben und
-verändern. Es kostet nichts, und es wird nichts von Ihnen erhoben: das Programm hat kein
-Konto, keine Telemetrie und keinen eigenen Netzwerkzugriff.
+Aura Toggle ist freie Open-Source-Software und steht unter der MIT-Lizenz. Sie dürfen die
+Software privat wie gewerblich nutzen, weitergeben und verändern - unentgeltlich. Die
+Anwendung erhebt keine Daten, benötigt kein Benutzerkonto und stellt selbst keine
+Netzwerkverbindungen her.
 
-Erwartet wird nur, dass der Copyright-Hinweis und diese Lizenz bei der Software bleiben,
-wenn Sie sie weitergeben.
-
-
-WAS ES MIT IHREM MAINBOARD MACHT
-
-Aura Toggle sendet ausschließlich flüchtige Beleuchtungsbefehle. Es schreibt nie in den
-Flash-Speicher des Controllers, Ihre BIOS-Einstellungen bleiben also unangetastet und ein
-Neustart holt sie zurück. Es braucht keine Administratorrechte und installiert weder einen
-Treiber noch einen Hintergrunddienst.
-
-Trotzdem gilt: hier spricht Software direkt mit Hardware, und das ohne jede Gewährleistung.
-Wer das nicht akzeptiert, sollte es nicht installieren.
+Einzige Bedingung: Der Copyright-Hinweis und dieser Lizenztext müssen bei einer Weitergabe
+erhalten bleiben.
 
 
-FREMDE NAMEN
+AUSWIRKUNG AUF IHR MAINBOARD
 
-Dies ist ein unabhängiges Projekt. Es stammt nicht von ASUSTeK Computer Inc. und wird von
-dort weder unterstützt noch empfohlen. "ASUS", "ROG", "TUF" und "Aura" sind Marken ihrer
-jeweiligen Inhaber und werden hier nur genannt, um die Hardware zu beschreiben, mit der
-diese Software spricht.
+Aura Toggle kommuniziert mit dem Beleuchtungscontroller Ihres Mainboards ausschließlich über
+flüchtige Befehle. Es schreibt zu keinem Zeitpunkt in den Flash-Speicher des Controllers:
+Jede Änderung geht bei einem Neustart verloren, und die im BIOS/UEFI hinterlegte Beleuchtung
+wird automatisch wiederhergestellt. Es sind weder Administratorrechte noch Treiber oder
+Hintergrunddienste erforderlich.
+
+Diese Software kommuniziert direkt mit der Hardware und wird ohne jegliche Gewährleistung
+bereitgestellt, wie nachstehend in der Lizenz festgelegt. Mit der Installation erkennen Sie
+diese Bedingungen an.
 
 
-DIE LIZENZ SELBST (MIT)
+MARKENRECHTLICHE HINWEISE
 
-Maßgeblich ist der englische Originaltext; diese Übersetzung dient nur dem Verständnis.
+Aura Toggle ist ein unabhängiges, nicht verbundenes Projekt. Es wird weder von der ASUSTeK
+Computer Inc. entwickelt noch von ihr unterstützt oder empfohlen. "ASUS", "ROG", "TUF" und
+"Aura" sind Marken ihrer jeweiligen Inhaber und werden hier ausschließlich zur Bezeichnung
+der Hardware verwendet, mit der diese Software kommuniziert.
+
+
+MIT-LIZENZ
+
+Maßgeblich ist der englische Originaltext; diese Übersetzung dient ausschließlich dem
+Verständnis.
 
 Copyright (c) 2026 BG Coding
 

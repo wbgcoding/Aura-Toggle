@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace AuraToggle;
@@ -15,8 +13,14 @@ namespace AuraToggle;
 /// follows the board-wide brightness instead. Zero is free for that: the usable range starts at
 /// <see cref="AuraState.MinBrightness"/>.
 /// </param>
+/// <param name="Seen">
+/// The day this channel was last written, counted from the Unix epoch, so records for hardware
+/// that is long gone can be cleared out. Days rather than seconds: a 30 day policy needs nothing
+/// finer, and the count stays small enough to be an ordinary number for centuries. Zero means a
+/// record from before the file carried the field.
+/// </param>
 internal sealed record ChannelLighting(byte Mode, byte Red, byte Green, byte Blue, bool On = true,
-    byte Brightness = 0);
+    byte Brightness = 0, int Seen = 0);
 
 /// <summary>
 /// What each channel was last set to, kept in %LOCALAPPDATA%\aura-toggle\channel-state.json.
@@ -25,18 +29,26 @@ internal sealed record ChannelLighting(byte Mode, byte Red, byte Green, byte Blu
 /// </summary>
 internal static class AuraChannelStates
 {
-    private const string FileName = "channel-state.json";
+    internal const string FileName = "channel-state.json";
 
-    private static string Key(string deviceKey, int channel) => $"{deviceKey}|{channel}";
+    /// <summary>
+    /// How long a channel's record outlives the last time anything wrote to it. The point of the
+    /// file is that a controller unplugged for a while still comes back to its own look, so this
+    /// has to be generous - but without it the file keeps a row for every header of every
+    /// controller ever plugged into the machine, for good. Any channel still attached is written
+    /// again by any whole-board switch, so only genuinely departed hardware ages out.
+    /// </summary>
+    private const int KeepDays = 30;
+
+    private static int Today => (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 86400);
+
+    private static string Key(string deviceKey, int channel) => AuraFiles.ChannelKey(deviceKey, channel);
 
     /// <summary>
     /// Every channel's remembered look, read once. Callers that need more than a single channel
     /// take this and index it, rather than re-reading and re-parsing the file per channel.
     /// </summary>
     public static Dictionary<string, ChannelLighting> All() => Load();
-
-    /// <summary>What this channel last ran, or null if it has never been set on its own.</summary>
-    public static ChannelLighting? Get(string deviceKey, int channel) => Get(Load(), deviceKey, channel);
 
     /// <summary>Looks one channel up in an already loaded set.</summary>
     public static ChannelLighting? Get(Dictionary<string, ChannelLighting> states, string deviceKey, int channel) =>
@@ -65,17 +77,26 @@ internal static class AuraChannelStates
     /// Records a different look per channel in one write, for a custom preset that sets each
     /// channel to something of its own.
     /// </summary>
-    public static void Remember(IEnumerable<(string DeviceKey, int Channel, ChannelLighting Look)> looks)
+    /// <param name="keepBrightness">
+    /// False only for the whole-board brightness slider applying a preset: every look it passes
+    /// already carries the new value (0, meaning "follow the board" - the same rule every other
+    /// brightness-0 record follows), and that has to stick rather than be read back as "unset" and
+    /// replaced with whatever the channel had before. Keeping it true for every other caller is
+    /// what makes an effect or colour change leave a channel's own brightness alone.
+    /// </param>
+    public static void Remember(IEnumerable<(string DeviceKey, int Channel, ChannelLighting Look)> looks,
+        bool keepBrightness = true)
     {
         using IDisposable guard = AuraFiles.Lock();
 
         Dictionary<string, ChannelLighting> states = Load();
+        int today = Today;
         var changed = false;
 
         foreach ((string deviceKey, int channel, ChannelLighting look) in looks)
         {
             string key = Key(deviceKey, channel);
-            states[key] = Keep(states, key, look);
+            states[key] = (keepBrightness ? Keep(states, key, look) : look) with { Seen = today };
             changed = true;
         }
 
@@ -113,7 +134,6 @@ internal static class AuraChannelStates
             : fallback with { Brightness = percent });
     }
 
-    /// <summary>One locked read-modify-write for every channel named, then a single save.</summary>
     private static void Update(IEnumerable<(string DeviceKey, int Channel)> targets,
         Func<Dictionary<string, ChannelLighting>, string, ChannelLighting> next)
     {
@@ -122,12 +142,13 @@ internal static class AuraChannelStates
         using IDisposable guard = AuraFiles.Lock();
 
         Dictionary<string, ChannelLighting> states = Load();
+        int today = Today;
         var changed = false;
 
         foreach ((string deviceKey, int channel) in targets)
         {
             string key = Key(deviceKey, channel);
-            states[key] = next(states, key);
+            states[key] = next(states, key) with { Seen = today };
             changed = true;
         }
 
@@ -156,6 +177,7 @@ internal static class AuraChannelStates
                     continue;
                 }
 
+                byte brightness = Byte(property.Value, "brightness");
                 states[property.Name] = new ChannelLighting(
                     Byte(property.Value, "mode"),
                     Byte(property.Value, "red"),
@@ -163,11 +185,14 @@ internal static class AuraChannelStates
                     Byte(property.Value, "blue"),
                     // Written before channels remembered their own power state: treat as on,
                     // which is what it meant back then.
-                    !property.Value.TryGetProperty("on", out JsonElement on) ||
-                        on.ValueKind != JsonValueKind.False,
+                    AuraFiles.JsonFlag(property.Value, "on", true),
                     // Missing means the channel follows the board-wide brightness, which is also
-                    // what every record written before brightness went per channel means.
-                    Byte(property.Value, "brightness"));
+                    // what every record written before brightness went per channel means - left
+                    // as zero rather than clamped into range, unlike a genuine stored value.
+                    brightness == 0
+                        ? (byte)0
+                        : Math.Clamp(brightness, AuraState.MinBrightness, AuraState.MaxBrightness),
+                    AuraFiles.JsonNumber(property.Value, "seen", 0));
             }
 
             return states;
@@ -178,14 +203,24 @@ internal static class AuraChannelStates
         }
     }
 
-    private static byte Byte(JsonElement element, string name) =>
-        element.TryGetProperty(name, out JsonElement value) && value.TryGetByte(out byte parsed) ? parsed : (byte)0;
+    private static byte Byte(JsonElement element, string name) => AuraFiles.JsonByte(element, name);
 
     private static void Save(Dictionary<string, ChannelLighting> states) => AuraFiles.Write(FileName, writer =>
     {
+        int today = Today;
+        int oldest = today - KeepDays;
+
         writer.WriteStartObject();
         foreach ((string key, ChannelLighting lighting) in states)
         {
+            // A record from a version that did not stamp its writes starts ageing from now rather
+            // than counting as ancient, so upgrading never throws away what was remembered.
+            int seen = lighting.Seen == 0 ? today : lighting.Seen;
+            if (seen < oldest)
+            {
+                continue;
+            }
+
             writer.WriteStartObject(key);
             writer.WriteNumber("mode", lighting.Mode);
             writer.WriteNumber("red", lighting.Red);
@@ -193,6 +228,7 @@ internal static class AuraChannelStates
             writer.WriteNumber("blue", lighting.Blue);
             writer.WriteBoolean("on", lighting.On);
             writer.WriteNumber("brightness", lighting.Brightness);
+            writer.WriteNumber("seen", seen);
             writer.WriteEndObject();
         }
 

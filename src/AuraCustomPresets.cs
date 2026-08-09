@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace AuraToggle;
@@ -30,7 +28,7 @@ internal sealed record CustomPreset(string Name, List<CustomPresetEntry> Entries
 /// <summary>Custom presets, kept in %LOCALAPPDATA%\aura-toggle\presets.json.</summary>
 internal static class AuraCustomPresets
 {
-    private const string FileName = "presets.json";
+    internal const string FileName = "presets.json";
 
     public static List<CustomPreset> Load()
     {
@@ -97,13 +95,9 @@ internal static class AuraCustomPresets
         }
     }
 
-    private static string Text(JsonElement element, string name) =>
-        element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? ""
-            : "";
+    private static string Text(JsonElement element, string name) => AuraFiles.JsonText(element, name);
 
-    private static byte Byte(JsonElement element, string name) =>
-        element.TryGetProperty(name, out JsonElement value) && value.TryGetByte(out byte parsed) ? parsed : (byte)0;
+    private static byte Byte(JsonElement element, string name) => AuraFiles.JsonByte(element, name);
 
     public static void Save(List<CustomPreset> presets) => AuraFiles.Write(FileName, writer =>
     {
