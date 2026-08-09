@@ -1,10 +1,10 @@
-﻿# Regression suite for "Aura Toggle.exe". Switches the mainboard lighting while it runs
+﻿# Regression suite for "AuraToggle.exe". Switches the mainboard lighting while it runs
 # and leaves it turned on at the end.
 #
 #   powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 
 param(
-    [string]$Exe = (Join-Path $PSScriptRoot "..\dist\Aura Toggle.exe")
+    [string]$Exe = (Join-Path $PSScriptRoot "..\dist\AuraToggle.exe")
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,6 +13,9 @@ $state = Join-Path $dataDir "state.json"
 $settings = Join-Path $dataDir "settings.json"
 $presets = Join-Path $dataDir "presets.json"
 $channelState = Join-Path $dataDir "channel-state.json"
+$channelNames = Join-Path $dataDir "channel-names.json"
+$log = Join-Path $dataDir "log.txt"
+$oldLog = Join-Path $dataDir "log.old.txt"
 $failed = 0
 
 if (-not (Test-Path $Exe)) {
@@ -41,8 +44,12 @@ function Restore-UserData {
             Remove-Item $path -ErrorAction SilentlyContinue
         }
         else {
-            # -NoNewline: the tool writes no trailing newline, so this restores it byte for byte.
-            Set-Content -Path $path -Value $saved -Encoding UTF8 -NoNewline
+            # Windows PowerShell 5.1's "-Encoding UTF8" always adds a BOM, which AuraFiles.Write
+            # never does - restoring through it left a byte the original file never had, despite
+            # what this comment used to claim. WriteAllText with an explicit BOM-less UTF8Encoding
+            # is the one way to actually match the app's own files byte for byte.
+            $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+            [IO.File]::WriteAllText($path, $saved, $utf8NoBom)
         }
     }
 }
@@ -61,6 +68,7 @@ function Invoke-Aura {
             -RedirectStandardOutput $out -RedirectStandardError $err
         return [pscustomobject]@{
             ExitCode = $process.ExitCode
+            StdOut   = (Get-Content $out -Raw -Encoding UTF8)
             StdErr   = (Get-Content $err -Raw -Encoding UTF8)
         }
     }
@@ -86,6 +94,21 @@ function Assert-Equal {
     if ($Expected -ne $Actual) {
         throw "$What expected '$Expected' but was '$Actual'"
     }
+}
+
+function Get-RealChannelEntries {
+    # channel-state.json can carry old records from other tools or manual testing. Only a real
+    # HID path is a channel the running build actually wrote this call - anything else is stale
+    # and would fail an assertion for a reason that has nothing to do with what it is checking.
+    param($Json)
+    $real = @($Json.PSObject.Properties | Where-Object { $_.Name.StartsWith('\\?\hid#') })
+    if ($real.Count -eq 0) { throw "no real device channel records were found" }
+    return $real
+}
+
+function Get-RealChannelKey {
+    param($Json)
+    return (Get-RealChannelEntries $Json)[0]
 }
 
 try {
@@ -205,7 +228,7 @@ Test-Case "brightness never dims what is stored, only what is sent" {
     Assert-Equal 192 $stored.green "stored green"
     Assert-Equal 255 $stored.blue "stored blue"
 
-    foreach ($entry in (Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties) {
+    foreach ($entry in Get-RealChannelEntries (Get-Content $channelState -Raw | ConvertFrom-Json)) {
         Assert-Equal 32 $entry.Value.red "channel red"
         Assert-Equal 192 $entry.Value.green "channel green"
         Assert-Equal 255 $entry.Value.blue "channel blue"
@@ -229,8 +252,7 @@ Test-Case "-off marks every channel off but keeps its effect and colour" {
     [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
     [void](Invoke-Aura @("-off"))
 
-    $entries = @((Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties)
-    if ($entries.Count -eq 0) { throw "no channel records were written" }
+    $entries = Get-RealChannelEntries (Get-Content $channelState -Raw | ConvertFrom-Json)
 
     foreach ($entry in $entries) {
         Assert-Equal $false $entry.Value.on "channel on"
@@ -241,7 +263,7 @@ Test-Case "-off marks every channel off but keeps its effect and colour" {
 
 Test-Case "-on brings every channel back on with its own colour" {
     [void](Invoke-Aura @("-on"))
-    foreach ($entry in (Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties) {
+    foreach ($entry in Get-RealChannelEntries (Get-Content $channelState -Raw | ConvertFrom-Json)) {
         Assert-Equal $true $entry.Value.on "channel on"
         Assert-Equal 32 $entry.Value.red "channel colour"
     }
@@ -253,7 +275,7 @@ Test-Case "a board-wide brightness hands every channel back to the board" {
     Assert-Equal 0 (Invoke-Aura @("-brightness", "55")).ExitCode "exit code"
 
     Assert-Equal 55 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "board brightness"
-    foreach ($entry in (Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties) {
+    foreach ($entry in Get-RealChannelEntries (Get-Content $channelState -Raw | ConvertFrom-Json)) {
         # 0 means "no brightness of its own", which is what the whole board being set implies.
         Assert-Equal 0 $entry.Value.brightness "channel brightness"
     }
@@ -267,8 +289,7 @@ Test-Case "a channel keeps its own brightness when its colour changes" {
     # The keys are the real device paths, so they are taken from the file the tool just wrote
     # rather than invented here.
     $records = Get-Content $channelState -Raw | ConvertFrom-Json
-    $first = @($records.PSObject.Properties)[0]
-    if ($null -eq $first) { throw "no channel records were written" }
+    $first = Get-RealChannelKey $records
 
     $first.Value.brightness = 40
     Set-Content -Path $channelState -Value ($records | ConvertTo-Json -Depth 4 -Compress) `
@@ -294,8 +315,7 @@ Test-Case "a custom preset applies its own brightness per channel" {
     [void](Invoke-Aura @("-brightness", "100"))
 
     # The real device key, taken from the file the tool just wrote.
-    $first = @((Get-Content $channelState -Raw | ConvertFrom-Json).PSObject.Properties)[0]
-    if ($null -eq $first) { throw "no channel records were written" }
+    $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
     $split = $first.Name -split '\|'
     $deviceKey = ($split[0..($split.Count - 2)] -join '|')
     $channel = [int]$split[-1]
@@ -314,22 +334,26 @@ Test-Case "a custom preset applies its own brightness per channel" {
         })
     }
 
-    # Wrapped by hand: ConvertTo-Json in Windows PowerShell unwraps a one element array, which
-    # would write an object where the tool expects a list - and be ignored, exactly as intended.
-    Set-Content -Path $presets -Encoding ascii -NoNewline `
-        -Value ("[" + ($preset | ConvertTo-Json -Depth 5 -Compress) + "]")
+    try {
+        # Wrapped by hand: ConvertTo-Json in Windows PowerShell unwraps a one element array, which
+        # would write an object where the tool expects a list - and be ignored, exactly as intended.
+        Set-Content -Path $presets -Encoding ascii -NoNewline `
+            -Value ("[" + ($preset | ConvertTo-Json -Depth 5 -Compress) + "]")
 
-    $stored = Get-Content $state -Raw | ConvertFrom-Json
-    $stored.customPreset = "Testhelligkeit"
-    $stored.on = $true
-    Set-Content -Path $state -Value ($stored | ConvertTo-Json -Compress) -Encoding ascii -NoNewline
+        $stored = Get-Content $state -Raw | ConvertFrom-Json
+        $stored.customPreset = "Testhelligkeit"
+        $stored.on = $true
+        Set-Content -Path $state -Value ($stored | ConvertTo-Json -Compress) -Encoding ascii -NoNewline
 
-    Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
-    Assert-Equal 45 ((Get-Content $channelState -Raw | ConvertFrom-Json).($first.Name).brightness) `
-        "brightness taken from the preset"
-
-    Set-Content -Path $presets -Value '[]' -Encoding ascii -NoNewline
-    [void](Invoke-Aura @("-brightness", "100"))
+        Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
+        Assert-Equal 45 ((Get-Content $channelState -Raw | ConvertFrom-Json).($first.Name).brightness) `
+            "brightness taken from the preset"
+    }
+    finally {
+        # A failed assertion above must not leave this bogus preset active for every test after it.
+        Set-Content -Path $presets -Value '[]' -Encoding ascii -NoNewline
+        [void](Invoke-Aura @("-brightness", "100"))
+    }
 }
 
 Test-Case "a channel record without 'on' counts as on" {
@@ -378,6 +402,10 @@ Test-Case "a custom preset naming a missing controller does not claim success" {
 
     # Nothing matched, so the restore has to report a missing controller rather than pretend.
     Assert-Equal 3 (Invoke-Aura @("-on")).ExitCode "exit code"
+
+    # The same forced error is what proves the log actually records one.
+    $lastLine = Get-Content $log -Tail 1
+    if ($lastLine -notmatch "ERROR") { throw "no error line logged: $lastLine" }
 }
 
 Test-Case "a remembered preset that no longer exists falls back to a normal restore" {
@@ -422,11 +450,138 @@ Test-Case "a preset survives an off/on round trip" {
     Assert-Equal 9 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
+Write-Host "Targeting"
+
+Test-Case "-channel accepts the flat number from -list" {
+    Assert-Equal 0 (Invoke-Aura @("-preset", "static", "red", "-channel", "1")).ExitCode "exit code"
+}
+
+Test-Case "-channel accepts the controller.channel form from -list" {
+    Assert-Equal 0 (Invoke-Aura @("-preset", "static", "lime", "-channel", "1.2")).ExitCode "exit code"
+}
+
+Test-Case "-channel accepts a default channel name" {
+    Assert-Equal 0 (Invoke-Aura @("-preset", "static", "blue", "-channel", "ARGB 1")).ExitCode "exit code"
+}
+
+Test-Case "-channel accepts a name of the user's own" {
+    # The real device key is whatever the app itself just wrote to channel-state.json - there is
+    # no CLI way to learn it beforehand, so read it back rather than guessing at one. It is a HID
+    # path with backslashes, which need escaping to land in valid JSON.
+    [void](Invoke-Aura @("-on"))
+    $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
+    $deviceKey = ($first.Name -split '\|')[0]
+    $escapedKey = $deviceKey -replace '\\', '\\'
+    Set-Content -Path $channelNames -Encoding utf8 -Value "{`"$escapedKey|0`":`"MyHeader`"}"
+    Assert-Equal 0 (Invoke-Aura @("-preset", "static", "yellow", "-channel", "MyHeader")).ExitCode "exit code"
+}
+
+Test-Case "-channel with an unknown target exits 2 and lists the possible ones" {
+    $r = Invoke-Aura @("-preset", "static", "red", "-channel", "does-not-exist")
+    Assert-Equal 2 $r.ExitCode "exit code"
+    if ($r.StdErr -notmatch "1\.1") { throw "no candidate list on stderr" }
+}
+
+Test-Case "-device targets a whole controller" {
+    Assert-Equal 0 (Invoke-Aura @("-on", "-device", "1")).ExitCode "exit code"
+}
+
+Test-Case "an unknown -device number exits 2" {
+    Assert-Equal 2 (Invoke-Aura @("-on", "-device", "99")).ExitCode "exit code"
+}
+
+Test-Case "-status prints the board and one line per channel" {
+    $r = Invoke-Aura @("-status")
+    Assert-Equal 0 $r.ExitCode "exit code"
+    if ($r.StdOut -notmatch "(?m)^Board\t") { throw "no board line: $($r.StdOut)" }
+    if ($r.StdOut -notmatch "1\.1") { throw "no channel line: $($r.StdOut)" }
+}
+
+Test-Case "--version prints only the version number" {
+    $r = Invoke-Aura @("--version")
+    Assert-Equal 0 $r.ExitCode "exit code"
+    if ($r.StdOut.Trim() -notmatch '^\d+\.\d+\.\d+') { throw "unexpected version output: '$($r.StdOut)'" }
+}
+
+Test-Case "-help lists every documented command" {
+    $r = Invoke-Aura @("-help")
+    Assert-Equal 0 $r.ExitCode "exit code"
+
+    # Every command the help claims to document has to actually appear in it - the list is easy
+    # to extend in code and forget here, which is how a flag ends up undocumented.
+    foreach ($flag in @("-on", "-off", "-preset", "-brightness", "-custom", "-list", "-status",
+                        "--version", "-help", "-device", "-channel")) {
+        if ($r.StdOut -notmatch [regex]::Escape($flag)) { throw "-help does not mention $flag" }
+    }
+
+    # The review harness is not an end-user flag and must stay out of the published help.
+    if ($r.StdOut -match "-review") { throw "-help must not advertise -review" }
+
+    # The brightness range comes from the code's own constants, so a change there cannot leave a
+    # stale number in the help text.
+    if ($r.StdOut -notmatch "10-100") { throw "-help does not show the real brightness range" }
+}
+
+Test-Case "-help is reachable as -h, --help and /?" {
+    foreach ($form in @("-h", "--help", "/?")) {
+        $r = Invoke-Aura @($form)
+        Assert-Equal 0 $r.ExitCode "exit code for $form"
+        if ($r.StdOut -notmatch "Usage: AuraToggle.exe") { throw "$form did not print the help" }
+    }
+}
+
+Test-Case "-help rejects a targeting option that does not apply to it" {
+    $r = Invoke-Aura @("-help", "-channel", "1")
+    Assert-Equal 2 $r.ExitCode "exit code"
+}
+
+Test-Case "-custom applies a saved preset by name" {
+    $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
+    $deviceKey = ($first.Name -split '\|')[0]
+    $escapedKey = $deviceKey -replace '\\', '\\'
+    Set-Content -Path $presets -Encoding utf8 -Value `
+        "[{`"name`":`"CliPreset`",`"entries`":[{`"deviceKey`":`"$escapedKey`",`"channel`":0,`"label`":`"x`",`"mode`":1,`"red`":10,`"green`":20,`"blue`":30}]}]"
+    Assert-Equal 0 (Invoke-Aura @("-custom", "CliPreset")).ExitCode "exit code"
+    Assert-Equal "CliPreset" ((Get-Content $state -Raw | ConvertFrom-Json).customPreset) "active preset"
+}
+
+Test-Case "-custom with an unknown name exits 2" {
+    Assert-Equal 2 (Invoke-Aura @("-custom", "does-not-exist")).ExitCode "exit code"
+}
+
+Test-Case "-custom rejects -device, since a preset names its own channels" {
+    # Regression: -device/-channel used to be extracted before the command was even looked at, so
+    # this silently applied the preset board-wide and exited 0 as if -device had done something.
+    Assert-Equal 2 (Invoke-Aura @("-custom", "CliPreset", "-device", "1")).ExitCode "exit code"
+}
+
+Test-Case "-list rejects -channel, since it has nothing to target" {
+    Assert-Equal 2 (Invoke-Aura @("-list", "-channel", "1")).ExitCode "exit code"
+}
+
+Write-Host "Log"
+
+Test-Case "a start line is written to the log" {
+    Remove-Item $log -ErrorAction SilentlyContinue
+    [void](Invoke-Aura @("-on"))
+    if (-not (Test-Path $log)) { throw "log.txt was not created" }
+    # Not the last line: -on always logs its device discovery right after the start line.
+    if (-not (Select-String -Path $log -Pattern "Start" -Quiet)) { throw "no start line in the log" }
+}
+
+Test-Case "the log rotates past 200 KB" {
+    Remove-Item $oldLog -ErrorAction SilentlyContinue
+    Set-Content -Path $log -Encoding ascii -NoNewline -Value ("x" * 210000)
+    [void](Invoke-Aura @("-on"))
+    if (-not (Test-Path $oldLog)) { throw "log.txt was not rotated to log.old.txt" }
+    if ((Get-Item $log).Length -gt 1000) { throw "log.txt was not restarted after rotation" }
+}
+
 Write-Host "Shortcuts"
 
 # Do not call the loop variable $name: inside Test-Case that would resolve to its own
 # $Name parameter, which is how this test first went looking for the wrong file.
-foreach ($linkName in "Aura An.lnk", "Aura Aus.lnk") {
+foreach ($linkName in "Aura On.lnk", "Aura Off.lnk") {
     Test-Case "'$linkName' exists and carries a relative path" {
         $link = Join-Path (Split-Path $Exe) $linkName
         if (-not (Test-Path $link)) { throw "shortcut missing at $link" }
@@ -437,7 +592,7 @@ foreach ($linkName in "Aura An.lnk", "Aura Aus.lnk") {
 
         $shell = New-Object -ComObject WScript.Shell
         $shortcut = $shell.CreateShortcut($link)
-        $expected = if ($linkName -eq "Aura An.lnk") { "-on" } else { "-off" }
+        $expected = if ($linkName -eq "Aura On.lnk") { "-on" } else { "-off" }
         Assert-Equal $expected $shortcut.Arguments "arguments"
         Assert-Equal (Resolve-Path $Exe).Path $shortcut.TargetPath "target"
     }
@@ -445,15 +600,16 @@ foreach ($linkName in "Aura An.lnk", "Aura Aus.lnk") {
 
 Write-Host "Window"
 
-Test-Case "-autostart shows the window when start minimised is off" {
+Test-Case "-autostart shows no window, but the process stays running and can be stopped" {
     $process = Start-Process $Exe -ArgumentList "-autostart" -PassThru
     Start-Sleep -Seconds 3
     $process.Refresh()
     try {
-        if ($process.MainWindowHandle -eq 0) { throw "no window" }
+        if ($process.HasExited) { throw "process exited immediately" }
+        if ($process.MainWindowHandle -ne 0) { throw "a window was shown" }
     }
     finally {
-        [void]$process.CloseMainWindow()
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         [void]$process.WaitForExit(5000)
     }
 }
@@ -473,7 +629,7 @@ Test-Case "window opens, closes and leaves no process behind" {
 
     # Scoped to this build: another copy of the tool may legitimately be running elsewhere.
     $target = (Resolve-Path $Exe).Path
-    $leftover = @(Get-Process -Name "Aura Toggle" -ErrorAction SilentlyContinue |
+    $leftover = @(Get-Process -Name "AuraToggle" -ErrorAction SilentlyContinue |
         Where-Object { $_.Path -eq $target })
     Assert-Equal 0 $leftover.Count "leftover processes"
 }

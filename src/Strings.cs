@@ -20,6 +20,14 @@ internal static class Strings
             ? German
             : English;
 
+    /// <summary>
+    /// One specific language regardless of <see cref="Override"/> - the CLI's forgiving
+    /// <c>-channel</c> matching accepts a channel's default name in either language, not just
+    /// whichever one is currently active.
+    /// </summary>
+    internal static string InLanguage(string key, string language) =>
+        (language == "de" ? German : English).GetString(key) ?? English.GetString(key) ?? key;
+
     public static string WindowTitle => Get("WindowTitle");
 
     public static string ButtonStateOn => Get("ButtonStateOn");
@@ -36,6 +44,16 @@ internal static class Strings
 
     public static string ErrorWriteFailed => Get("ErrorWriteFailed");
 
+    public static string ErrorWriteBusy => Get("ErrorWriteBusy");
+
+    public static string ErrorWriteTimeout => Get("ErrorWriteTimeout");
+
+    public static string ErrorWriteGeneric => Get("ErrorWriteGeneric");
+
+    public static string ErrorDeviceNotFound => Get("ErrorDeviceNotFound");
+
+    public static string ErrorChannelNotFound => Get("ErrorChannelNotFound");
+
     public static string UsagePresets => Get("UsagePresets");
 
     public static string PresetAccessibleName => Get("PresetAccessibleName");
@@ -51,8 +69,6 @@ internal static class Strings
     public static string SettingsAccessibleName => Get("SettingsAccessibleName");
 
     public static string SettingAutoStart => Get("SettingAutoStart");
-
-    public static string SettingStartMinimised => Get("SettingStartMinimised");
 
     public static string SettingMinimiseOnClose => Get("SettingMinimiseOnClose");
 
@@ -87,8 +103,9 @@ internal static class Strings
     public static string ChannelQualified => Get("ChannelQualified");
 
     /// <summary>
-    /// Says why the firmware-driven effects are missing from the list while a single channel is
-    /// selected: the controller runs them across all of its channels at once.
+    /// Standing reminder shown under the effect list while a single channel is selected: the
+    /// firmware-driven effects still apply to every channel of that controller at once, even
+    /// though all nine effects stay selectable regardless of the selection.
     /// </summary>
     public static string ChannelEffectHint => Get("ChannelEffectHint");
 
@@ -96,9 +113,13 @@ internal static class Strings
 
     public static string ChannelRenameReset => Get("ChannelRenameReset");
 
+    public static string ChannelRenameAccessibleName => Get("ChannelRenameAccessibleName");
+
     public static string SettingBrightness => Get("SettingBrightness");
 
     public static string ColourAccessibleName => Get("ColourAccessibleName");
+
+    public static string ColourHexAccessibleName => Get("ColourHexAccessibleName");
 
     /// <summary>"{0} %" - the brightness read-out.</summary>
     public static string BrightnessValue => Get("BrightnessValue");
@@ -129,6 +150,38 @@ internal static class Strings
 
     /// <summary>Display name of a lighting effect.</summary>
     public static string Preset(string resourceKey) => Get(resourceKey);
+
+    public static string ErrorTitle => Get("ErrorTitle");
+
+    public static string ErrorUnexpected => Get("ErrorUnexpected");
+
+    public static string ErrorDetails => Get("ErrorDetails");
+
+    public static string ErrorCopyDetails => Get("ErrorCopyDetails");
+
+    public static string ErrorOpenLog => Get("ErrorOpenLog");
+
+    public static string ErrorClose => Get("ErrorClose");
+
+    public static string SettingReset => Get("SettingReset");
+
+    public static string SettingResetConfirm => Get("SettingResetConfirm");
+
+    public static string SettingOpenLog => Get("SettingOpenLog");
+
+    public static string SettingHotkey => Get("SettingHotkey");
+
+    public static string SettingHotkeyConflict => Get("SettingHotkeyConflict");
+
+    public static string HotkeyRecordPrompt => Get("HotkeyRecordPrompt");
+
+    public static string HotkeyModifierControl => Get("HotkeyModifierControl");
+
+    public static string HotkeyModifierAlt => Get("HotkeyModifierAlt");
+
+    public static string HotkeyModifierShift => Get("HotkeyModifierShift");
+
+    public static string HotkeyModifierWin => Get("HotkeyModifierWin");
 
     private static string Get(string key) =>
         Current.GetString(key) ?? English.GetString(key) ?? key;

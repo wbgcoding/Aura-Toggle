@@ -1,7 +1,6 @@
 ; Inno Setup script for Aura Toggle.
 ;
-; Built through build.bat, which publishes both architectures and packs them into ONE installer
-; that picks the matching binary for the machine it runs on:
+; Built through build.bat, which publishes the x64 exe and packs it into the installer:
 ;
 ;   build.bat installer
 ;
@@ -14,9 +13,10 @@
 #endif
 
 #define AppName "Aura Toggle"
+#define AppExe "AuraToggle.exe"
 #define AppPublisher "BG Coding"
 #define AppUrl "https://github.com/wbgcoding/aura-toggle"
-#define SetupName "Setup Aura Toggle v" + AppVersion
+#define SetupName "AuraToggle-Setup-" + AppVersion
 
 [Setup]
 AppId={{8E5C1F42-6A1D-4A0B-9C3F-2B7E4D9A1C55}
@@ -34,14 +34,17 @@ DisableProgramGroupPage=yes
 OutputDir=..\dist
 OutputBaseFilename={#SetupName}
 SetupIconFile=..\assets\aura.ico
-UninstallDisplayIcon={app}\Aura Toggle.exe
+UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 
 ; Per machine into Program Files by default, but the user may choose "just for me" instead,
 ; which installs into the profile and needs no elevation at all.
 PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
-Compression=lzma2/max
+; The strongest setting Inno offers. Measured: this is saturated - lzma2/max produces a file
+; within a dozen bytes of it. What is left of the download is the Inno engine itself, not the
+; program.
+Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 
@@ -52,10 +55,8 @@ MinVersion=10.0
 CloseApplications=yes
 RestartApplications=yes
 
-; One installer for both architectures - which of the two [Files] entries below actually
-; gets copied is decided per machine by the IsArm64 checks.
-ArchitecturesAllowed=x64compatible or arm64
-ArchitecturesInstallIn64BitMode=x64compatible or arm64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
 ; The licence page carries a plain-language preamble in front of the MIT text: what the licence
@@ -87,29 +88,48 @@ Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
 Name: "autostart"; Description: "{cm:AutoStart}"; Flags: unchecked
 
 [Files]
-Source: "..\dist\Aura Toggle.exe"; DestDir: "{app}"; DestName: "Aura Toggle.exe"; Flags: ignoreversion; Check: not IsArm64
-Source: "..\dist\arm64\Aura Toggle.exe"; DestDir: "{app}"; DestName: "Aura Toggle.exe"; Flags: ignoreversion; Check: IsArm64
+Source: "..\dist\{#AppExe}"; DestDir: "{app}"; DestName: "{#AppExe}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.de.md"; DestDir: "{app}"; Flags: ignoreversion
+; Never installed to the target machine - only extracted to {tmp} on demand, to check the
+; downloaded .NET runtime installer's signature before PrepareToInstall runs it elevated.
+Source: "verify-signature.ps1"; DestDir: "{tmp}"; Flags: dontcopy
+
+[InstallDelete]
+; Upgrading from 1.0.0, which installed the executable as "aura.exe" and put three entries in the
+; Start menu. Without this the old binary stays behind next to the new one - and a Run entry
+; written by that version still points at it, so Windows would go on starting the old build at
+; logon. The two extra shortcuts were dropped on purpose (see [Icons] below) and have to go with it.
+Type: files; Name: "{app}\aura.exe"
+Type: files; Name: "{group}\Aura An.lnk"
+Type: files; Name: "{group}\Aura Aus.lnk"
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\Aura Toggle.exe"
-Name: "{group}\Aura An"; Filename: "{app}\Aura Toggle.exe"; Parameters: "-on"
-Name: "{group}\Aura Aus"; Filename: "{app}\Aura Toggle.exe"; Parameters: "-off"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Aura Toggle.exe"; Tasks: desktopicon
+; The application and nothing else. One-click on/off shortcuts used to be created here too, which
+; put three entries in the Start menu for a tool whose whole point is one switch - anyone who
+; wants them can make one from the documented -on/-off arguments.
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Registry]
-; Per user autostart, matching the switch inside the application itself.
+; Per user autostart, matching the switch inside the application itself. Correct for the common
+; case (elevating as yourself, same HKCU). If the setup was instead elevated with a *different*
+; administrator's credentials, HKCU here is that admin's hive, not the one the app actually runs
+; under - the [Run] entry below repeats the same write as the original user to cover that case too.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; \
-    ValueName: "AuraToggle"; ValueData: """{app}\Aura Toggle.exe"" -autostart"; Flags: uninsdeletevalue; Tasks: autostart
+    ValueName: "AuraToggle"; ValueData: """{app}\{#AppExe}"" -autostart"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
 ; runasoriginaluser: without it the app inherits the installer's elevation and writes its
 ; state, settings and autostart entry into the administrator's profile instead of the user's,
 ; so the next normal start would find none of it.
-Filename: "{app}\Aura Toggle.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; \
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; \
     Flags: nowait postinstall skipifsilent runasoriginaluser
+; Same reasoning as above, aimed at the [Registry] entry's blind spot: reg.exe run as the
+; original user writes the value into the profile that will actually start the app.
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v AuraToggle /d ""\""{app}\{#AppExe}\"" -autostart"" /f"; \
+    Flags: runasoriginaluser runhidden; Tasks: autostart
 
 [UninstallDelete]
 Type: dirifempty; Name: "{app}"
@@ -123,22 +143,36 @@ Type: dirifempty; Name: "{app}"
   --------------------------------------------------------------------------------------------- }
 const
   RuntimeUrlX64 = 'https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe';
-  RuntimeUrlArm64 = 'https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-arm64.exe';
   RuntimeFile = 'windowsdesktop-runtime.exe';
   RestartRequired = 3010;
 
-{ Any 10.x is enough: a framework dependent build rolls forward to the newest one present. }
-function DesktopRuntimeInstalled: Boolean;
+{ ASFW_ANY: passed instead of a specific process id to hand the foreground-activation right to
+  whichever process asks for it next, rather than one this script would have to track down. }
+  AnyProcess = $FFFFFFFF;
+
+function AllowSetForegroundWindow(dwProcessId: LongWord): Boolean;
+  external 'AllowSetForegroundWindow@user32.dll stdcall';
+
+{ Checks one candidate ".dotnet root\shared\Microsoft.WindowsDesktop.App" for any 10.x - a
+  framework dependent build rolls forward to the newest one present, so the exact patch does
+  not matter. A directory name match alone does not prove the runtime is actually usable there
+  though - a failed uninstall or an interrupted install can leave an empty or stripped folder
+  behind with the right name. System.Windows.Forms.dll is the one assembly this application
+  itself needs, so its presence is what "usable" means here, not just a matching folder name. }
+function HasDesktopRuntimeAt(const DotnetRoot: String): Boolean;
 var
   Found: TFindRec;
 begin
   Result := False;
-  if not FindFirst(ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App\10.*'), Found) then
+  if (DotnetRoot = '') or
+     not FindFirst(DotnetRoot + '\shared\Microsoft.WindowsDesktop.App\10.*', Found) then
     Exit;
 
   try
     repeat
-      if (Found.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+      if ((Found.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0) and
+         FileExists(DotnetRoot + '\shared\Microsoft.WindowsDesktop.App\' + Found.Name +
+           '\System.Windows.Forms.dll') then
       begin
         Result := True;
         Break;
@@ -147,6 +181,18 @@ begin
   finally
     FindClose(Found);
   end;
+end;
+
+{ The official installer always goes to Program Files, but a machine with the SDK put there by
+  `dotnet-install` (common in dev/CI setups) can have it under a custom DOTNET_ROOT, or under
+  the user's own profile instead - checked too, so those machines are not asked to download
+  60 MB they already effectively have. }
+function DesktopRuntimeInstalled: Boolean;
+begin
+  Result :=
+    HasDesktopRuntimeAt(ExpandConstant('{commonpf}\dotnet')) or
+    HasDesktopRuntimeAt(ExpandConstant('{localappdata}\Microsoft\dotnet')) or
+    HasDesktopRuntimeAt(GetEnv('DOTNET_ROOT'));
 end;
 
 function OnRuntimeProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
@@ -158,9 +204,43 @@ begin
   Result := True;
 end;
 
+{ ---------------------------------------------------------------------------------------------
+  DownloadTemporaryFile takes an expected SHA-256, but the aka.ms link always points at whatever
+  the newest 10.0 patch is, so there is no fixed hash to pin here. This is the check that stands
+  in for it: the same Authenticode verification Windows itself runs when a user double-clicks a
+  downloaded .exe and picks "Run" - a tampered, corrupted or unsigned file fails it.
+
+  The natural way to run that check from Inno Setup is WinVerifyTrust, called directly - but
+  Pascal Script's "@" operator only yields addresses of procedures (needed for the callback
+  DownloadTemporaryFile already takes above), not of plain variables, and WinVerifyTrust needs
+  the address of a local WINTRUST_FILE_INFO/WINTRUST_DATA record to point its union member at.
+  Confirmed by compiling a minimal test script against ISCC rather than assumed: "@" on a data
+  variable is rejected with "Unknown identifier", so there is no way to marshal those structs by
+  hand here. PowerShell's own Get-AuthenticodeSignature is the same check without that problem -
+  it ships on every supported version of Windows, so this shells out to it instead of adding a
+  third-party Inno Setup plugin DLL for one boolean answer.
+  --------------------------------------------------------------------------------------------- }
+function IsAuthenticodeSigned(const FileName: String): Boolean;
+var
+  ScriptPath: String;
+  Params: String;
+  ExitCode: Integer;
+begin
+  ExtractTemporaryFile('verify-signature.ps1');
+  ScriptPath := ExpandConstant('{tmp}\verify-signature.ps1');
+
+  { -ExecutionPolicy Bypass applies only to this one process, not any lasting machine setting -
+    without it, a script FILE (unlike an inline -Command) refuses to run at all on a machine
+    whose policy is still the Windows default of Restricted. }
+  Params := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ScriptPath + '" "' +
+    FileName + '"';
+
+  Result := Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params, '',
+    SW_HIDE, ewWaitUntilTerminated, ExitCode) and (ExitCode = 0);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
-  Url: String;
   ExitCode: Integer;
 begin
   Result := '';
@@ -175,14 +255,17 @@ begin
     Exit;
   end;
 
-  if IsArm64 then
-    Url := RuntimeUrlArm64
-  else
-    Url := RuntimeUrlX64;
-
   try
-    DownloadTemporaryFile(Url, RuntimeFile, '', @OnRuntimeProgress);
+    DownloadTemporaryFile(RuntimeUrlX64, RuntimeFile, '', @OnRuntimeProgress);
   except
+    Result := CustomMessage('RuntimeFailed');
+    Exit;
+  end;
+
+  if not IsAuthenticodeSigned(ExpandConstant('{tmp}\' + RuntimeFile)) then
+  begin
+    { Refused rather than run elevated - a broken or missing signature is exactly what a
+      tampered or substituted download looks like. }
     Result := CustomMessage('RuntimeFailed');
     Exit;
   end;
@@ -204,10 +287,115 @@ begin
     Result := CustomMessage('RuntimeFailed');
 end;
 
+{ ---------------------------------------------------------------------------------------------
+  1.0.0 wrote its autostart entry pointing at "aura.exe", and the switch inside the application
+  writes the same value name - so an entry left from that version survives an upgrade while the
+  file it names has just been deleted above, and autostart silently stops working for someone who
+  had deliberately turned it on. Repointed rather than removed, because the user's choice was
+  "start with Windows" and that is still what they want; entries that already name the current
+  executable are left untouched. Run as the original user for the same reason the [Run] section
+  is: elevated as a different administrator, HKCU here is that admin's hive, not the real user's.
+  --------------------------------------------------------------------------------------------- }
+procedure RepointLegacyAutoStart;
+var
+  RunKey: String;
+  Current: String;
+  Wanted: String;
+  ResultCode: Integer;
+begin
+  RunKey := 'Software\Microsoft\Windows\CurrentVersion\Run';
+  if not RegQueryStringValue(HKEY_CURRENT_USER, RunKey, 'AuraToggle', Current) then
+    Exit;
+
+  { Only the entry the old version wrote. Anything already naming the current executable - or
+    something the user pointed elsewhere themselves - is none of this installer's business. }
+  if Pos('aura.exe', Lowercase(Current)) = 0 then
+    Exit;
+
+  Wanted := '"' + ExpandConstant('{app}\{#AppExe}') + '" -autostart';
+  RegWriteStringValue(HKEY_CURRENT_USER, RunKey, 'AuraToggle', Wanted);
+
+  { Same blind spot the [Run] section works around: elevated as a different administrator, the
+    write above lands in that account's hive rather than the one the app actually starts under. }
+  ExecAsOriginalUser('reg.exe',
+    'add "HKCU\' + RunKey + '" /v AuraToggle /d "' + Wanted + '" /f',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  { After the files are in place, so the entry is repointed at an executable that exists. }
+  if CurStep = ssPostInstall then
+    RepointLegacyAutoStart;
+
+  { The [Run] entry below launches the app de-elevated (runasoriginaluser) once the user clicks
+    Finish - a different hand-off than a plain child process, which is why it used to open behind
+    whatever window had focus at that point instead of in front: that hand-off does not carry the
+    foreground-activation right an elevated Setup.exe normally passes straight to what it launches.
+    Granted here rather than right before the launch, because Inno gives no hook that runs at that
+    exact point for a [Run] entry - ssDone fires just before the Finished page, with nothing but
+    the wizard itself between here and the user's click, so the grant is still standing when the
+    launch actually happens. }
+  if CurStep = ssDone then
+    AllowSetForegroundWindow(AnyProcess);
+end;
+
+{ A standard, non-elevated user fully controls their own LOCALAPPDATA environment variable - no
+  special rights needed, System Properties or a plain "setx" both reach it. Accepted only when it
+  has the shape a real profile's local app data folder actually has ("<system drive>\Users\
+  <name>\AppData\Local"), so a value pointed somewhere else cannot turn the recursive, forced
+  delete in CurUninstallStepChanged below - which can be running with a more privileged token
+  than the very user this string is read from - into deleting an arbitrary elevation-only path
+  that happens to contain a folder literally named "aura-toggle". }
+function LooksLikeLocalAppData(const path: String): Boolean;
+var
+  prefix: String;
+begin
+  prefix := Lowercase(ExpandConstant('{sd}\users\'));
+  Result :=
+    (Length(path) > Length(prefix) + Length('\appdata\local')) and
+    (Copy(Lowercase(path), 1, Length(prefix)) = prefix) and
+    (Copy(Lowercase(path), Length(path) - 13, 14) = '\appdata\local');
+end;
+
+{ The LocalAppData constant resolves for whichever account this process is running as - the real
+  interactive user when the uninstaller elevated as themselves, but a different administrator's
+  own profile when it did not (the same blind spot the Run-key deletion below already works
+  around). Reads the real value out of the original user's own environment instead of assuming it
+  matches this process's, the same way ExecAsOriginalUser reaches that user's registry hive: a
+  command run as them writes their LocalAppData environment variable to a temp file, which this
+  process then reads back. Falls back to the plain constant - this process's own, safely resolved
+  by Inno itself rather than read from a spoofable environment variable - whenever that round
+  trip fails, or its result does not look like a real profile path; not knowing the right folder
+  should not block the rest of the uninstall, and a value that fails the shape check is exactly
+  as unusable as one that failed to read at all. }
+function OriginalUserLocalAppData: String;
+var
+  TempFile: String;
+  Lines: TArrayOfString;
+  ResultCode: Integer;
+  candidate: String;
+begin
+  Result := ExpandConstant('{localappdata}');
+  TempFile := ExpandConstant('{tmp}\aura-toggle-orig-localappdata.txt');
+
+  if ExecAsOriginalUser(ExpandConstant('{cmd}'), '/c echo %LOCALAPPDATA%>"' + TempFile + '"',
+       '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) and
+     LoadStringsFromFile(TempFile, Lines) and (GetArrayLength(Lines) > 0) then
+  begin
+    candidate := Trim(Lines[0]);
+    if LooksLikeLocalAppData(candidate) then
+      Result := candidate;
+  end;
+
+  DeleteFile(TempFile);
+end;
+
 { User data lives outside the install folder and is kept unless the user opts out. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   DataDir: String;
+  ResultCode: Integer;
 begin
   if CurUninstallStep = usPostUninstall then
   begin
@@ -217,7 +405,16 @@ begin
     RegDeleteValue(HKEY_CURRENT_USER,
       'Software\Microsoft\Windows\CurrentVersion\Run', 'AuraToggle');
 
-    DataDir := ExpandConstant('{localappdata}\aura-toggle');
+    { Same blind spot as the [Run] reg.exe entry at install time: if this uninstaller is
+      elevated as a *different* administrator account than the one that actually used the app,
+      the call above clears that admin's own Run key, not the real user's. [UninstallRun] has no
+      runasoriginaluser flag (Run-only), so ExecAsOriginalUser is the documented way to still
+      reach the real interactive user's hive from [Code]. }
+    ExecAsOriginalUser('reg.exe',
+      'delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle /f',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+    DataDir := OriginalUserLocalAppData + '\aura-toggle';
     if DirExists(DataDir) then
       if SuppressibleMsgBox(ExpandConstant('{cm:RemoveSettings}'), mbConfirmation, MB_YESNO, IDNO) = IDYES then
         DelTree(DataDir, True, True, True);

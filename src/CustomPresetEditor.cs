@@ -12,7 +12,7 @@ namespace AuraToggle;
 /// built-in effect and a colour. Saving applies nothing by itself - the preset appears in the
 /// effect list like any other, and is switched to from there.
 /// </summary>
-internal sealed class CustomPresetEditor : Form
+internal sealed class CustomPresetEditor : PopupForm
 {
     // Wide enough for the colour strip's nine chips, which do not shrink to fit their parent.
     private const int ContentWidth = 330;
@@ -23,7 +23,17 @@ internal sealed class CustomPresetEditor : Form
     private readonly TextField _name = new();
     private readonly PillButton _save = new();
     private readonly PillButton _delete = new();
+    private readonly ArmedButton _deleteArm;
     private readonly string? _editing;
+
+    /// <summary>Read once rather than on every keystroke of the name field.</summary>
+    private readonly HashSet<string> _existingNames;
+
+    /// <summary>
+    /// Set once Save has applied the preset, so closing does not undo it. Left false by Delete -
+    /// nothing new was applied there, so the hardware still has to be put back to its own records.
+    /// </summary>
+    private bool _saved;
 
     /// <param name="preset">The preset to edit, or null to create one.</param>
     /// <param name="devices">
@@ -39,18 +49,13 @@ internal sealed class CustomPresetEditor : Form
     public CustomPresetEditor(CustomPreset? preset, List<AuraDeviceSummary> devices, AuraState current)
     {
         _editing = preset?.Name;
+        _existingNames = AuraCustomPresets.Load().Select(p => p.Name).ToHashSet();
 
         AutoScaleMode = AutoScaleMode.Dpi;
-        FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar = false;
-        StartPosition = FormStartPosition.Manual;
-        BackColor = Theme.Surface;
         ForeColor = Theme.Text;
         Font = Theme.Ui;
         AccessibleName = Strings.CustomPresetAccessibleName;
-        DoubleBuffered = true;
-        KeyPreview = true;
-        Padding = new Padding(16, 14, 16, 14);
+        Padding = new Padding(this.Scaled(16), this.Scaled(14), this.Scaled(16), this.Scaled(14));
 
         _root = new Layout
         {
@@ -59,7 +64,6 @@ internal sealed class CustomPresetEditor : Form
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
             BackColor = Theme.Surface,
-            Width = ContentWidth,
         };
 
         // A board with a lot of channels would make this taller than the screen, so the rows
@@ -77,7 +81,7 @@ internal sealed class CustomPresetEditor : Form
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, 0, 0, 8),
+            Margin = new Padding(0, 0, 0, this.Scaled(8)),
         };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -90,7 +94,7 @@ internal sealed class CustomPresetEditor : Form
             Font = Theme.Heading,
             ForeColor = Theme.Text,
             BackColor = Theme.Surface,
-            Margin = new Padding(2, 2, 0, 0),
+            Margin = new Padding(this.Scaled(2), this.Scaled(2), 0, 0),
         };
         header.Controls.Add(heading, 0, 0);
 
@@ -109,7 +113,7 @@ internal sealed class CustomPresetEditor : Form
         _name.PlaceholderText = Strings.CustomPresetNamePlaceholder;
         _name.AccessibleName = Strings.CustomPresetNamePlaceholder;
         _name.MaxLength = 40;
-        _name.Margin = new Padding(0, 0, 0, 10);
+        _name.Margin = new Padding(0, 0, 0, this.Scaled(10));
         _name.Text = preset?.Name ?? "";
         _name.Accepted += (_, e) =>
         {
@@ -131,7 +135,7 @@ internal sealed class CustomPresetEditor : Form
                 Text = Strings.CustomPresetNoDevices,
                 ForeColor = Theme.TextMuted,
                 BackColor = Theme.Surface,
-                Margin = new Padding(2, 0, 0, 10),
+                Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(10)),
             });
         }
 
@@ -153,7 +157,7 @@ internal sealed class CustomPresetEditor : Form
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, 6, 0, 0),
+            Margin = new Padding(0, this.Scaled(6), 0, 0),
         };
         buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         buttons.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -161,8 +165,8 @@ internal sealed class CustomPresetEditor : Form
         _save.Text = preset == null ? Strings.CustomPresetCreate : Strings.CustomPresetSave;
         _save.Primary = true;
         _save.Font = Theme.Action; // the one action this panel leads with, so it says so
-        _save.Height = 40;
-        _save.Width = 130;
+        _save.DesignHeight = 40;
+        _save.Width = this.Scaled(130);
         _save.Dock = DockStyle.Left;
         _save.BackColor = Theme.Surface;
         _save.Click += (_, _) => SaveAndClose();
@@ -170,15 +174,17 @@ internal sealed class CustomPresetEditor : Form
         buttons.Controls.Add(_save, 0, 0);
 
         _delete.Text = Strings.CustomPresetDelete;
-        _delete.Height = 40;
-        _delete.Width = 96;
+        _delete.DesignHeight = 40;
+        _delete.Width = this.Scaled(96);
         _delete.Fill = Theme.NeutralSoft;
         _delete.ForeColor = Theme.Danger;
         _delete.BackColor = Theme.Surface;
-        _delete.Margin = new Padding(8, 0, 0, 0);
+        _delete.Margin = new Padding(this.Scaled(8), 0, 0, 0);
         _delete.Visible = _editing != null;
-        _delete.Click += (_, _) => DeleteAndClose();
-        _delete.FitToText(16);
+
+        _deleteArm = new ArmedButton(_delete, Strings.CustomPresetDelete, Strings.CustomPresetConfirmDelete, 16);
+        _deleteArm.Confirmed += (_, _) => OnDeleteConfirmed();
+
         buttons.Controls.Add(_delete, 1, 0);
 
         _root.Controls.Add(buttons);
@@ -191,9 +197,10 @@ internal sealed class CustomPresetEditor : Form
         UpdateSaveState();
         FitToContent();
 
-        // The window has no title bar of its own, and it is the one panel that stays open, so it
-        // is dragged by its heading - and by its own background, which is what is left of the
-        // window once the rows have their say.
+        // The window has no title bar of its own, and - like ErrorDialog - it stays open rather
+        // than closing on an outside click, so it needs its own way to move. Dragged by its
+        // heading, and by its own background, which is what is left of the window once the rows
+        // have their say.
         WindowDrag.Enable(this, this, header, heading);
     }
 
@@ -208,8 +215,7 @@ internal sealed class CustomPresetEditor : Form
 
         // Saving onto a name that already belongs to another preset replaces it, so the button
         // says that rather than "Create".
-        bool replaces = named && _name.Text.Trim() != _editing &&
-            AuraCustomPresets.Load().Exists(p => p.Name == _name.Text.Trim());
+        bool replaces = named && _name.Text.Trim() != _editing && _existingNames.Contains(_name.Text.Trim());
 
         _save.Text = replaces
             ? Strings.CustomPresetReplace
@@ -237,38 +243,69 @@ internal sealed class CustomPresetEditor : Form
     /// <summary>Raised after a save or a delete, so the window behind can refresh its list.</summary>
     public event EventHandler? PresetsChanged;
 
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            CreateParams parameters = base.CreateParams;
-            parameters.ClassStyle |= 0x00020000; // CS_DROPSHADOW
-            return parameters;
-        }
-    }
+    /// <summary>
+    /// Raised once Save has written the preset to disk, carrying it so the window behind can
+    /// actually apply it - committing what the live preview already put on the hardware, and
+    /// bringing <c>state.json</c>/<c>channel-state.json</c> in step with what is now showing.
+    /// Without this, saving left the board showing the new preset while every record still
+    /// described the old one, and the very next unrelated action would snap it back.
+    /// </summary>
+    public event EventHandler<CustomPreset>? Saved;
+
+    /// <summary>Raised once Delete has removed the preset, carrying its name, so the window
+    /// behind can clear it from the active state if it was the one running.</summary>
+    public event EventHandler<string>? Deleted;
+
+    /// <summary>
+    /// Raised whenever a row changes, carrying the preset as it stands. The window applies it to
+    /// the hardware without recording anything, so the preset can be judged on the machine
+    /// itself while it is being put together.
+    /// </summary>
+    public event EventHandler<CustomPreset>? PreviewRequested;
+
+    /// <summary>Raised once the editor closes, so the lighting goes back to what it was.</summary>
+    public event EventHandler? PreviewEnded;
 
     private ChannelRow BuildChannelRow(AuraDeviceSummary device, AuraChannel channel, bool nameDevice,
         AuraState current, Dictionary<string, string> chosen, Dictionary<string, ChannelLighting> remembered)
     {
         string label = ChannelLabels.For(device, channel, nameDevice, chosen);
 
+        // One block per channel, and the block has to say which channel at a glance - the rows
+        // below it look identical from one channel to the next. A hairline above every block but
+        // the first keeps them apart once the list is long enough to scroll.
+        if (_rows.Count > 0)
+        {
+            _root.Controls.Add(new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 1,
+                BackColor = Theme.Border,
+                Margin = new Padding(this.Scaled(2), this.Scaled(6), this.Scaled(2), 0),
+            });
+        }
+
         _root.Controls.Add(new Label
         {
             Dock = DockStyle.Top,
             AutoSize = true,
+            // Wraps rather than clips: a channel can be renamed to anything up to 30 characters,
+            // and in this weight that outgrows the panel well before the limit.
+            MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0),
             Text = label,
-            ForeColor = Theme.TextMuted,
+            Font = Theme.Subheading,
+            ForeColor = Theme.Text,
             BackColor = Theme.Surface,
-            Margin = new Padding(2, 4, 0, 4),
+            Margin = new Padding(this.Scaled(2), this.Scaled(10), 0, this.Scaled(6)),
         });
 
         var effect = new Select
         {
             Dock = DockStyle.Top,
-            Height = 32,
+            DesignHeight = 32,
             BackColor = Theme.Surface,
             AccessibleName = label,
-            Margin = new Padding(0, 0, 0, 8),
+            Margin = new Padding(0, 0, 0, this.Scaled(8)),
         };
         // What this very channel last ran, or the board-wide state when it has never been set
         // on its own.
@@ -284,7 +321,7 @@ internal sealed class CustomPresetEditor : Form
             Anchor = AnchorStyles.Left,
             BackColor = Theme.Surface,
             Colour = Color.FromArgb(seed.Red, seed.Green, seed.Blue),
-            Margin = new Padding(0, 0, 0, 8),
+            Margin = new Padding(0, 0, 0, this.Scaled(8)),
         };
         _root.Controls.Add(colours);
 
@@ -294,7 +331,7 @@ internal sealed class CustomPresetEditor : Form
             AutoSize = true,
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, 0, 2, 2),
+            Margin = new Padding(0, 0, this.Scaled(2), this.Scaled(2)),
         };
 
         var brightness = new Slider
@@ -316,7 +353,7 @@ internal sealed class CustomPresetEditor : Form
             ColumnCount = 2,
             RowCount = 2,
             BackColor = Theme.Surface,
-            Margin = new Padding(0, 0, 0, 10),
+            Margin = new Padding(0, 0, 0, this.Scaled(10)),
         };
         brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -326,7 +363,7 @@ internal sealed class CustomPresetEditor : Form
             Text = Strings.SettingBrightness,
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Surface,
-            Margin = new Padding(2, 0, 0, 2),
+            Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(2)),
         }, 0, 0);
         brightnessRow.Controls.Add(brightnessValue, 1, 0);
         brightnessRow.Controls.Add(brightness, 0, 1);
@@ -346,6 +383,10 @@ internal sealed class CustomPresetEditor : Form
         };
 
         brightness.ValueChanged += (_, _) => ShowBrightnessValue(row);
+
+        // Debounced by the slider itself, so dragging it sends one switch when it settles rather
+        // than one per pixel - the controller takes a few hundred ms per switch.
+        brightness.ValueCommitted += (_, _) => RaisePreview();
         ShowBrightnessValue(row);
 
         // The row's own icon previews the effect in the colour picked right below it.
@@ -354,12 +395,14 @@ internal sealed class CustomPresetEditor : Form
         {
             effect.Colour = colours.Colour;
             effect.Invalidate();
+            RaisePreview();
         };
 
         effect.SelectionChanged += (_, _) =>
         {
             ShowColours(row);
             FitToContent();
+            RaisePreview();
         };
 
         ShowColours(row);
@@ -382,16 +425,30 @@ internal sealed class CustomPresetEditor : Form
     private static void ShowBrightnessValue(ChannelRow row) => row.BrightnessValue.Text =
         string.Format(CultureInfo.CurrentCulture, Strings.BrightnessValue, row.Brightness.Value);
 
-    /// <summary>Keeps the window exactly as tall as its rows, which change with each effect.</summary>
-    private void FitToContent()
+    /// <summary>
+    /// Keeps the window exactly as tall as its rows, which change with each effect. Every call
+    /// before <see cref="Open"/> has run measures against <see cref="Screen.FromPoint"/> of
+    /// (0, 0) - wherever that lands is corrected once <see cref="Open"/> knows the real screen
+    /// and re-measures against <paramref name="workingArea"/> instead.
+    /// </summary>
+    private void FitToContent(Rectangle? workingArea = null)
     {
         int wanted = _root.PreferredSize.Height + Padding.Vertical;
-        int available = Screen.FromPoint(Location).WorkingArea.Height - 48;
+        int available = (workingArea ?? Screen.FromPoint(Location).WorkingArea).Height - this.Scaled(48);
         bool scrolls = wanted > available;
 
+        // Scaled, because this runs again on every effect change - long after WinForms scaled the
+        // window for the display it opened on. Assigning the plain 96 dpi number here squeezed the
+        // panel back to half its width on a 200 % screen and cut the colour chips off with it.
         ClientSize = new Size(
-            ContentWidth + Padding.Horizontal + (scrolls ? SystemInformation.VerticalScrollBarWidth : 0),
+            this.Scaled(ContentWidth) + Padding.Horizontal +
+                (scrolls ? SystemInformation.VerticalScrollBarWidth : 0),
             Math.Min(wanted, available));
+
+        // This runs on every effect change, long after Open() placed the window - a row that grows
+        // by its colour chips and brightness slider would otherwise push Save and Delete off the
+        // bottom of the screen.
+        KeepOnScreen();
     }
 
     /// <summary>Fills every field from an existing preset, so it can be edited.</summary>
@@ -433,7 +490,37 @@ internal sealed class CustomPresetEditor : Form
             return;
         }
 
+        List<CustomPresetEntry> entries = CurrentEntries();
+
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        CustomPreset saved;
+        using (IDisposable guard = AuraFiles.Lock())
+        {
+            List<CustomPreset> presets = AuraCustomPresets.Load();
+            saved = new CustomPreset(name, entries);
+
+            // Renaming replaces the entry being edited; saving over another name overwrites it,
+            // which is the expected meaning of Save here.
+            presets.RemoveAll(p => p.Name == name || p.Name == _editing);
+            presets.Add(saved);
+            AuraCustomPresets.Save(presets);
+        }
+
+        _saved = true;
+        PresetsChanged?.Invoke(this, EventArgs.Empty);
+        Saved?.Invoke(this, saved);
+        Close();
+    }
+
+    /// <summary>The rows as preset entries, as they stand right now.</summary>
+    private List<CustomPresetEntry> CurrentEntries()
+    {
         var entries = new List<CustomPresetEntry>();
+
         foreach (ChannelRow row in _rows)
         {
             if (row.Effect.Selected == null || AuraPresets.Find(row.Effect.Selected.Key) is not AuraPreset preset)
@@ -449,34 +536,43 @@ internal sealed class CustomPresetEditor : Form
                 preset.UsesColour ? (byte)row.Brightness.Value : (byte)0));
         }
 
-        if (entries.Count == 0)
-        {
-            return;
-        }
-
-        List<CustomPreset> presets = AuraCustomPresets.Load();
-
-        // Renaming replaces the entry being edited; saving over another name overwrites it,
-        // which is the expected meaning of Save here.
-        presets.RemoveAll(p => p.Name == name || p.Name == _editing);
-        presets.Add(new CustomPreset(name, entries));
-        AuraCustomPresets.Save(presets);
-
-        PresetsChanged?.Invoke(this, EventArgs.Empty);
-        Close();
+        return entries;
     }
 
-    private void DeleteAndClose()
+    /// <summary>
+    /// Shows the rows as they stand on the real hardware, so the preset is judged by looking at
+    /// the machine rather than at nine small icons. Nothing is written - <see cref="PreviewEnded"/>
+    /// puts the lighting back when the editor closes.
+    /// </summary>
+    private void RaisePreview()
+    {
+        List<CustomPresetEntry> entries = CurrentEntries();
+        if (entries.Count > 0)
+        {
+            PreviewRequested?.Invoke(this, new CustomPreset(_name.Text.Trim(), entries));
+        }
+    }
+
+    /// <summary>The arm/confirm timing and text swap live in <see cref="ArmedButton"/> now; this
+    /// is just the action itself, run once the second click confirms it.</summary>
+    private void OnDeleteConfirmed()
     {
         if (_editing == null)
         {
             return;
         }
 
-        List<CustomPreset> presets = AuraCustomPresets.Load();
-        presets.RemoveAll(p => p.Name == _editing);
-        AuraCustomPresets.Save(presets);
+        using (IDisposable guard = AuraFiles.Lock())
+        {
+            List<CustomPreset> presets = AuraCustomPresets.Load();
+            presets.RemoveAll(p => p.Name == _editing);
+            AuraCustomPresets.Save(presets);
+        }
 
+        // Deleted first: it clears _state.CustomPreset if this was the active one, so the render
+        // PresetsChanged triggers next already reflects that instead of repainting the tray with
+        // a name that is about to disappear and then never repainting again.
+        Deleted?.Invoke(this, _editing);
         PresetsChanged?.Invoke(this, EventArgs.Empty);
         Close();
     }
@@ -487,10 +583,8 @@ internal sealed class CustomPresetEditor : Form
     /// </summary>
     public void Open(Point at, IWin32Window? owner)
     {
-        Rectangle screen = Screen.FromPoint(at).WorkingArea;
-        int x = Math.Min(at.X, screen.Right - Width - 4);
-        int y = Math.Min(at.Y, screen.Bottom - Height - 4);
-        Location = new Point(Math.Max(screen.Left + 4, x), Math.Max(screen.Top + 4, y));
+        FitToContent(Screen.FromPoint(at).WorkingArea);
+        Place(at);
 
         if (owner == null)
         {
@@ -503,12 +597,36 @@ internal sealed class CustomPresetEditor : Form
 
         Activate();
         _name.FocusInput();
+
+        // The rows are seeded from what each channel is already running, so the first preview is
+        // usually a no-op - but not when an existing preset was loaded into them.
+        RaisePreview();
     }
 
-    protected override void OnHandleCreated(EventArgs e)
+    /// <summary>Dragged onto a display with a different scale: the height and width this was
+    /// fitted to belong to the one it came from.</summary>
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
     {
-        base.OnHandleCreated(e);
-        Theme.RoundWindowCorners(Handle);
+        base.OnDpiChanged(e);
+        BeginInvoke(() =>
+        {
+            if (!IsDisposed)
+            {
+                FitToContent();
+            }
+        });
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        base.OnFormClosed(e);
+
+        // Saving already applied and recorded the preset; anything else leaves the preview on the
+        // hardware and nothing on record, so the lighting has to be put back.
+        if (!_saved)
+        {
+            PreviewEnded?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -522,5 +640,15 @@ internal sealed class CustomPresetEditor : Form
         // Enter is handled by the name field itself (TextField.Accepted): this form only holds
         // the field, so its own Focused is never true while the caret is in it.
         base.OnKeyDown(e);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _deleteArm.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

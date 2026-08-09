@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace AuraToggle;
@@ -12,9 +10,7 @@ namespace AuraToggle;
 /// </summary>
 internal static class AuraChannelNames
 {
-    private const string FileName = "channel-names.json";
-
-    private static string Key(string deviceKey, int channel) => $"{deviceKey}|{channel}";
+    internal const string FileName = "channel-names.json";
 
     /// <summary>
     /// Every chosen name, read once. Labelling a whole selector otherwise re-read and re-parsed
@@ -22,12 +18,11 @@ internal static class AuraChannelNames
     /// </summary>
     public static Dictionary<string, string> All() => Load();
 
-    /// <summary>The name chosen for this channel, or null if it still uses the default one.</summary>
-    public static string? Get(string deviceKey, int channel) => Get(Load(), deviceKey, channel);
-
     /// <summary>Looks one channel up in an already loaded set.</summary>
     public static string? Get(Dictionary<string, string> names, string deviceKey, int channel) =>
-        names.TryGetValue(Key(deviceKey, channel), out string? name) && name.Length > 0 ? name : null;
+        names.TryGetValue(AuraFiles.ChannelKey(deviceKey, channel), out string? name) && name.Length > 0
+            ? name
+            : null;
 
     /// <summary>Sets a channel's name, or clears it back to the default when <paramref name="name"/> is empty.</summary>
     public static void Set(string deviceKey, int channel, string name)
@@ -37,7 +32,7 @@ internal static class AuraChannelNames
         using IDisposable guard = AuraFiles.Lock();
 
         Dictionary<string, string> names = Load();
-        string key = Key(deviceKey, channel);
+        string key = AuraFiles.ChannelKey(deviceKey, channel);
 
         if (name.Trim().Length == 0)
         {

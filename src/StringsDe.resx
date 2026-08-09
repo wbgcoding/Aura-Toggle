@@ -54,7 +54,7 @@
     <value>Mainboard-Beleuchtung ein- oder ausschalten</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Aufruf: aura [-on | -off | -preset &lt;Name&gt; [Farbe] | -brightness &lt;10-100&gt;]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
+    <value>Aufruf: aura [-on | -off | -preset &lt;Name&gt; [Farbe] | -brightness &lt;10-100&gt; | -custom &lt;Name&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;Ziel&gt;]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
     <value>Voreinstellungen: {0}</value>
@@ -101,14 +101,26 @@
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>Schreiben an den AURA-Controller fehlgeschlagen (Befehl 0x{0}): {1}</value>
   </data>
+  <data name="ErrorWriteBusy" xml:space="preserve">
+    <value>Der AURA-Controller hat auf einen vorherigen Befehl noch nicht geantwortet.</value>
+  </data>
+  <data name="ErrorWriteTimeout" xml:space="preserve">
+    <value>Der AURA-Controller hat den Befehl nicht rechtzeitig angenommen.</value>
+  </data>
+  <data name="ErrorWriteGeneric" xml:space="preserve">
+    <value>Schreiben an den AURA-Controller fehlgeschlagen.</value>
+  </data>
+  <data name="ErrorDeviceNotFound" xml:space="preserve">
+    <value>Unbekannte Controller-Nummer. -list zeigt die g&#252;ltigen.</value>
+  </data>
+  <data name="ErrorChannelNotFound" xml:space="preserve">
+    <value>Unbekannter oder mehrdeutiger Kanal. M&#246;gliche Ziele:</value>
+  </data>
   <data name="SettingsAccessibleName" xml:space="preserve">
     <value>Einstellungen</value>
   </data>
   <data name="SettingAutoStart" xml:space="preserve">
     <value>Mit Windows starten</value>
-  </data>
-  <data name="SettingStartMinimised" xml:space="preserve">
-    <value>Minimiert starten</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
     <value>Beim Schlie&#223;en minimieren</value>
@@ -173,11 +185,17 @@
   <data name="ChannelRenameReset" xml:space="preserve">
     <value>Zur&#252;cksetzen</value>
   </data>
+  <data name="ChannelRenameAccessibleName" xml:space="preserve">
+    <value>Kanalname</value>
+  </data>
   <data name="SettingBrightness" xml:space="preserve">
     <value>Helligkeit</value>
   </data>
   <data name="ColourAccessibleName" xml:space="preserve">
     <value>Effektfarbe</value>
+  </data>
+  <data name="ColourHexAccessibleName" xml:space="preserve">
+    <value>Farbe als Hex-Wert</value>
   </data>
   <data name="BrightnessValue" xml:space="preserve">
     <value>{0} %</value>
@@ -217,5 +235,53 @@
   </data>
   <data name="CustomPresetAccessibleName" xml:space="preserve">
     <value>Editor f&#252;r eigene Presets</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>Etwas ist schiefgelaufen</value>
+  </data>
+  <data name="ErrorUnexpected" xml:space="preserve">
+    <value>Das h&#228;tte nicht passieren sollen. Aura Toggle schlie&#223;en und neu &#246;ffnen hilft meistens.</value>
+  </data>
+  <data name="ErrorDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="ErrorCopyDetails" xml:space="preserve">
+    <value>Details kopieren</value>
+  </data>
+  <data name="ErrorOpenLog" xml:space="preserve">
+    <value>Logordner &#246;ffnen</value>
+  </data>
+  <data name="ErrorClose" xml:space="preserve">
+    <value>Schlie&#223;en</value>
+  </data>
+  <data name="SettingReset" xml:space="preserve">
+    <value>Einstellungen zur&#252;cksetzen</value>
+  </data>
+  <data name="SettingResetConfirm" xml:space="preserve">
+    <value>Wirklich alles zur&#252;cksetzen?</value>
+  </data>
+  <data name="SettingOpenLog" xml:space="preserve">
+    <value>Logordner &#246;ffnen</value>
+  </data>
+  <data name="SettingHotkey" xml:space="preserve">
+    <value>Globaler Hotkey (Ein/Aus)</value>
+  </data>
+  <data name="SettingHotkeyConflict" xml:space="preserve">
+    <value>Diese Kombination ist bereits belegt.</value>
+  </data>
+  <data name="HotkeyRecordPrompt" xml:space="preserve">
+    <value>Taste dr&#252;cken...</value>
+  </data>
+  <data name="HotkeyModifierControl" xml:space="preserve">
+    <value>Strg</value>
+  </data>
+  <data name="HotkeyModifierAlt" xml:space="preserve">
+    <value>Alt</value>
+  </data>
+  <data name="HotkeyModifierShift" xml:space="preserve">
+    <value>Umschalt</value>
+  </data>
+  <data name="HotkeyModifierWin" xml:space="preserve">
+    <value>Win</value>
   </data>
 </root>

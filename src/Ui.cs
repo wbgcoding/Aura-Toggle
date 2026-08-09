@@ -5,7 +5,9 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -45,7 +47,8 @@ internal static class Theme
         Color.FromArgb(90, 150, 255),  // Accent
         Color.FromArgb(43, 55, 78),    // AccentSoft
         Color.FromArgb(68, 71, 77),    // Neutral
-        Color.FromArgb(48, 50, 55),    // NeutralSoft
+        Color.FromArgb(61, 64, 70),    // NeutralSoft - lighter than Surface/SurfaceHover so a
+                                       // filled button stays visible against the popup background
         Color.FromArgb(255, 116, 108), // Danger
     };
 
@@ -60,7 +63,7 @@ internal static class Theme
         Color.FromArgb(37, 99, 235),   // Accent
         Color.FromArgb(234, 240, 254), // AccentSoft
         Color.FromArgb(140, 147, 158), // Neutral
-        Color.FromArgb(238, 239, 242), // NeutralSoft
+        Color.FromArgb(227, 229, 233), // NeutralSoft
         Color.FromArgb(198, 40, 40),   // Danger
     };
 
@@ -86,6 +89,10 @@ internal static class Theme
     public static readonly Font Input = new("Segoe UI", 10F);
 
     public static readonly Font Heading = new("Segoe UI", 11F, FontStyle.Bold);
+
+    /// <summary>Names a group inside a panel that already has a <see cref="Heading"/> of its own -
+    /// one step down, so the two do not compete for the same rank.</summary>
+    public static readonly Font Subheading = new("Segoe UI", 10F, FontStyle.Bold);
 
     /// <summary>The state on the big switch, which is what the window is read from across a room.</summary>
     public static readonly Font Display = new("Segoe UI", 30F, FontStyle.Bold);
@@ -174,15 +181,26 @@ internal static class Theme
 
     private static void Retint(Control control, Color[] from, Color[] to)
     {
-        if (control is FlatControl flat)
-        {
-            // Its background is deliberately inherited, so assigning one here would pin the old
-            // window colour into it; only what it keeps of its own is reset.
-            flat.ApplyTheme();
-        }
-        else if (Translate(control.BackColor, from, to, inkOnly: false) is Color background)
+        // A FlatControl inherits its background by default, but a panel that gave one of its own
+        // still holds the old palette's colour in it - and a custom paint starts by clearing to
+        // exactly that. Translating it here keeps the relationship the panel asked for instead of
+        // leaving white boxes on a window that has already gone dark.
+        if (Translate(control.BackColor, from, to, inkOnly: false) is Color background)
         {
             control.BackColor = background;
+        }
+
+        if (control is FlatControl flat)
+        {
+            // Anything the control copied into a field of its own is translated by the control.
+            flat.ApplyTheme();
+        }
+        else if (control is LinkLabel link && Translate(link.LinkColor, from, to, inkOnly: true) is Color accent)
+        {
+            // A link keeps its colour in three properties of its own, none of which is ForeColor.
+            link.LinkColor = accent;
+            link.ActiveLinkColor = accent;
+            link.VisitedLinkColor = accent;
         }
 
         if (Translate(control.ForeColor, from, to, inkOnly: true) is Color foreground)
@@ -233,6 +251,55 @@ internal static class Theme
         int preference = Round;
         DwmSetWindowAttribute(window, WindowCornerPreference, ref preference, sizeof(int));
     }
+
+    /// <summary>
+    /// Turns a length written against the 96 dpi baseline into pixels on the display
+    /// <paramref name="control"/> is currently on.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is scaled for us. These forms set <see cref="ContainerControl.AutoScaleMode"/> but
+    /// never <see cref="ContainerControl.AutoScaleDimensions"/>, and without that WinForms' own
+    /// auto-scaling does nothing at all - not to a size assigned in a constructor, not to a
+    /// padding, not to a margin. Only fonts, and therefore measured text, grow by themselves.
+    /// Every other length stays at 96 dpi until it is put through here: that is a half-size gear
+    /// beside full-size text, and labels clipped by a limit written for a 96 dpi screen. Reading
+    /// <see cref="Control.DeviceDpi"/> rather than the primary monitor's keeps it right on a
+    /// second screen at a different scale.
+    /// </remarks>
+    public static int Scaled(this Control control, int length) => length * control.DeviceDpi / 96;
+
+    /// <summary>
+    /// The dpi GDI measures text at, which is the process-wide system dpi and does not follow a
+    /// window onto a differently scaled monitor. Fixed for the life of the process (changing it
+    /// requires signing out), so it is read once.
+    /// </summary>
+    private static readonly int SystemDpi = ReadSystemDpi();
+
+    /// <summary>Exposed for <c>-review layout</c>, which reports it next to the window's own dpi.</summary>
+    public static int TextDpi => SystemDpi;
+
+    private static int ReadSystemDpi()
+    {
+        using var screen = Graphics.FromHwnd(IntPtr.Zero);
+        return (int)screen.DpiX;
+    }
+
+    /// <summary>
+    /// Width of <paramref name="text"/> as it will actually be drawn on the display this control
+    /// is on.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="TextRenderer.MeasureText(string, Font)"/> measures against a screen device
+    /// context, and that context carries the system dpi - one number for the whole process. The
+    /// text itself is drawn per monitor, so on a display scaled differently from the system one
+    /// the measurement comes back for the wrong size: on a 150 % second monitor with a 100 %
+    /// primary, every measured width was a third too small, and the window sized from it cut its
+    /// own top row off on the right. Correcting by the ratio fixes that and is a no-op
+    /// (<c>DeviceDpi == SystemDpi</c>) whenever the window is on a display at the system scale,
+    /// which is the ordinary single-monitor case.
+    /// </remarks>
+    public static int MeasuredWidth(this Control control, string text, Font font) =>
+        TextRenderer.MeasureText(text, font).Width * control.DeviceDpi / SystemDpi;
 
     /// <summary>The drawing quality every custom control in this window paints with.</summary>
     public static void Prepare(Graphics g)
@@ -286,6 +353,24 @@ internal static class Theme
             Math.Clamp((int)((r + m) * 255), 0, 255),
             Math.Clamp((int)((g + m) * 255), 0, 255),
             Math.Clamp((int)((b + m) * 255), 0, 255));
+    }
+
+    /// <summary>Parses a bare or #-prefixed 6-digit hex string ("RRGGBB" or "#RRGGBB").</summary>
+    public static bool TryParseHex(string text, out Color colour)
+    {
+        string digits = text.Trim().TrimStart('#');
+
+        // Every character has to be a hex digit: NumberStyles.HexNumber also allows surrounding
+        // whitespace, so " 12345" would otherwise pass the length check and parse as 0x12345.
+        if (digits.Length == 6 && digits.All(Uri.IsHexDigit) &&
+            int.TryParse(digits, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int rgb))
+        {
+            colour = Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+            return true;
+        }
+
+        colour = default;
+        return false;
     }
 
     /// <summary>Hue in degrees, saturation and value in 0..1.</summary>
@@ -350,7 +435,12 @@ internal static class EffectPainter
     // frame, which was the main cost behind the animation feeling laggy.
     private static readonly ColorBlend SpectrumBlend = Blend(SpectrumStops);
 
-    private static bool UsesColour(byte mode) => mode is 1 or 2 or 3 or 7 or 9;
+    // The brush wrapping that blend was left allocating a fresh LinearGradientBrush every frame
+    // regardless - rebuilt only when the paint size changes, same as EffectSurface's own buffer.
+    private static LinearGradientBrush? _spectrumBrush;
+    private static SizeF _spectrumBrushSize;
+
+    private static bool UsesColour(byte mode) => AuraPresets.ByMode(mode)?.UsesColour ?? false;
 
     /// <summary>
     /// Draws the effect as it looks at <paramref name="seconds"/>, filling
@@ -421,10 +511,15 @@ internal static class EffectPainter
     private static double Breath(double seconds, double period) =>
         0.22 + (0.78 * ((Math.Sin(seconds / period * 2 * Math.PI) * 0.5) + 0.5));
 
+    // Shared rather than allocated per call: painting only ever happens on the UI thread, each
+    // call sets the colour and uses the brush immediately, and animated effects call this every
+    // frame at up to 30 fps per visible control.
+    private static readonly SolidBrush FillBrush = new(Color.Black);
+
     private static void Fill(Graphics g, RectangleF bounds, Color colour)
     {
-        using var brush = new SolidBrush(colour);
-        g.FillRectangle(brush, bounds);
+        FillBrush.Color = colour;
+        g.FillRectangle(FillBrush, bounds);
     }
 
     /// <summary>
@@ -434,19 +529,28 @@ internal static class EffectPainter
     private static void Spectrum(Graphics g, RectangleF bounds, double phase, float cycles)
     {
         float period = Math.Max(bounds.Width / cycles, 4f);
-        var strip = new RectangleF(bounds.X, bounds.Y, period, bounds.Height);
+        var size = new SizeF(period, bounds.Height);
 
-        using var brush = new LinearGradientBrush(strip, SpectrumStops[0], SpectrumStops[^1],
-            LinearGradientMode.Horizontal)
+        if (_spectrumBrush == null || _spectrumBrushSize != size)
         {
-            WrapMode = WrapMode.Tile,
-            InterpolationColors = SpectrumBlend,
-        };
+            _spectrumBrush?.Dispose();
+            _spectrumBrush = new LinearGradientBrush(new RectangleF(PointF.Empty, size),
+                SpectrumStops[0], SpectrumStops[^1], LinearGradientMode.Horizontal)
+            {
+                WrapMode = WrapMode.Tile,
+                InterpolationColors = SpectrumBlend,
+            };
+            _spectrumBrushSize = size;
+        }
 
+        // The brush's own rectangle only ever holds the size above; position - the animation
+        // shift and the caller's bounds.X/Y - lives entirely in the transform, reset and
+        // reapplied every call rather than left to accumulate on the reused brush.
         double shift = ((phase % 1.0) + 1.0) % 1.0;
-        brush.TranslateTransform((float)(shift * period) - period, 0);
+        _spectrumBrush.ResetTransform();
+        _spectrumBrush.TranslateTransform(bounds.X + (float)(shift * period) - period, bounds.Y);
 
-        g.FillRectangle(brush, bounds);
+        g.FillRectangle(_spectrumBrush, bounds);
     }
 
     private static ColorBlend Blend(Color[] colours)
@@ -505,7 +609,7 @@ internal static class EffectPainter
 
         Using(surface, shared => shared.Paint(g, bounds, bounds.Height / 2f, buffer =>
             Render(buffer, new RectangleF(0, 0, bounds.Width, bounds.Height), mode, colour, seconds),
-            Outline(mode == 0 ? Theme.Neutral : UsesColour(mode) ? colour : Color.FromArgb(90, 150, 255))));
+            Outline(mode == 0 ? Theme.Neutral : UsesColour(mode) ? colour : Theme.Accent)));
     }
 
     /// <summary>Runs <paramref name="body"/> with the surface given, or with a throwaway one.</summary>
@@ -536,7 +640,7 @@ internal static class EffectPainter
             : Theme.Dark ? Color.FromArgb(46, 255, 255, 255) : Color.FromArgb(58, 0, 0, 0);
     }
 
-    private static double Luminance(Color colour) =>
+    internal static double Luminance(Color colour) =>
         ((colour.R * 0.299) + (colour.G * 0.587) + (colour.B * 0.114)) / 255.0;
 
     /// <summary>
@@ -698,6 +802,77 @@ internal sealed class Layout : TableLayoutPanel
     }
 }
 
+/// <summary>
+/// Shared chrome for every borderless popup: no border, no taskbar entry, manual position,
+/// <see cref="Theme.Surface"/> background, double buffering, a native drop shadow
+/// (<c>CS_DROPSHADOW</c>) instead of a drawn one, and DWM-rounded corners once the handle
+/// exists. Each popup still owns its own <c>AutoScaleMode</c>, <c>OnDeactivate</c> and
+/// <c>OnKeyDown</c> - see DESIGN.md for why those differ (a caller-sized popup would double-
+/// scale under Dpi mode; a couple of popups hold content that must survive an outside click).
+/// </summary>
+internal abstract class PopupForm : Form
+{
+    protected PopupForm()
+    {
+        FormBorderStyle = FormBorderStyle.None;
+        ShowInTaskbar = false;
+        StartPosition = FormStartPosition.Manual;
+        BackColor = Theme.Surface;
+        DoubleBuffered = true;
+        KeyPreview = true;
+    }
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams parameters = base.CreateParams;
+            parameters.ClassStyle |= 0x00020000; // CS_DROPSHADOW
+            return parameters;
+        }
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        Theme.RoundWindowCorners(Handle);
+    }
+
+    /// <summary>
+    /// Puts the window where it was asked for, but never off the screen it opens on.
+    /// </summary>
+    /// <param name="flipAbove">
+    /// The height of the control this drops from, plus the gap below it. A list that would run
+    /// past the bottom edge opens upward instead - above that control, not over it. Zero for a
+    /// panel that only has to stay on screen.
+    /// </param>
+    protected void Place(Point at, int flipAbove = 0)
+    {
+        Rectangle screen = Screen.FromPoint(at).WorkingArea;
+        int y = flipAbove > 0 && at.Y + Height > screen.Bottom ? at.Y - Height - flipAbove : at.Y;
+
+        Location = OnScreen(new Point(at.X, y), screen);
+    }
+
+    /// <summary>
+    /// Pulls the window back onto its screen after it has grown. Every panel here sizes itself to
+    /// its contents, and contents arrive after it was placed - a hotkey row switched on, an effect
+    /// that brings colour chips with it - so the position it was given is no longer the one it
+    /// needs. Without this the buttons at the bottom end up under the taskbar.
+    /// </summary>
+    protected void KeepOnScreen()
+    {
+        if (IsHandleCreated && Visible)
+        {
+            Location = OnScreen(Location, Screen.FromControl(this).WorkingArea);
+        }
+    }
+
+    private Point OnScreen(Point at, Rectangle screen) => new(
+        Math.Max(screen.Left + 4, Math.Min(at.X, screen.Right - Width - 4)),
+        Math.Max(screen.Top + 4, Math.Min(at.Y, screen.Bottom - Height - 4)));
+}
+
 /// <summary>Base for the flat, rounded controls in this window.</summary>
 internal abstract class FlatControl : Control
 {
@@ -727,8 +902,72 @@ internal abstract class FlatControl : Control
     /// </summary>
     public virtual void ApplyTheme() => Invalidate();
 
+    /// <summary>
+    /// Corner rounding, written as the 96 dpi value and read back scaled for the display this is
+    /// on. Every painter takes it straight to <see cref="Theme.RoundedRectangle"/>, so a raw
+    /// number here left a 10 px corner on a control that had otherwise doubled.
+    /// </summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int Radius { get; set; } = 10;
+    public int Radius
+    {
+        get => this.Scaled(_radius);
+        set => _radius = value;
+    }
+
+    private int _radius = 10;
+
+    /// <summary>
+    /// The control's size at 96 dpi. Assigning it applies the scaled size now and again whenever
+    /// the display scale changes - these controls are laid out by size rather than by measuring
+    /// their own content, and WinForms will not resize them here (the forms set
+    /// <see cref="ContainerControl.AutoScaleMode"/> but never
+    /// <see cref="ContainerControl.AutoScaleDimensions"/>, which makes its auto-scaling inert).
+    /// </summary>
+    protected Size DesignSize
+    {
+        set
+        {
+            _designSize = value;
+            ApplyDesignSize();
+        }
+    }
+
+    /// <summary>
+    /// As <see cref="DesignSize"/>, for the controls whose width belongs to the layout they sit
+    /// in (docked or stretched) and only whose height is a fixed design number.
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal int DesignHeight
+    {
+        set
+        {
+            _designHeight = value;
+            ApplyDesignSize();
+        }
+    }
+
+    private Size _designSize;
+    private int _designHeight;
+
+    private void ApplyDesignSize()
+    {
+        if (!_designSize.IsEmpty)
+        {
+            Size = new Size(this.Scaled(_designSize.Width), this.Scaled(_designSize.Height));
+        }
+        else if (_designHeight > 0)
+        {
+            Height = this.Scaled(_designHeight);
+        }
+    }
+
+    /// <summary>Fires when the window this sits on moves to a display with a different scale.</summary>
+    protected override void OnDpiChangedAfterParent(EventArgs e)
+    {
+        base.OnDpiChangedAfterParent(e);
+        ApplyDesignSize();
+        Invalidate();
+    }
 
     protected override void OnMouseEnter(EventArgs e)
     {
@@ -795,7 +1034,7 @@ internal abstract class FlatControl : Control
             return;
         }
 
-        using var pen = new Pen(Color.FromArgb(130, Theme.Accent), 2f);
+        using var pen = new Pen(Color.FromArgb(130, Theme.Accent), 2f * DeviceDpi / 96f);
         g.DrawPath(pen, path);
     }
 }

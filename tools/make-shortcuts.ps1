@@ -7,7 +7,7 @@
 
 param(
     [string]$Directory = (Join-Path $PSScriptRoot "..\dist"),
-    [string]$ExeName = "Aura Toggle.exe"
+    [string]$ExeName = "AuraToggle.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -86,9 +86,11 @@ namespace AuraShortcut
 }
 '@
 
+# One fixed pair of names, in English: this runs at build time, where there is no user and so no
+# language to follow, and English is the project's primary language everywhere else.
 $shortcuts = @(
-    @{ Name = "Aura An.lnk";  Arguments = "-on";  Description = "Mainboard-Beleuchtung einschalten" },
-    @{ Name = "Aura Aus.lnk"; Arguments = "-off"; Description = "Mainboard-Beleuchtung ausschalten" }
+    @{ Name = "Aura On.lnk";  Arguments = "-on";  Description = "Turn the mainboard lighting on" },
+    @{ Name = "Aura Off.lnk"; Arguments = "-off"; Description = "Turn the mainboard lighting off" }
 )
 
 foreach ($shortcut in $shortcuts) {

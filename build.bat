@@ -1,24 +1,24 @@
 @echo off
-REM Builds "Aura Toggle.exe" into dist\.
+REM Builds "AuraToggle.exe" into dist\.
 REM
 REM   build.bat                      EVERYTHING: portable, installer, dist\release with checksums
-REM   build.bat portable             only dist\Aura Toggle.exe, ~740 KB
-REM   build.bat installer            only the setup covering x64 and ARM64 (needs Inno Setup)
+REM   build.bat portable             only the portable x64 exe (~580 KB) and its two shortcuts
+REM   build.bat installer            only the x64 setup (needs Inno Setup)
 REM   build.bat all                  same as no argument at all
 REM
 REM No argument means "build the lot": a double click has to leave nothing out, which is what
 REM kept the installer from appearing when only the portable exe was built by default.
 REM
-REM Nothing here bundles the .NET runtime. Both architectures are framework dependent, and the
-REM setup installs the .NET 10 Desktop Runtime itself when the machine has none - which is what
-REM took the download from 63 MB down to under 2 MB.
+REM Nothing here bundles the .NET runtime. The build is framework dependent, and the setup
+REM installs the .NET 10 Desktop Runtime itself when the machine has none - which is what took
+REM the download from 63 MB to under 3 MB.
 REM
 REM A full build empties dist and leaves exactly this behind:
 REM
-REM   dist\Aura Toggle.exe            the portable x64 build
-REM   dist\Aura An.lnk, Aura Aus.lnk  the two shortcuts, with a relative path
-REM   dist\Setup Aura Toggle vX.exe   the setup, covering x64 and ARM64
-REM   dist\arm64\Aura Toggle.exe      the ARM64 build, only a payload for the setup
+REM   dist\AuraToggle.exe             the portable x64 build
+REM   dist\Aura On.lnk, Aura Off.lnk  the two shortcuts, with a relative path
+REM   dist\AuraToggle-Setup-X.exe     the setup, x64 only
+REM   dist\SHA256SUMS.txt             a checksum for the two exe files above, not the shortcuts
 REM
 REM No .pdb: debug symbols belong to the build, not to what anybody downloads. They stay in
 REM bin\publish\<rid>\ for reading a stack trace from a crash.
@@ -27,8 +27,8 @@ setlocal
 
 set ROOT=%~dp0
 set MODE=%~1
-set EXE=Aura Toggle.exe
-set PDB=Aura Toggle.pdb
+set EXE=AuraToggle.exe
+set PDB=AuraToggle.pdb
 
 if "%MODE%"=="" goto :dispatch
 if /I "%MODE%"=="all" goto :dispatch
@@ -53,7 +53,7 @@ if "%MODE%"=="" goto :all
 if /I "%MODE%"=="all" goto :all
 if /I "%MODE%"=="installer" goto :installer
 
-call :publish win-x64 "%ROOT%dist" shortcuts
+call :publish win-x64 "%ROOT%dist"
 if errorlevel 1 exit /b 1
 
 echo.
@@ -61,12 +61,12 @@ echo Done: %ROOT%dist\%EXE%
 call :maybepause
 exit /b 0
 
-REM Publishes one architecture into one folder, framework dependent.
-REM   %1 runtime identifier   %2 output folder   %3 "shortcuts" to write the two dist shortcuts
+REM Publishes into one folder, framework dependent, and writes the two dist shortcuts next to it.
+REM   %1 runtime identifier   %2 output folder
 REM
 REM DEST, not OUTDIR: MSBuild reads the environment as properties and matches names without
 REM regard to case, so an OUTDIR of its own made "dotnet publish" treat it as OutDir and drop
-REM the whole intermediate build - Aura Toggle.dll, deps.json, runtimeconfig.json - into dist.
+REM the whole intermediate build - AuraToggle.dll, deps.json, runtimeconfig.json - into dist.
 :publish
 set RID=%~1
 set DEST=%~2
@@ -76,8 +76,12 @@ echo Building "%EXE%" [%RID%]
 
 REM Publish into a staging folder. The publish step also drops its intermediate build
 REM output there, and only the executable plus its symbols are the actual artifact.
+REM
+REM No PublishReadyToRun: it precompiles to native code and was carrying ~40% of the exe's
+REM weight for a startup saving nobody can feel - the hardware scan on launch already takes
+REM longer than any JIT warm-up would.
 if exist "%STAGE%" rd /s /q "%STAGE%"
-dotnet publish "%ROOT%AuraToggle.csproj" -c Release -r %RID% --self-contained false -p:PublishSingleFile=true -p:PublishReadyToRun=true -o "%STAGE%"
+dotnet publish "%ROOT%AuraToggle.csproj" -c Release -r %RID% --self-contained false -p:PublishSingleFile=true -o "%STAGE%"
 if errorlevel 1 (
     echo.
     echo BUILD FAILED
@@ -97,9 +101,6 @@ if not exist "%DEST%\%EXE%" goto :copyfailed
 
 REM Symbols are not part of the download, and an older build may have left a copy behind.
 del /q "%DEST%\%PDB%" >nul 2>nul
-
-REM Only the folder the user actually gets: the ARM64 payload needs no shortcuts of its own.
-if /I not "%~3"=="shortcuts" exit /b 0
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%tools\make-shortcuts.ps1" -Directory "%DEST%" -ExeName "%EXE%"
 if errorlevel 1 goto :copyfailed
@@ -125,11 +126,11 @@ call :maybepause
 exit /b 1
 
 :checksums
-REM Printed rather than written to a file: dist holds only what a user downloads, and the
-REM checksums are wanted once, when a release is being put together.
+REM Printed for a quick look, and written into dist as SHA256SUMS.txt too - the standard
+REM "<hash>  <filename>" format, so `sha256sum -c` or a manual compare both just work.
 echo.
 echo Checksums:
-powershell -NoProfile -Command "Get-ChildItem -LiteralPath '%ROOT%dist' -File -Filter *.exe | ForEach-Object { '  {0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }"
+powershell -NoProfile -Command "$h = Get-ChildItem -LiteralPath '%ROOT%dist' -File -Filter *.exe | ForEach-Object { [pscustomobject]@{ H = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(); N = $_.Name } }; $h | ForEach-Object { '  {0}  {1}' -f $_.H, $_.N }; ($h | ForEach-Object { '{0}  {1}' -f $_.H, $_.N }) | Set-Content -LiteralPath '%ROOT%dist\SHA256SUMS.txt' -Encoding ascii"
 exit /b 0
 
 :version
@@ -160,26 +161,23 @@ rd /s /q "%~1" 2>nul
 if exist "%~1" echo WARNING: "%~1" could not be emptied completely.
 exit /b 0
 
-REM Builds both architectures, then packs one setup covering both.
+REM Builds the x64 exe, then packs the setup around it.
 :installer
 REM Emptied first, so what is left afterwards is exactly this build and nothing from an older
 REM one. Safe here because every artifact is rebuilt below - "build.bat portable" deletes
 REM nothing, which is what stopped it from removing the setup.
 call :wipe "%ROOT%dist"
 
-call :publish win-x64 "%ROOT%dist" shortcuts
-if errorlevel 1 goto :installerfailed
-call :publish win-arm64 "%ROOT%dist\arm64"
+call :publish win-x64 "%ROOT%dist"
 if errorlevel 1 goto :installerfailed
 call :version
 if errorlevel 1 goto :installerfailed
 
-REM Both payloads have to still be there at this exact moment. A single file bundle is a
-REM favourite false positive for antivirus software, and a quarantined one vanishes after its
-REM own build step reported success - which would leave the setup to be packed around a missing
-REM or, worse, a stale binary.
+REM The payload has to still be there at this exact moment. A single file bundle is a favourite
+REM false positive for antivirus software, and a quarantined one vanishes after its own build
+REM step reported success - which would leave the setup to be packed around a missing or, worse,
+REM a stale binary.
 if not exist "%ROOT%dist\%EXE%" goto :payloadmissing
-if not exist "%ROOT%dist\arm64\%EXE%" goto :payloadmissing
 
 set ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe
 if not exist "%ISCC%" set ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe
@@ -190,7 +188,7 @@ if not exist "%ISCC%" (
     goto :installerfailed
 )
 
-echo Packing installer [x64 + arm64, version %APPVER%]
+echo Packing installer [x64, version %APPVER%]
 "%ISCC%" /Q "/DAppVersion=%APPVER%" "%ROOT%installer\aura.iss"
 if errorlevel 1 (
     echo.
@@ -198,7 +196,7 @@ if errorlevel 1 (
     goto :installerfailed
 )
 
-echo Installer: %ROOT%dist\Setup Aura Toggle v%APPVER%.exe
+echo Installer: %ROOT%dist\AuraToggle-Setup-%APPVER%.exe
 if /I not "%~1"=="noexit" call :maybepause
 exit /b 0
 

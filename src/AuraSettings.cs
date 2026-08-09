@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -11,11 +9,12 @@ namespace AuraToggle;
 /// <c>%LOCALAPPDATA%\aura-toggle\settings.json</c>.
 /// </summary>
 internal sealed record AuraSettings(
-    bool StartMinimised,
     bool MinimiseOnClose,
     string StartAction,
     bool Animate,
-    string Language)
+    string Language,
+    bool HotkeyEnabled,
+    int Hotkey)
 {
     /// <summary>Leave the lighting untouched when the tool starts.</summary>
     public const string StartActionNone = "";
@@ -26,15 +25,13 @@ internal sealed record AuraSettings(
     /// <summary>Follow the Windows display language.</summary>
     public const string LanguageAuto = "";
 
-    /// <summary>The per-device selector's default: every controller is switched together.</summary>
-    public const string ChannelAll = "all";
-
     public static readonly AuraSettings Default = new(
-        StartMinimised: false,
         MinimiseOnClose: false,
         StartAction: StartActionNone,
         Animate: true,
-        Language: LanguageAuto);
+        Language: LanguageAuto,
+        HotkeyEnabled: false,
+        Hotkey: HotKey.Default);
 
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "AuraToggle";
@@ -45,7 +42,7 @@ internal sealed record AuraSettings(
     /// </summary>
     public const string AutoStartArgument = "-autostart";
 
-    private const string FileName = "settings.json";
+    internal const string FileName = "settings.json";
 
     public static AuraSettings Load()
     {
@@ -61,12 +58,15 @@ internal sealed record AuraSettings(
         {
             JsonElement root = document.RootElement;
 
+            // "startMinimised" from before autostart always went to the tray on its own is read
+            // by nobody any more - an old file with the key just falls through to Default here.
             return new AuraSettings(
-                StartMinimised: Flag(root, "startMinimised", Default.StartMinimised),
-                MinimiseOnClose: Flag(root, "minimiseOnClose", Default.MinimiseOnClose),
-                StartAction: Text(root, "startAction", StartActionNone),
-                Animate: Flag(root, "animate", Default.Animate),
-                Language: Text(root, "language", LanguageAuto));
+                MinimiseOnClose: AuraFiles.JsonFlag(root, "minimiseOnClose", Default.MinimiseOnClose),
+                StartAction: AuraFiles.JsonText(root, "startAction", StartActionNone),
+                Animate: AuraFiles.JsonFlag(root, "animate", Default.Animate),
+                Language: AuraFiles.JsonText(root, "language", LanguageAuto),
+                HotkeyEnabled: AuraFiles.JsonFlag(root, "hotkeyEnabled", Default.HotkeyEnabled),
+                Hotkey: ValidHotkey(AuraFiles.JsonNumber(root, "hotkey", Default.Hotkey)));
         }
         catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
@@ -74,24 +74,31 @@ internal sealed record AuraSettings(
         }
     }
 
-    private static string Text(JsonElement root, string name, string fallback) =>
-        root.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? fallback
-            : fallback;
+    /// <summary>
+    /// A hand-edited or corrupted <c>settings.json</c> could carry a packed hotkey the recorder
+    /// itself would never produce (<see cref="SettingsPopup"/> insists on at least one modifier
+    /// and a real key). Registering a bare key globally would swallow ordinary typing system-wide,
+    /// and registering no key at all fails outright and switches the setting back off with no
+    /// explanation - so anything malformed falls back to the default combination instead.
+    /// </summary>
+    private static int ValidHotkey(int packed)
+    {
+        const int knownModifiers = HotKey.ModControl | HotKey.ModAlt | HotKey.ModShift | HotKey.ModWin;
+        int modifiers = HotKey.Modifiers(packed) & knownModifiers;
+        int key = HotKey.VirtualKey(packed);
 
-    private static bool Flag(JsonElement root, string name, bool fallback) =>
-        root.TryGetProperty(name, out JsonElement value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
-            ? value.GetBoolean()
-            : fallback;
+        return modifiers == 0 || key == 0 ? HotKey.Default : HotKey.Pack(modifiers, key);
+    }
 
     public void Save() => AuraFiles.Write(FileName, writer =>
     {
         writer.WriteStartObject();
-        writer.WriteBoolean("startMinimised", StartMinimised);
         writer.WriteBoolean("minimiseOnClose", MinimiseOnClose);
         writer.WriteString("startAction", StartAction);
         writer.WriteBoolean("animate", Animate);
         writer.WriteString("language", Language);
+        writer.WriteBoolean("hotkeyEnabled", HotkeyEnabled);
+        writer.WriteNumber("hotkey", Hotkey);
         writer.WriteEndObject();
     });
 
@@ -108,7 +115,7 @@ internal sealed record AuraSettings(
                 using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKey);
                 return key?.GetValue(RunValue) != null;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
             {
                 return false;
             }
@@ -135,7 +142,7 @@ internal sealed record AuraSettings(
                     key.DeleteValue(RunValue, throwOnMissingValue: false);
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
             {
                 // A locked down machine may forbid the Run key. The rest of the tool works.
             }

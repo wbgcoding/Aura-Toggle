@@ -29,6 +29,12 @@ internal sealed record AuraChannel(int Index, bool Onboard, int Header);
 internal sealed record AuraDeviceSummary(string Key, string Name, List<AuraChannel> Channels);
 
 /// <summary>
+/// What one channel is to run, as part of a mix sent in a single burst. A channel the controller
+/// does not have is ignored rather than an error - the records outlive the hardware they describe.
+/// </summary>
+internal readonly record struct ChannelLook(int Channel, byte Mode, byte Red, byte Green, byte Blue);
+
+/// <summary>
 /// Names a channel for the selector and the preset editor. Kept out of <see cref="AuraDevice"/>
 /// so that a language change can relabel everything without touching the hardware again.
 /// </summary>
@@ -38,15 +44,12 @@ internal static class ChannelLabels
     /// Prefixes the controller's name, for machines that have more than one.
     /// </param>
     /// <param name="chosen">
-    /// The chosen names, when labelling several channels in a row - passing them in reads the
-    /// file once instead of once per channel.
+    /// The chosen names, read once by the caller rather than once per channel.
     /// </param>
     public static string For(AuraDeviceSummary device, AuraChannel channel, bool withDevice,
-        Dictionary<string, string>? chosen = null)
+        Dictionary<string, string> chosen)
     {
-        string? own = chosen == null
-            ? AuraChannelNames.Get(device.Key, channel.Index)
-            : AuraChannelNames.Get(chosen, device.Key, channel.Index);
+        string? own = AuraChannelNames.Get(chosen, device.Key, channel.Index);
 
         string name = own ?? (channel.Onboard
             ? Strings.ChannelOnboard
@@ -100,6 +103,12 @@ internal sealed class AuraDevice : IDisposable
         int mainboardLeds = configTable[0x1B];
         _addressableOnly = mainboardLeds == 0;
 
+        // configTable[0x1D], plain 12V RGB headers, is deliberately not read: the reference board
+        // is ARGB only, so there is no hardware here to verify what commands a classic RGB header
+        // actually takes - very possibly not 0x35/0x36, which assume per-LED addressing a
+        // non-addressable header does not have. Wiring it up without a board to test against is
+        // exactly the fuzzing INVARIANTS.md forbids.
+
         int startLed = 0;
         if (mainboardLeds > 0)
         {
@@ -111,6 +120,16 @@ internal sealed class AuraDevice : IDisposable
         {
             // Each addressable header contributes exactly one effect color slot.
             _channels.Add(new Channel((byte)_channels.Count, startLed, 1, Header: i + 1));
+
+            // A header whose slot lands at bit 16 or beyond gets no colour command at all (see
+            // SendEffectColor) - logged so a "this channel won't take a colour" report is not a
+            // guessing game, on a board with more onboard LEDs than the reference one.
+            if (startLed >= 16)
+            {
+                AuraLog.Info($"Header {i + 1} slot {startLed} is past the 16-bit colour mask " +
+                    $"(mainboard LEDs: {mainboardLeds}, headers: {addressableHeaders}) - colour will not reach it.");
+            }
+
             startLed++;
         }
 
@@ -152,6 +171,9 @@ internal sealed class AuraDevice : IDisposable
 
         var devices = new List<AuraDevice>();
         int accessDenied = 0;
+        int tooShort = candidates.Count(info => info.OutputReportLength < ReportLength);
+        int noAnswer = 0;
+        int unreachable = 0;
 
         foreach (HidInfo info in candidates.Where(info => info.OutputReportLength >= ReportLength))
         {
@@ -162,6 +184,9 @@ internal sealed class AuraDevice : IDisposable
                 AuraDevice? device = TryHandshake(stream);
                 if (device == null)
                 {
+                    // Opened, but did not answer the firmware query as an Aura controller - the
+                    // usual case for a second, unrelated interface on the same physical device.
+                    noAnswer++;
                     stream.Dispose();
                     continue;
                 }
@@ -174,11 +199,26 @@ internal sealed class AuraDevice : IDisposable
                 accessDenied++;
                 stream?.Dispose();
             }
-            catch (IOException)
+            catch (IOException ex)
             {
                 // One unresponsive interface must not stop the others from being found.
+                unreachable++;
+                AuraLog.Warn($"Discover: PID {info.Pid:X4} (usage page {info.UsagePage:X4}) not reachable - " +
+                    $"{ex.GetType().Name}: {ex.Message}");
                 stream?.Dispose();
             }
+        }
+
+        // One line per sweep, not per interface: enough to tell "no Aura hardware on this machine"
+        // apart from "found it but something else is holding it", which is the distinction every
+        // report about the tool not finding a controller turns on.
+        AuraLog.Info($"Discover: {present.Count} vendor interface(s), {candidates.Count} candidate(s), " +
+            $"{devices.Count} controller(s) [busy {accessDenied}, no answer {noAnswer}, " +
+            $"unreachable {unreachable}, report too short {tooShort}]");
+
+        foreach (AuraDevice found in devices)
+        {
+            AuraLog.Info($"Discover: {found.Name} - {found.Channels.Count} channel(s)");
         }
 
         if (devices.Count == 0)
@@ -253,7 +293,7 @@ internal sealed class AuraDevice : IDisposable
         // A device that answers with a shorter report gets the rest padded with zeroes rather
         // than crashing the lookup below.
         var configTable = new byte[60];
-        configReply.Skip(4).Take(60).ToArray().CopyTo(configTable, 0);
+        Array.Copy(configReply, 4, configTable, 0, Math.Clamp(configReply.Length - 4, 0, 60));
 
         // The firmware string itself is not kept: answering 0x82 at all is the protocol probe,
         // and nothing in the tool has a use for the version.
@@ -267,6 +307,7 @@ internal sealed class AuraDevice : IDisposable
         var request = new byte[stream.Info.OutputReportLength];
         request[0] = ReportId;
         request[1] = command;
+        EnsureAllowed(request);
         stream.Write(request);
 
         reply = new byte[stream.Info.InputReportLength];
@@ -274,59 +315,80 @@ internal sealed class AuraDevice : IDisposable
     }
 
     /// <summary>
-    /// Applies an effect mode to every channel, or to one of them. Volatile only - without the
-    /// commit command the controller keeps its stored configuration and a reboot restores it.
+    /// Applies a whole mix - a mode and colour per channel - in one burst. Volatile only -
+    /// without the commit command the controller keeps its stored configuration and a reboot
+    /// restores it.
     /// </summary>
-    /// <param name="channelIndex">
-    /// The single channel to switch, or -1 for all of them. Channels the caller does not name
-    /// are left exactly as they are, which is how one header can run a different effect from
-    /// the rest of the board.
-    /// </param>
     /// <remarks>
-    /// The whole sequence runs twice. The controller silently drops commands that arrive
-    /// while it is still applying the previous one, which showed up as the onboard zone
-    /// switching while the ARGB headers kept running. Together with the pause between
-    /// reports in <see cref="Write"/> this makes the switch reliable; setting the same mode
-    /// again is idempotent, so the second pass costs nothing but time.
+    /// Both passes run over the <em>whole list</em>, not over one channel at a time. Sending each
+    /// channel to completion in turn meant the onboard zone was lit and settled twelve reports
+    /// before the last header caught up, which reads as the board coming on in stages. Sweeping
+    /// the list twice keeps every channel within one report of its neighbours and still repeats
+    /// the sequence, which is what the controller needs: it silently drops commands that arrive
+    /// while it is still applying the previous one, and setting the same mode again is idempotent,
+    /// so the second pass costs nothing but time.
     /// </remarks>
-    public void Apply(byte mode, byte red, byte green, byte blue, int channelIndex = -1)
+    public void Apply(IReadOnlyList<ChannelLook> looks)
     {
-        // The mode arrives from state.json, presets.json or channel-state.json, all of which are
-        // plain text in the user's profile. Only the modes verified on this hardware may be sent -
-        // an unverified number is exactly the fuzzing the project forbids - so anything else
-        // falls back to the ASUS default.
-        if (mode != AuraState.ModeOff && AuraPresets.ByMode(mode) == null)
+        for (var pass = 0; pass < 2; pass++)
         {
-            mode = AuraState.ModeRainbow;
-        }
-
-        for (int pass = 0; pass < 2; pass++)
-        {
-            foreach (Channel channel in _channels)
+            foreach (ChannelLook look in looks)
             {
-                if (channelIndex >= 0 && channel.Index != channelIndex)
+                int at = _channels.FindIndex(entry => entry.Index == look.Channel);
+                if (at < 0)
                 {
                     continue;
                 }
 
+                Channel channel = _channels[at];
+                byte mode = Verified(look.Mode);
+
                 if (_addressableOnly)
                 {
-                    Send(CmdAddressableEffect, channel.Index, 0x00, mode, red, green, blue);
+                    Send(CmdAddressableEffect, channel.Index, 0x00, mode, look.Red, look.Green, look.Blue);
                     continue;
                 }
 
                 Send(CmdMainboardEffect, channel.Index, 0x00, 0x00, mode);
-                SendEffectColor(channel, red, green, blue);
+
+                // The firmware colours spectrum cycle, rainbow, rainbow breathing and wave itself,
+                // so 0x36 does nothing for them. Skipping it is two fewer reports per such channel
+                // across the two passes, and every report saved is ~16.7 ms less of the board
+                // coming on in stages.
+                if (CarriesColour(mode))
+                {
+                    SendEffectColor(channel, look.Red, look.Green, look.Blue);
+                }
             }
         }
     }
 
+    /// <summary>
+    /// The mode arrives from state.json, presets.json or channel-state.json, all of which are
+    /// plain text in the user's profile. Only the modes verified on this hardware may be sent - an
+    /// unverified number is exactly the fuzzing the project forbids - so anything else falls back
+    /// to the ASUS default.
+    /// </summary>
+    private static byte Verified(byte mode) =>
+        mode != AuraState.ModeOff && AuraPresets.ByMode(mode) == null ? AuraState.ModeRainbow : mode;
+
+    /// <summary>
+    /// Whether a colour command is worth sending for this mode. Only the four the firmware colours
+    /// itself (spectrum cycle, rainbow, rainbow breathing, wave) say no. "Off" and any mode this
+    /// build does not know keep their colour command, so the paths that matter most - switching
+    /// the board off above all - send exactly the same reports as before.
+    /// </summary>
+    private static bool CarriesColour(byte mode) => AuraPresets.ByMode(mode)?.UsesColour != false;
+
     /// <summary>Colour for the running effect, addressed by an LED bitmask.</summary>
     private void SendEffectColor(Channel channel, byte red, byte green, byte blue)
     {
-        // The mask is two bytes wide, so it addresses at most 16 LEDs. Boards with more
-        // onboard LEDs than that still switch effects correctly through 0x35; only the
-        // colour of the LEDs past the sixteenth is left alone.
+        // The mask is two bytes wide, so it addresses at most 16 LEDs. Boards with more onboard
+        // LEDs than that still switch effects correctly through 0x35, but a whole channel that
+        // starts past LED 16 (an ARGB header behind a big onboard zone, say) gets no colour
+        // command at all here and keeps whatever colour it already had. Not reachable on the
+        // reference board (4 onboard LEDs total); unverified whether a real board like that
+        // needs more than one coloured mask per report.
         int addressable = Math.Min(channel.LedCount, 16 - Math.Min(channel.StartLed, 16));
         if (addressable <= 0)
         {
@@ -345,7 +407,7 @@ internal sealed class AuraDevice : IDisposable
         for (int led = 0; led < addressable; led++)
         {
             int at = 5 + ((channel.StartLed + led) * 3);
-            if (at + 2 >= report.Length)
+            if (at + 2 > report.Length - 1)
             {
                 break;
             }
@@ -371,20 +433,26 @@ internal sealed class AuraDevice : IDisposable
     /// The only commands this tool is ever allowed to send. Everything here is verified on the
     /// reference board and volatile; anything else - above all the commit command 0x3F - writes
     /// the controller flash and can brick it. Enforced rather than merely documented, so a
-    /// future edit cannot quietly widen it.
+    /// future edit cannot quietly widen it - by every caller that reaches the hardware, static
+    /// <see cref="Request"/> during the handshake included, not just this instance's own <see cref="Write"/>.
     /// </summary>
     private static readonly byte[] AllowedCommands =
     {
         CmdReadFirmware, CmdReadConfigTable, CmdMainboardEffect, CmdMainboardEffectColor, CmdAddressableEffect,
     };
 
-    private void Write(byte[] report)
+    private static void EnsureAllowed(byte[] report)
     {
         if (report.Length < 2 || Array.IndexOf(AllowedCommands, report[1]) < 0)
         {
             throw new InvalidOperationException(
                 $"Refusing to send command 0x{(report.Length > 1 ? report[1] : 0):X2} to the LED controller.");
         }
+    }
+
+    private void Write(byte[] report)
+    {
+        EnsureAllowed(report);
 
         // Byte 4 of the colour command selects the shutdown effect, which lives in flash.
         if (report[1] == CmdMainboardEffectColor && report.Length > 4 && report[4] != 0x00)
@@ -397,7 +465,10 @@ internal sealed class AuraDevice : IDisposable
             _stream.Write(report);
 
             // The controller needs a moment between commands, otherwise later channels are
-            // dropped. Eight milliseconds per report keeps a full switch under 150 ms.
+            // dropped. The requested value is 8 ms; Windows' timer resolution rounds a Sleep this
+            // short up to whatever a scheduler tick actually is on the machine (measured ~16.7 ms
+            // on the reference machine) - that rounded-up gap is what has been tested against the
+            // hardware, so it is left alone rather than "corrected" down to the requested number.
             Thread.Sleep(ReportGapMs);
         }
         catch (IOException ex)
