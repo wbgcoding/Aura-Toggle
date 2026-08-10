@@ -117,27 +117,30 @@ title bar of its own but can be dragged by its heading, so it never sits in the 
 AuraToggle.exe                            :: opens the window
 AuraToggle.exe -off                       :: lighting off
 AuraToggle.exe -on                        :: back to the last effect
+AuraToggle.exe -toggle                    :: on if it's off, off if it's on
 AuraToggle.exe -preset rainbow            :: switch to an effect
 AuraToggle.exe -preset static "#20C0FF"   :: effect with a colour
 AuraToggle.exe -brightness 40             :: dim the colour effects, 10 to 100
 AuraToggle.exe -custom "Movie Night"      :: apply a preset saved in the window
 AuraToggle.exe -list                      :: number every controller and channel
 AuraToggle.exe -status                    :: current effect, colour, brightness, on/off
+AuraToggle.exe -status --json             :: the same, as one line of JSON for scripts
 AuraToggle.exe --version                  :: version number, nothing else
 AuraToggle.exe -help                      :: every command, explained
 ```
 
-`-on`, `--on`, `/on`, `on` — all accepted, any casing. Same for `off`, `preset`, `brightness`,
-`custom`, `list`, `status`, `version` and `help` (also `-h` and `/?`). Creating a custom preset still only happens in the
-window - applying an existing one does not.
+`-on`, `--on`, `/on`, `on` — all accepted, any casing. Same for `off`, `toggle`, `preset`,
+`brightness`, `custom`, `list`, `status`, `version` and `help` (also `-h` and `/?`). Creating a
+custom preset still only happens in the window - applying an existing one does not.
 
-**One channel or controller**, with `-on`, `-off`, `-preset` and `-brightness`:
+**One channel or controller**, with `-on`, `-off`, `-toggle`, `-preset` and `-brightness`:
 
 ```bat
 AuraToggle.exe -preset static red -channel 2       :: by the number from -list
 AuraToggle.exe -preset static red -channel 1.2     :: controller 1, channel 2
 AuraToggle.exe -preset static red -channel "ARGB 1" :: by its default or renamed name
 AuraToggle.exe -on -device 1                       :: every channel of controller 1
+AuraToggle.exe -toggle -channel 2                  :: only that channel's own on/off state
 ```
 
 `-channel` accepts a flat number from `-list`, the `<controller>.<channel>` form, the default

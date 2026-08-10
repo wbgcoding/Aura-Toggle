@@ -476,6 +476,23 @@ Test-Case "a preset survives an off/on round trip" {
     Assert-Equal 9 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
+Test-Case "-toggle switches off when on, then on again" {
+    [void](Invoke-Aura @("-on"))
+    Assert-Equal 0 (Invoke-Aura @("-toggle")).ExitCode "exit code"
+    Assert-Equal $false ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state after first toggle"
+    Assert-Equal 0 (Invoke-Aura @("-toggle")).ExitCode "exit code"
+    Assert-Equal $true ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state after second toggle"
+}
+
+Test-Case "-toggle on one channel follows only that channel's own state" {
+    [void](Invoke-Aura @("-on"))
+    [void](Invoke-Aura @("-off", "-channel", "1"))
+    Assert-Equal 0 (Invoke-Aura @("-toggle", "-channel", "1")).ExitCode "exit code"
+
+    $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
+    Assert-Equal $true $first.Value.on "channel 1 back on"
+}
+
 Write-Host "Targeting"
 
 Test-Case "-channel accepts the flat number from -list" {
@@ -523,6 +540,22 @@ Test-Case "-status prints the board and one line per channel" {
     if ($r.StdOut -notmatch "1\.1") { throw "no channel line: $($r.StdOut)" }
 }
 
+Test-Case "-status --json prints one parseable line" {
+    [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
+    $r = Invoke-Aura @("-status", "--json")
+    Assert-Equal 0 $r.ExitCode "exit code"
+
+    $lines = $r.StdOut.Trim() -split "`r?`n"
+    Assert-Equal 1 $lines.Count "line count"
+
+    $parsed = $lines[0] | ConvertFrom-Json
+    Assert-Equal $true $parsed.on "on"
+    Assert-Equal "static" $parsed.effect "effect"
+    Assert-Equal "#20C0FF" $parsed.colour "colour"
+    if ($parsed.channels.Count -lt 1) { throw "no channels in JSON status" }
+    if ($null -eq $parsed.channels[0].device) { throw "channel entry missing device" }
+}
+
 Test-Case "--version prints only the version number" {
     $r = Invoke-Aura @("--version")
     Assert-Equal 0 $r.ExitCode "exit code"
@@ -535,8 +568,8 @@ Test-Case "-help lists every documented command" {
 
     # Every command the help claims to document has to actually appear in it - the list is easy
     # to extend in code and forget here, which is how a flag ends up undocumented.
-    foreach ($flag in @("-on", "-off", "-preset", "-brightness", "-custom", "-list", "-status",
-                        "--version", "-help", "-device", "-channel")) {
+    foreach ($flag in @("-on", "-off", "-toggle", "-preset", "-brightness", "-custom", "-list", "-status",
+                        "--json", "--version", "-help", "-device", "-channel")) {
         if ($r.StdOut -notmatch [regex]::Escape($flag)) { throw "-help does not mention $flag" }
     }
 
@@ -583,6 +616,25 @@ Test-Case "-custom rejects -device, since a preset names its own channels" {
 
 Test-Case "-list rejects -channel, since it has nothing to target" {
     Assert-Equal 2 (Invoke-Aura @("-list", "-channel", "1")).ExitCode "exit code"
+}
+
+Test-Case "-list names a saved custom preset" {
+    $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
+    $deviceKey = ($first.Name -split '\|')[0]
+    $escapedKey = $deviceKey -replace '\\', '\\'
+    Set-Content -Path $presets -Encoding utf8 -Value `
+        "[{`"name`":`"ListedPreset`",`"entries`":[{`"deviceKey`":`"$escapedKey`",`"channel`":0,`"label`":`"x`",`"mode`":1,`"red`":10,`"green`":20,`"blue`":30}]}]"
+    $r = Invoke-Aura @("-list")
+    Assert-Equal 0 $r.ExitCode "exit code"
+    if ($r.StdOut -notmatch "Presets:") { throw "no Presets: block on stdout" }
+    if ($r.StdOut -notmatch "ListedPreset") { throw "preset name missing from -list" }
+}
+
+Test-Case "-list omits the Presets block when none are saved" {
+    Set-Content -Path $presets -Value "[]" -Encoding ascii -NoNewline
+    $r = Invoke-Aura @("-list")
+    Assert-Equal 0 $r.ExitCode "exit code"
+    if ($r.StdOut -match "Presets:") { throw "Presets: block shown with no saved presets" }
 }
 
 Write-Host "Log"

@@ -87,6 +87,12 @@ internal sealed class ToggleForm : Form
     private readonly NotifyIcon _tray = new();
     private readonly ToolStripMenuItem _trayLighting = new();
 
+    // A single left click on the tray icon toggles the lighting, but the first click of a
+    // double-click looks identical until the second one either arrives or does not - so it is
+    // held here until SystemInformation.DoubleClickTime passes with no second click, and dropped
+    // if DoubleClick fires first.
+    private readonly System.Windows.Forms.Timer _trayClickTimer = new();
+
     private AuraState _state;
     private AuraSettings _settings;
     private SettingsPopup? _settingsPopup;
@@ -320,7 +326,27 @@ internal sealed class ToggleForm : Form
         _tray.Icon = _iconOnTray ?? Icon;
         _tray.Text = Strings.WindowTitle;
         _tray.ContextMenuStrip = menu;
-        _tray.DoubleClick += (_, _) => RestoreFromTray();
+
+        _trayClickTimer.Tick += (_, _) =>
+        {
+            _trayClickTimer.Stop();
+            _ = Run(() => Program.Switch(!_state.On));
+        };
+
+        _tray.MouseClick += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _trayClickTimer.Interval = SystemInformation.DoubleClickTime;
+                _trayClickTimer.Start();
+            }
+        };
+
+        _tray.DoubleClick += (_, _) =>
+        {
+            _trayClickTimer.Stop();
+            RestoreFromTray();
+        };
     }
 
     /// <summary>
@@ -1139,6 +1165,7 @@ internal sealed class ToggleForm : Form
         _tray.Visible = false;
         _tray.ContextMenuStrip?.Dispose();
         _tray.Dispose();
+        _trayClickTimer.Dispose();
         Icon?.Dispose();
         _iconOff?.Dispose();
         _iconOnTray?.Dispose();
