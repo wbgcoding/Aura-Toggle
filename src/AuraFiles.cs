@@ -165,24 +165,30 @@ internal static class AuraFiles
 
     private static void WriteRaw(string name, Action<FileStream> body)
     {
+        string temp = PathTo(name) + ".tmp";
+
         try
         {
             Directory.CreateDirectory(Folder);
-
-            string path = PathTo(name);
-            string temp = path + ".tmp";
 
             using (FileStream stream = File.Create(temp))
             {
                 body(stream);
             }
 
-            File.Move(temp, path, overwrite: true);
+            File.Move(temp, PathTo(name), overwrite: true);
         }
         catch (Exception ex) when (IsExpected(ex))
         {
             // Failing to store a preference is not worth aborting a switch that already reached
-            // the hardware.
+            // the hardware - but the half-written temp file must not linger forever either.
+            try
+            {
+                File.Delete(temp);
+            }
+            catch (Exception cleanupEx) when (IsExpected(cleanupEx))
+            {
+            }
         }
     }
 

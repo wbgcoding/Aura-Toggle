@@ -236,15 +236,29 @@ internal sealed class AuraDevice : IDisposable
     /// none is reachable - everything here is what the hardware actually reports, since the
     /// running effect cannot be read back.
     /// </summary>
-    public static List<AuraDeviceSummary> ListDevices()
+    public static List<AuraDeviceSummary> ListDevices() => ListDevices(out _);
+
+    /// <summary>
+    /// Same as <see cref="ListDevices()"/>, but <paramref name="errorExitCode"/> carries why the
+    /// list came back empty - 3 (not found) or 4 (busy) - so callers can report the real cause
+    /// instead of collapsing both into "not found".
+    /// </summary>
+    public static List<AuraDeviceSummary> ListDevices(out int errorExitCode)
     {
+        errorExitCode = 0;
         List<AuraDevice> devices;
         try
         {
             devices = DiscoverAll();
         }
-        catch (Exception ex) when (ex is AuraNotFoundException or IOException)
+        catch (AuraNotFoundException ex)
         {
+            errorExitCode = ex.ExitCode;
+            return new List<AuraDeviceSummary>();
+        }
+        catch (IOException)
+        {
+            errorExitCode = 3;
             return new List<AuraDeviceSummary>();
         }
 

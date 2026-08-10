@@ -703,13 +703,14 @@ internal sealed class ToggleForm : Form
                     await _identifyTask;
                 }
             }
-            catch (Exception ex) when (ex is AuraNotFoundException or IOException)
+            catch (Exception ex)
             {
-                // await unwraps a faulted Task and rethrows the real exception directly, never
-                // wrapped in AggregateException - the catch here used to be typed for the
-                // wrong exception and so never actually caught anything. Every awaiter of the
-                // same Task sees this independently, so it is logged again even though the
-                // failing run's own RunIdentify call already logged it once.
+                // Same widened catch as the one below, and for the same reason - a refused
+                // command throws InvalidOperationException, which used to fall through here
+                // uncaught and take the newly requested rename down with the previous run's own
+                // failure. Every awaiter of the same Task sees this independently, so it is
+                // logged again even though the failing run's own RunIdentify call already logged
+                // it once.
                 AuraLog.Error("Identify", ex);
             }
         }
@@ -1136,6 +1137,7 @@ internal sealed class ToggleForm : Form
 
         HotKey.Unregister(Handle);
         _tray.Visible = false;
+        _tray.ContextMenuStrip?.Dispose();
         _tray.Dispose();
         Icon?.Dispose();
         _iconOff?.Dispose();

@@ -607,7 +607,14 @@ internal static class Program
             return true;
         }
 
-        List<AuraDeviceSummary> devices = AuraDevice.ListDevices();
+        List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int listErrorExitCode);
+        if (devices.Count == 0)
+        {
+            WriteError(listErrorExitCode == 4 ? Strings.ErrorControllerBusy : Strings.ErrorControllerNotFound);
+            errorExitCode = listErrorExitCode;
+            return false;
+        }
+
         List<ChannelEntry> entries = FlattenChannels(devices);
 
         int? deviceNumber = null;
@@ -792,11 +799,11 @@ internal static class Program
 
     private static int PrintList()
     {
-        List<AuraDeviceSummary> devices = AuraDevice.ListDevices();
+        List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int errorExitCode);
         if (devices.Count == 0)
         {
-            WriteError(Strings.ErrorControllerNotFound);
-            return 3;
+            WriteError(errorExitCode == 4 ? Strings.ErrorControllerBusy : Strings.ErrorControllerNotFound);
+            return errorExitCode;
         }
 
         WriteLine("Devices:");
@@ -817,11 +824,11 @@ internal static class Program
 
     private static int PrintStatus()
     {
-        List<AuraDeviceSummary> devices = AuraDevice.ListDevices();
+        List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int errorExitCode);
         if (devices.Count == 0)
         {
-            WriteError(Strings.ErrorControllerNotFound);
-            return 3;
+            WriteError(errorExitCode == 4 ? Strings.ErrorControllerBusy : Strings.ErrorControllerNotFound);
+            return errorExitCode;
         }
 
         AuraState state = AuraState.Load();
@@ -862,7 +869,7 @@ internal static class Program
         }
 
         colour = Color.FromName(value.Trim());
-        return colour.IsKnownColor;
+        return colour.IsKnownColor && !colour.IsSystemColor && colour.A == 255;
     }
 
     private static int Usage()
@@ -1228,6 +1235,8 @@ internal static class Program
         var devices = AuraDevice.DiscoverAll();
         var applied = new List<(string DeviceKey, int Channel, ChannelLighting Look)>();
         var named = new HashSet<(string DeviceKey, int Channel)>();
+        IOException? failure = null;
+        bool delivered = false;
 
         // Every entry and every gap-filled channel lands here first, then each controller gets
         // one Apply() call for its whole mix - not one call per channel, which left the onboard
@@ -1330,15 +1339,36 @@ internal static class Program
 
             foreach (AuraDevice device in devices)
             {
-                if (perDevice.TryGetValue(device.Key, out List<ChannelLook>? looks))
+                if (!perDevice.TryGetValue(device.Key, out List<ChannelLook>? looks))
                 {
+                    continue;
+                }
+
+                try
+                {
+                    // Every channel of this controller in one burst, same as ApplyMix - and the
+                    // same reasoning for catching per device: one controller dropping a report
+                    // must not undo what every other controller in this preset already received.
                     device.Apply(looks);
+                    delivered = true;
+                }
+                catch (IOException ex)
+                {
+                    AuraLog.Error($"Apply: {device.Name} ({looks.Count} channel(s))", ex);
+                    failure = ex;
                 }
             }
         }
         finally
         {
             Close(devices);
+        }
+
+        // Whether anything actually got through, not the same question as whether any channel
+        // was named - see ApplyMix for why this has to be its own check.
+        if (failure != null && !delivered)
+        {
+            throw failure;
         }
 
         if (applied.Count == 0)
