@@ -4,6 +4,10 @@
 
 **Turn off ASUS RGB — without Armoury Crate.**
 
+[![Latest release](https://img.shields.io/github/v/release/wbgcoding/aura-toggle)](https://github.com/wbgcoding/aura-toggle/releases/latest)
+[![License](https://img.shields.io/github/license/wbgcoding/aura-toggle)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/wbgcoding/aura-toggle/total)](https://github.com/wbgcoding/aura-toggle/releases)
+
 [Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) ·
 [Troubleshooting](#-troubleshooting) · [Changelog](CHANGELOG.md)
 
@@ -13,10 +17,15 @@
 
 ---
 
-| | Aura Toggle | Armoury Crate |
-|---|---|---|
-| Size | ~580 KB | Hundreds of MB |
-| Background service | None | Always running |
+| | Aura Toggle | Armoury Crate | OpenRGB / SignalRGB |
+|---|---|---|---|
+| Size | ~580 KB | Hundreds of MB | Tens of MB and up |
+| Background service | None | Always running | Usually running |
+| Device range | ASUS Aura mainboard lighting only | ASUS ecosystem | Many vendors, many device types |
+| Effects | 9 built-in, plus your own presets | ASUS's own effect set | Large effect libraries, often per-LED |
+
+OpenRGB and SignalRGB genuinely do more — more devices, more effects, per-LED control on
+hardware that supports it. Aura Toggle does one thing: it is a switch, not a control suite.
 
 **Quickstart:**
 
@@ -64,6 +73,14 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 - No channel of its own for a plain (non-addressable) 12 V RGB header — only what the board
   reports as its onboard zone is switched
 - Can't read the current effect back from the controller — it remembers what it last set instead
+- Doesn't survive a reboot on its own — see below for why, and what to do instead
+
+**Why "off" doesn't stay off without the tool running:** writing a look into the controller
+permanently means committing it to flash, and a write that goes wrong there can brick the
+controller for good. This tool deliberately never does that — everything it sends is volatile, so
+a restart always brings the BIOS lighting back, on purpose. If you want lighting that starts off
+without this tool running, set autostart with "lighting at start: off" in the gear, or turn it off
+in the BIOS itself.
 
 ## 📥 Download
 
@@ -78,6 +95,28 @@ attached there, along with `SHA256SUMS.txt` to check them against.
 Portable: download, double click, done. Installer: for everyone or just for you, optional
 autostart and desktop shortcut, clean uninstall. If the .NET 10 Desktop Runtime is missing it
 asks once, downloads it from Microsoft and installs it.
+
+To check a download against `SHA256SUMS.txt` from the same release:
+
+```powershell
+Get-FileHash .\AuraToggle.exe -Algorithm SHA256
+```
+
+Compare the result against the matching line in `SHA256SUMS.txt`. Windows SmartScreen will warn
+on the first run either way, since the file is not code-signed — "More info" then "Run anyway"
+gets past it.
+
+**Does this fit my board?** Grab the portable exe and run `AuraToggle.exe -list`; if it names a
+controller, it works.
+
+**Unattended installs** — verified switches, for scripted rollouts:
+
+```bat
+AuraToggle-Setup-<version>.exe /VERYSILENT /NORESTART        :: for everyone, no prompts
+AuraToggle-Setup-<version>.exe /VERYSILENT /CURRENTUSER      :: just the current user
+AuraToggle-Setup-<version>.exe /VERYSILENT /LOG="install.log" :: with a log file
+unins000.exe /VERYSILENT                                     :: silent uninstall
+```
 
 ## 🚀 Using it
 

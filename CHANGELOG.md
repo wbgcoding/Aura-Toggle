@@ -32,6 +32,12 @@ All notable changes to this project are documented here. The format follows
   offered a link to the release page instead, since it cannot replace itself.
 - The uninstaller now names the actual files it is about to delete when asking to remove settings.
 
+### Documentation
+
+- README: release/license/download badges, a checksum-comparison command, a SmartScreen note, a
+  "does this fit my board" pointer, silent install/uninstall switches, an honest OpenRGB/SignalRGB
+  comparison, and why the lighting never survives a reboot on its own.
+
 ### Changed
 
 - The tray icon shown while the lighting is off is now noticeably darker and desaturated, instead
