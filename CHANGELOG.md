@@ -6,7 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `-toggle` on the command line: on if the lighting is off, off if it is on. A single targeted
+  channel decides by its own remembered state rather than the board's.
+- `-list` now also names every saved custom preset, numbered for use with `-custom`.
+- `-status --json`: the same information as plain `-status`, as one line of JSON for scripts.
+- A single left click on the tray icon now toggles the lighting; double click still opens the
+  window, and right click still opens the menu.
+
 ### Changed
+
+- The tray icon shown while the lighting is off is now noticeably darker and desaturated, instead
+  of a shade too close to the "on" icon to tell apart at taskbar size.
 
 - The window title is just "Aura Toggle". It used to carry the channel count as well, which said
   nothing a look at the channel selector does not.

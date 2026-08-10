@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -484,7 +485,12 @@ internal static class Program
 
         if (command == "status" && rest.Count == 1)
         {
-            return PrintStatus();
+            return PrintStatus(json: false);
+        }
+
+        if (command == "status" && rest.Count == 2 && Normalise(rest[1]) == "json")
+        {
+            return PrintStatus(json: true);
         }
 
         if (command == "custom" && rest.Count == 2)
@@ -508,6 +514,21 @@ internal static class Program
         if (rest.Count == 1 && command is "on" or "off")
         {
             Switch(command == "on", targetDevice, targetChannel);
+            return 0;
+        }
+
+        if (rest.Count == 1 && command == "toggle")
+        {
+            // A single channel decides by its own remembered state, not the board's - the whole
+            // point of targeting one channel is that it can differ from the others. A channel
+            // with no record of its own has never been switched on its own, so it still follows
+            // whatever the board is doing.
+            bool currentlyOn = targetChannel >= 0
+                ? AuraChannelStates.Get(AuraChannelStates.All(), targetDevice!, targetChannel)?.On
+                    ?? AuraState.Load().On
+                : AuraState.Load().On;
+
+            Switch(!currentlyOn, targetDevice, targetChannel);
             return 0;
         }
 
@@ -764,17 +785,19 @@ internal static class Program
         WriteLine("Commands:");
         WriteLine("  -on                     Switch the lighting on, each channel to its own last look.");
         WriteLine("  -off                    Switch the lighting off.");
+        WriteLine("  -toggle                 Switch on if it is off, off if it is on.");
         WriteLine("  -preset <effect> [rgb]  Apply an effect, optionally with a colour.");
         WriteLine(Row($"-brightness <{AuraState.MinBrightness}-{AuraState.MaxBrightness}>",
             "Set the brightness in percent. Does nothing for the"));
         WriteLine(Row("", "effects the firmware colours itself."));
         WriteLine("  -custom <name>          Apply a custom preset saved in the window.");
         WriteLine("  -list                   List every controller and channel with its identifiers.");
-        WriteLine("  -status                 Print the effect, colour, brightness and state per channel.");
+        WriteLine(Row("-status [--json]", "Print the effect, colour, brightness and state per"));
+        WriteLine(Row("", "channel, as text or as one line of JSON."));
         WriteLine("  --version               Print the version number.");
         WriteLine("  -help                   Show this text.");
         WriteLine("");
-        WriteLine("Options (for -on, -off, -preset and -brightness):");
+        WriteLine("Options (for -on, -off, -toggle, -preset and -brightness):");
         WriteLine("  -device <n>             Limit to one controller, numbered as in -list.");
         WriteLine("  -channel <id>           Limit to one channel: its number from -list, the");
         WriteLine("                          \"controller.channel\" form, or its name.");
@@ -819,10 +842,21 @@ internal static class Program
             WriteLine(DescribeChannel(entry));
         }
 
+        List<CustomPreset> presets = AuraCustomPresets.Load();
+        if (presets.Count > 0)
+        {
+            WriteLine("");
+            WriteLine("Presets:");
+            for (int p = 0; p < presets.Count; p++)
+            {
+                WriteLine($"{p + 1}\t{presets[p].Name}");
+            }
+        }
+
         return 0;
     }
 
-    private static int PrintStatus()
+    private static int PrintStatus(bool json)
     {
         List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int errorExitCode);
         if (devices.Count == 0)
@@ -832,11 +866,19 @@ internal static class Program
         }
 
         AuraState state = AuraState.Load();
+        Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
+        List<ChannelEntry> channels = FlattenChannels(devices);
+
+        if (json)
+        {
+            WriteLine(StatusJson(state, remembered, channels));
+            return 0;
+        }
+
         WriteLine(FormatStatusLine("Board", state.On, state.Mode, state.Red, state.Green, state.Blue,
             state.Brightness.ToString(CultureInfo.InvariantCulture)));
 
-        Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
-        foreach (ChannelEntry entry in FlattenChannels(devices))
+        foreach (ChannelEntry entry in channels)
         {
             string label = DescribeChannel(entry);
             ChannelLighting? own = AuraChannelStates.Get(remembered, entry.DeviceKey, entry.ChannelIndex);
@@ -848,6 +890,54 @@ internal static class Program
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// One line of JSON, machine-readable output for <c>-status --json</c>. A channel with no
+    /// record of its own reports the board's own effect and colour - what it would actually run -
+    /// with brightness 0, the same "follows the board" sentinel <c>channel-state.json</c> itself
+    /// uses, rather than a null the caller would have to special-case.
+    /// </summary>
+    private static string StatusJson(AuraState state, Dictionary<string, ChannelLighting> remembered,
+        List<ChannelEntry> channels)
+    {
+        using var buffer = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WriteBoolean("on", state.On);
+            writer.WriteString("effect", AuraPresets.ByMode(state.Mode)?.Key ?? "unknown");
+            writer.WriteString("colour", $"#{state.Red:X2}{state.Green:X2}{state.Blue:X2}");
+            writer.WriteNumber("brightness", state.Brightness);
+            writer.WriteString("customPreset", state.CustomPreset);
+
+            writer.WriteStartArray("channels");
+            foreach (ChannelEntry entry in channels)
+            {
+                ChannelLighting? own = AuraChannelStates.Get(remembered, entry.DeviceKey, entry.ChannelIndex);
+                bool on = own?.On ?? state.On;
+                byte mode = own?.Mode ?? state.Mode;
+                byte red = own?.Red ?? state.Red;
+                byte green = own?.Green ?? state.Green;
+                byte blue = own?.Blue ?? state.Blue;
+                byte brightness = own?.Brightness ?? 0;
+
+                writer.WriteStartObject();
+                writer.WriteNumber("device", entry.DeviceNumber);
+                writer.WriteNumber("channel", entry.ChannelNumber);
+                writer.WriteString("name", DefaultChannelName(entry.Channel, "en"));
+                writer.WriteString("effect", AuraPresets.ByMode(mode)?.Key ?? "unknown");
+                writer.WriteString("colour", $"#{red:X2}{green:X2}{blue:X2}");
+                writer.WriteNumber("brightness", brightness);
+                writer.WriteBoolean("on", on);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+            writer.WriteEndObject();
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
     }
 
     private static string FormatStatusLine(string label, bool on, byte mode, byte red, byte green, byte blue,
