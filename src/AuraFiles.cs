@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -71,6 +72,8 @@ internal static class AuraFiles
     {
         using IDisposable held = Lock();
 
+        BackUpBeforeReset();
+
         foreach (string name in new[]
         {
             AuraState.FileName, AuraSettings.FileName,
@@ -84,6 +87,42 @@ internal static class AuraFiles
             catch (Exception ex) when (IsExpected(ex))
             {
             }
+        }
+    }
+
+    /// <summary>
+    /// One <c>reset-backup.bak</c> zip of every file a reset can touch - including
+    /// <c>presets.json</c>, which a reset does not actually delete, as a safety net in case that
+    /// ever changes. A failed backup does not stop the reset itself, since that is the action the
+    /// user actually asked for; only the net underneath it is missing, and that goes to the log.
+    /// </summary>
+    private static void BackUpBeforeReset()
+    {
+        string zipPath = PathTo("reset-backup.bak");
+
+        try
+        {
+            // A second reset replaces the backup from before it, not both at once - there is
+            // only ever one.
+            File.Delete(zipPath);
+
+            using ZipArchive archive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+            foreach (string name in new[]
+            {
+                AuraState.FileName, AuraSettings.FileName, AuraChannelNames.FileName,
+                AuraChannelStates.FileName, AuraCustomPresets.FileName,
+            })
+            {
+                string path = PathTo(name);
+                if (File.Exists(path))
+                {
+                    archive.CreateEntryFromFile(path, name);
+                }
+            }
+        }
+        catch (Exception ex) when (IsExpected(ex))
+        {
+            AuraLog.Error("ResetBackup", ex);
         }
     }
 
@@ -149,6 +188,14 @@ internal static class AuraFiles
         value.TryGetInt32(out int number)
             ? number
             : fallback;
+
+    /// <summary>Same as <see cref="JsonNumber"/>, but missing or unusable means "never set" rather
+    /// than a fallback value indistinguishable from a genuine zero.</summary>
+    public static int? JsonNumberOrNull(JsonElement element, string name) =>
+        element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Number &&
+        value.TryGetInt32(out int number)
+            ? number
+            : null;
 
     /// <summary>
     /// Writes JSON through a temporary file and moves it into place, so a crash or a full disk

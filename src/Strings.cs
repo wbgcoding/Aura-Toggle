@@ -77,6 +77,7 @@ internal static class Strings
     public static string StartActionOff => Get("StartActionOff");
 
     public static string SettingAnimate => Get("SettingAnimate");
+    public static string SettingAlwaysOnTop => Get("SettingAlwaysOnTop");
 
     public static string SettingLanguage => Get("SettingLanguage");
 
@@ -145,6 +146,10 @@ internal static class Strings
     public static string CustomPresetNoDevices => Get("CustomPresetNoDevices");
 
     public static string CustomPresetAccessibleName => Get("CustomPresetAccessibleName");
+    public static string CustomPresetExport => Get("CustomPresetExport");
+    public static string CustomPresetImport => Get("CustomPresetImport");
+    public static string CustomPresetExportError => Get("CustomPresetExportError");
+    public static string CustomPresetImportError => Get("CustomPresetImportError");
 
     /// <summary>Display name of a lighting effect.</summary>
     public static string Preset(string resourceKey) => Get(resourceKey);
@@ -168,6 +173,7 @@ internal static class Strings
     public static string SettingHotkey => Get("SettingHotkey");
 
     public static string SettingHotkeyConflict => Get("SettingHotkeyConflict");
+    public static string PresetShortcutHint => Get("PresetShortcutHint");
 
     public static string HotkeyRecordPrompt => Get("HotkeyRecordPrompt");
 

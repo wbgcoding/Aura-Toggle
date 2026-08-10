@@ -9,6 +9,13 @@ internal sealed record AuraPreset(string Key, byte Mode, string ResourceKey, boo
 {
     public string DisplayName => Strings.Preset(ResourceKey);
 
+    /// <summary>
+    /// One half-sentence explaining what the effect does, shown as a tooltip on its row in the
+    /// drop down. Derived from <see cref="ResourceKey"/> rather than a second table to look up -
+    /// "PresetStatic" always has an "EffectHintStatic" next to it in both .resx files.
+    /// </summary>
+    public string HintText => Strings.Preset("EffectHint" + ResourceKey["Preset".Length..]);
+
     /// <summary>Used as the entry text in the drop down.</summary>
     public override string ToString() => DisplayName;
 }

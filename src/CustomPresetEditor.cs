@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Windows.Forms;
 
 namespace AuraToggle;
@@ -23,6 +25,9 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly TextField _name = new();
     private readonly PillButton _save = new();
     private readonly PillButton _delete = new();
+    private readonly PillButton _export = new();
+    private readonly PillButton _import = new();
+    private readonly Label _transferHint = new();
     private readonly ArmedButton _deleteArm;
     private readonly string? _editing;
 
@@ -202,6 +207,52 @@ internal sealed class CustomPresetEditor : PopupForm
         buttons.Controls.Add(_delete, 1, 0);
 
         _root.Controls.Add(buttons);
+
+        var transfer = new Layout
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 2,
+            BackColor = Theme.Surface,
+        };
+        _metrics.Add(() => transfer.Margin = new Padding(0, this.Scaled(6), 0, 0));
+        transfer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        transfer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+        _export.Text = Strings.CustomPresetExport;
+        _export.DesignHeight = 36;
+        _export.Fill = Theme.NeutralSoft;
+        _export.ForeColor = Theme.Text;
+        _export.BackColor = Theme.Surface;
+        _export.Dock = DockStyle.Left;
+        _export.Click += (_, _) => ExportToFile();
+        _export.FitToText();
+        transfer.Controls.Add(_export, 0, 0);
+
+        _import.Text = Strings.CustomPresetImport;
+        _import.DesignHeight = 36;
+        _import.Fill = Theme.NeutralSoft;
+        _import.ForeColor = Theme.Text;
+        _import.BackColor = Theme.Surface;
+        _metrics.Add(() => _import.Margin = new Padding(this.Scaled(8), 0, 0, 0));
+        _import.Click += (_, _) => ImportFromFile();
+        _import.FitToText();
+        transfer.Controls.Add(_import, 1, 0);
+
+        _root.Controls.Add(transfer);
+
+        _transferHint.Dock = DockStyle.Top;
+        _transferHint.AutoSize = true;
+        _transferHint.ForeColor = Theme.Danger;
+        _transferHint.BackColor = Theme.Surface;
+        _transferHint.Visible = false;
+        _metrics.Add(() =>
+        {
+            _transferHint.MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0);
+            _transferHint.Margin = new Padding(this.Scaled(2), this.Scaled(6), 0, 0);
+        });
+        _root.Controls.Add(_transferHint);
 
         if (preset != null)
         {
@@ -564,6 +615,202 @@ internal sealed class CustomPresetEditor : PopupForm
         }
 
         return entries;
+    }
+
+    /// <summary>
+    /// Writes the rows as they currently stand - not necessarily saved yet - to a file the user
+    /// picks, in the same shape <c>presets.json</c> itself stores an entry in, plus a
+    /// <c>kind</c>/<c>version</c> pair so <see cref="TryReadPresetFile"/> can tell it apart from
+    /// any other JSON file a file picker might be pointed at.
+    /// </summary>
+    private void ExportToFile()
+    {
+        List<CustomPresetEntry> entries = CurrentEntries();
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        string name = _name.Text.Trim();
+        using var dialog = new SaveFileDialog
+        {
+            Filter = "JSON (*.json)|*.json",
+            FileName = (name.Length > 0 ? SanitiseFileName(name) : "preset") + ".json",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            using FileStream stream = File.Create(dialog.FileName);
+            using var writer = new Utf8JsonWriter(stream);
+            writer.WriteStartObject();
+            writer.WriteString("kind", "aura-preset");
+            writer.WriteNumber("version", 1);
+            writer.WriteString("name", name);
+            writer.WriteStartArray("entries");
+            foreach (CustomPresetEntry entry in entries)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("deviceKey", entry.DeviceKey);
+                writer.WriteNumber("channel", entry.Channel);
+                writer.WriteString("label", entry.Label);
+                writer.WriteNumber("mode", entry.Mode);
+                writer.WriteNumber("red", entry.Red);
+                writer.WriteNumber("green", entry.Green);
+                writer.WriteNumber("blue", entry.Blue);
+                writer.WriteNumber("brightness", entry.Brightness);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+            writer.WriteEndObject();
+            writer.Flush();
+
+            _transferHint.Visible = false;
+        }
+        catch (Exception ex) when (AuraFiles.IsExpected(ex))
+        {
+            AuraLog.Error("PresetExport", ex);
+            ShowTransferHint(Strings.CustomPresetExportError);
+        }
+    }
+
+    private static string SanitiseFileName(string name) =>
+        string.Join("_", name.Split(Path.GetInvalidFileNameChars()));
+
+    /// <summary>
+    /// Reads a file <see cref="ExportToFile"/> wrote - or one written by hand to the same shape -
+    /// and applies it to the open rows without saving, the same as <see cref="Fill"/> for an
+    /// existing preset. A bad file leaves every row exactly as it was and says so, rather than
+    /// throwing or half-applying something.
+    /// </summary>
+    private void ImportFromFile()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Filter = "JSON (*.json)|*.json",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        List<CustomPresetEntry>? imported = TryReadPresetFile(dialog.FileName, out string? importedName);
+        if (imported == null)
+        {
+            ShowTransferHint(Strings.CustomPresetImportError);
+            return;
+        }
+
+        ApplyImportedEntries(imported);
+
+        if (_name.Text.Trim().Length == 0 && importedName is { Length: > 0 })
+        {
+            _name.Text = importedName;
+        }
+
+        _transferHint.Visible = false;
+        UpdateSaveState();
+        FitToContent();
+        RaisePreview();
+    }
+
+    private static List<CustomPresetEntry>? TryReadPresetFile(string path, out string? name)
+    {
+        name = null;
+
+        try
+        {
+            using FileStream stream = File.OpenRead(path);
+            using JsonDocument document = JsonDocument.Parse(stream);
+            JsonElement root = document.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("kind", out JsonElement kindElement) ||
+                kindElement.ValueKind != JsonValueKind.String || kindElement.GetString() != "aura-preset" ||
+                !root.TryGetProperty("entries", out JsonElement entriesElement) ||
+                entriesElement.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+
+            name = AuraFiles.JsonText(root, "name");
+
+            var entries = new List<CustomPresetEntry>();
+            foreach (JsonElement item in entriesElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                entries.Add(new CustomPresetEntry(
+                    AuraFiles.JsonText(item, "deviceKey"),
+                    item.TryGetProperty("channel", out JsonElement channelElement) &&
+                        channelElement.TryGetInt32(out int channel) ? channel : -1,
+                    AuraFiles.JsonText(item, "label"),
+                    AuraFiles.JsonByte(item, "mode"), AuraFiles.JsonByte(item, "red"),
+                    AuraFiles.JsonByte(item, "green"), AuraFiles.JsonByte(item, "blue"),
+                    AuraFiles.JsonByte(item, "brightness")));
+            }
+
+            return entries.Count > 0 ? entries : null;
+        }
+        catch (Exception ex) when (AuraFiles.IsExpected(ex))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Matched by device key and channel when the file came from this same machine/profile -
+    /// an exact restore. A file from a different computer never has a device key that matches
+    /// anything connected here, so the best it can still offer is "the same position in the same
+    /// order" instead - which is how both this editor and <see cref="ExportToFile"/> build the
+    /// list. A row with nothing to match, either way, is left exactly as it already stood -
+    /// "extra channels in the file are skipped, missing ones stay as they are".
+    /// </summary>
+    private void ApplyImportedEntries(List<CustomPresetEntry> imported)
+    {
+        bool sameMachine = imported.Any(e => _rows.Any(r => r.DeviceKey == e.DeviceKey));
+
+        for (int i = 0; i < _rows.Count; i++)
+        {
+            ChannelRow row = _rows[i];
+            CustomPresetEntry? entry = sameMachine
+                ? imported.Find(e => e.DeviceKey == row.DeviceKey && e.Channel == row.Channel)
+                : i < imported.Count ? imported[i] : null;
+
+            if (entry == null)
+            {
+                continue;
+            }
+
+            row.Effect.ShowSelection(AuraPresets.ByMode(entry.Mode)?.Key ?? AuraPresets.All[0].Key);
+            row.Colours.Colour = Color.FromArgb(entry.Red, entry.Green, entry.Blue);
+            row.Effect.Colour = row.Colours.Colour;
+
+            if (entry.Brightness != 0)
+            {
+                row.Brightness.Value = entry.Brightness;
+            }
+
+            ShowColours(row);
+        }
+    }
+
+    private void ShowTransferHint(string text)
+    {
+        _transferHint.Text = text;
+        _transferHint.Visible = true;
+        FitToContent();
     }
 
     /// <summary>

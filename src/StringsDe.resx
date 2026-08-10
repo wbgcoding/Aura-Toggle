@@ -92,6 +92,33 @@
   <data name="PresetWave" xml:space="preserve">
     <value>Welle</value>
   </data>
+  <data name="EffectHintStatic" xml:space="preserve">
+    <value>Durchgehend eine Farbe, ohne Bewegung.</value>
+  </data>
+  <data name="EffectHintBreathing" xml:space="preserve">
+    <value>Die Farbe wird langsam heller und dunkler.</value>
+  </data>
+  <data name="EffectHintFlashing" xml:space="preserve">
+    <value>Die Farbe blinkt scharf an und aus.</value>
+  </data>
+  <data name="EffectHintSpectrumCycle" xml:space="preserve">
+    <value>Durchläuft das gesamte Farbspektrum. Nicht dimmbar.</value>
+  </data>
+  <data name="EffectHintRainbow" xml:space="preserve">
+    <value>Ein Regenbogenverlauf wandert über den Kanal. Nicht dimmbar.</value>
+  </data>
+  <data name="EffectHintRainbowBreathing" xml:space="preserve">
+    <value>Der Regenbogenverlauf wird heller und dunkler. Nicht dimmbar.</value>
+  </data>
+  <data name="EffectHintChaseFade" xml:space="preserve">
+    <value>Ein Lichtpunkt läuft über den Kanal mit einem verblassenden Schweif.</value>
+  </data>
+  <data name="EffectHintChase" xml:space="preserve">
+    <value>Ein Lichtpunkt läuft über den Kanal, ohne Schweif.</value>
+  </data>
+  <data name="EffectHintWave" xml:space="preserve">
+    <value>Die Farbe fließt wellenförmig über den Kanal. Nicht dimmbar.</value>
+  </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
     <value>Kein AURA-LED-Controller gefunden (USB VID 0B05). Dieses Tool funktioniert nur auf ASUS-Mainboards mit Aura-USB-Beleuchtung.</value>
   </data>
@@ -142,6 +169,9 @@
   </data>
   <data name="SettingAnimate" xml:space="preserve">
     <value>Knopf animieren</value>
+  </data>
+  <data name="SettingAlwaysOnTop" xml:space="preserve">
+    <value>Immer im Vordergrund</value>
   </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Sprache</value>
@@ -233,6 +263,18 @@
   <data name="CustomPresetAccessibleName" xml:space="preserve">
     <value>Editor f&#252;r eigene Presets</value>
   </data>
+  <data name="CustomPresetExport" xml:space="preserve">
+    <value>Exportieren</value>
+  </data>
+  <data name="CustomPresetImport" xml:space="preserve">
+    <value>Importieren</value>
+  </data>
+  <data name="CustomPresetExportError" xml:space="preserve">
+    <value>Die Datei konnte nicht gespeichert werden.</value>
+  </data>
+  <data name="CustomPresetImportError" xml:space="preserve">
+    <value>Keine Preset-Datei oder besch&#228;digt.</value>
+  </data>
   <data name="ErrorTitle" xml:space="preserve">
     <value>Etwas ist schiefgelaufen</value>
   </data>
@@ -262,6 +304,9 @@
   </data>
   <data name="SettingHotkeyConflict" xml:space="preserve">
     <value>Diese Kombination ist bereits belegt.</value>
+  </data>
+  <data name="PresetShortcutHint" xml:space="preserve">
+    <value>F2 umbenennen, Entf löschen</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>Taste dr&#252;cken...</value>

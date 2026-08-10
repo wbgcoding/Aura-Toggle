@@ -84,9 +84,10 @@ asks once, downloads it from Microsoft and installs it.
 
 1. **Big button** — shows the state and switches it. While the lighting is on it animates
    whatever effect is running, brightness included.
-2. **Drop down** — pick a built-in effect or a saved custom preset, it applies immediately.
-   The last row creates a preset; each preset of your own carries a ✏️ to edit it and an ✕ to
-   delete it, which asks once more before it does.
+2. **Drop down** — pick a built-in effect or a saved custom preset, it applies immediately. Hover
+   a built-in effect for a one-line explanation of what it does. The last row creates a preset;
+   each preset of your own carries icons to duplicate it, edit it, or delete it (which asks once
+   more before it does) — F2 and Delete do the edit and delete from the keyboard.
 3. **Channel selector** — all channels, or a single one: the onboard zone, one ARGB header, or
    one whole controller on boards that have several. Hover a channel for a ✏️ to give it a name
    of your own.
@@ -95,10 +96,11 @@ asks once, downloads it from Microsoft and installs it.
    one header on its own, or set the whole board at once, which hands every channel back to the
    board-wide value.
 6. **⚙️ Gear** — autostart, minimise instead of close, lighting at start, a global hotkey,
-   animation on/off, language, reset everything back to first-run defaults.
+   animation on/off, always on top, language, reset everything back to first-run defaults (which
+   first zips every file it is about to touch into `reset-backup.bak`, right next to them).
 
-Minimising sends the window to the notification area. Right click the icon there to toggle the
-lighting, reopen or quit.
+Minimising sends the window to the notification area. Left click the icon there to toggle the
+lighting, double click to reopen the window, right click for the same options in a menu.
 
 ### Custom presets
 
@@ -110,6 +112,11 @@ current look needs no changes at all. It then shows up in the effect list next t
 person icon, told apart from the built-in effects at a glance. Each channel also carries its own
 brightness there, so a preset can hold one header at 30 % and the next at full. The editor has no
 title bar of its own but can be dragged by its heading, so it never sits in the way.
+
+Export and Import in the editor move a preset as a single `.json` file — to another machine, a
+second Windows profile, or just a backup. On different hardware the channels are matched by their
+position (first channel to first channel, and so on) rather than the exact controller, since a
+different machine has no way to have the same one.
 
 ## ⌨️ Command line
 

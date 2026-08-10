@@ -14,6 +14,16 @@ All notable changes to this project are documented here. The format follows
 - `-status --json`: the same information as plain `-status`, as one line of JSON for scripts.
 - A single left click on the tray icon now toggles the lighting; double click still opens the
   window, and right click still opens the menu.
+- The window remembers where it was last placed and reopens there, as long as that spot is still
+  on a display that exists - otherwise it centres itself instead of opening off-screen.
+- "Always on top" in the settings panel.
+- A tooltip on F2/Delete-capable rows in the effect list, and one on every built-in effect
+  explaining what it does.
+- A duplicate icon next to edit and delete on every custom preset row, naming the copy
+  "<name> (2)" (counting up on a collision) without opening the editor for it.
+- "Reset settings" now zips every file it is about to touch into `reset-backup.bak` first.
+- Export and Import buttons in the custom preset editor, to move one preset as a single `.json`
+  file to another machine, profile, or just a backup.
 
 ### Changed
 

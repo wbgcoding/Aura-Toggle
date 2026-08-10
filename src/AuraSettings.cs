@@ -12,9 +12,12 @@ internal sealed record AuraSettings(
     bool MinimiseOnClose,
     string StartAction,
     bool Animate,
+    bool AlwaysOnTop,
     string Language,
     bool HotkeyEnabled,
-    int Hotkey)
+    int Hotkey,
+    int? WindowX,
+    int? WindowY)
 {
     /// <summary>Leave the lighting untouched when the tool starts.</summary>
     public const string StartActionNone = "";
@@ -29,9 +32,12 @@ internal sealed record AuraSettings(
         MinimiseOnClose: false,
         StartAction: StartActionNone,
         Animate: true,
+        AlwaysOnTop: false,
         Language: LanguageAuto,
         HotkeyEnabled: false,
-        Hotkey: HotKey.Default);
+        Hotkey: HotKey.Default,
+        WindowX: null,
+        WindowY: null);
 
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "AuraToggle";
@@ -64,9 +70,12 @@ internal sealed record AuraSettings(
                 MinimiseOnClose: AuraFiles.JsonFlag(root, "minimiseOnClose", Default.MinimiseOnClose),
                 StartAction: AuraFiles.JsonText(root, "startAction", StartActionNone),
                 Animate: AuraFiles.JsonFlag(root, "animate", Default.Animate),
+                AlwaysOnTop: AuraFiles.JsonFlag(root, "alwaysOnTop", Default.AlwaysOnTop),
                 Language: AuraFiles.JsonText(root, "language", LanguageAuto),
                 HotkeyEnabled: AuraFiles.JsonFlag(root, "hotkeyEnabled", Default.HotkeyEnabled),
-                Hotkey: ValidHotkey(AuraFiles.JsonNumber(root, "hotkey", Default.Hotkey)));
+                Hotkey: ValidHotkey(AuraFiles.JsonNumber(root, "hotkey", Default.Hotkey)),
+                WindowX: AuraFiles.JsonNumberOrNull(root, "windowX"),
+                WindowY: AuraFiles.JsonNumberOrNull(root, "windowY"));
         }
         catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
@@ -96,9 +105,17 @@ internal sealed record AuraSettings(
         writer.WriteBoolean("minimiseOnClose", MinimiseOnClose);
         writer.WriteString("startAction", StartAction);
         writer.WriteBoolean("animate", Animate);
+        writer.WriteBoolean("alwaysOnTop", AlwaysOnTop);
         writer.WriteString("language", Language);
         writer.WriteBoolean("hotkeyEnabled", HotkeyEnabled);
         writer.WriteNumber("hotkey", Hotkey);
+
+        if (WindowX.HasValue && WindowY.HasValue)
+        {
+            writer.WriteNumber("windowX", WindowX.Value);
+            writer.WriteNumber("windowY", WindowY.Value);
+        }
+
         writer.WriteEndObject();
     });
 
