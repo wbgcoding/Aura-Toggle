@@ -126,7 +126,23 @@ internal sealed class ToggleForm : Form
         ClientSize = new Size(380, 214);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
-        StartPosition = FormStartPosition.CenterScreen;
+
+        // Only trusted when the saved point still lands on a display that exists right now -
+        // unplugging the second monitor a window sat on must not open it off-screen and
+        // unreachable. Screen.AllScreens is queried fresh here rather than cached, since it is
+        // Windows' own idea of the current monitor layout and construction only runs once anyway.
+        if (_settings.WindowX is int savedX && _settings.WindowY is int savedY &&
+            Screen.AllScreens.Any(display => display.WorkingArea.Contains(new Point(savedX, savedY))))
+        {
+            StartPosition = FormStartPosition.Manual;
+            Location = new Point(savedX, savedY);
+        }
+        else
+        {
+            StartPosition = FormStartPosition.CenterScreen;
+        }
+
+        TopMost = _settings.AlwaysOnTop;
         BackColor = Theme.Background;
         ForeColor = Theme.Text;
         Font = Theme.Ui;
@@ -135,7 +151,7 @@ internal sealed class ToggleForm : Form
         _effects.AccessibleName = Strings.PresetAccessibleName;
         _effects.Dock = DockStyle.Fill;
         _effects.TakesWhatIsLeft = true;
-        _effects.PopupWidth = 252; // room for a preset name next to its edit and delete buttons
+        _effects.PopupWidth = 276; // room for a preset name next to its duplicate, edit and delete buttons
         _effects.SelectionChanged += OnEffectChosen;
         _effects.ActionPicked += (_, _) => OpenPresetEditor(null);
         _effects.EditRequested += (_, item) =>
@@ -148,6 +164,7 @@ internal sealed class ToggleForm : Form
             }
         };
         _effects.DeleteRequested += (_, item) => DeleteCustomPreset(item.Text);
+        _effects.DuplicateRequested += (_, item) => DuplicateCustomPreset(item.Text);
 
         _channel.AccessibleName = Strings.ChannelAccessibleName;
         _channel.Width = 112; // "Alle Kanäle" has to fit without being cut off
@@ -364,7 +381,7 @@ internal sealed class ToggleForm : Form
         bool oneChannel = Target.Channel >= 0;
 
         var effects = AuraPresets.All
-            .Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode))
+            .Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode, Hint: p.HintText))
             .ToList();
 
         if (oneChannel)
@@ -445,6 +462,37 @@ internal sealed class ToggleForm : Form
         ClearActiveCustomPreset(name);
         RefreshEffectItems();
         Render();
+    }
+
+    /// <summary>
+    /// Copies a preset under "&lt;name&gt; (2)", counting up on a collision. Does not open the
+    /// editor - the point is a quick starting copy to tweak later, not an interruption right now.
+    /// </summary>
+    private void DuplicateCustomPreset(string name)
+    {
+        using (IDisposable guard = AuraFiles.Lock())
+        {
+            List<CustomPreset> presets = AuraCustomPresets.Load();
+            if (presets.Find(p => p.Name == name) is not CustomPreset original)
+            {
+                return;
+            }
+
+            var existingNames = presets.Select(p => p.Name).ToHashSet();
+            string copyName;
+            int suffix = 2;
+            do
+            {
+                copyName = $"{name} ({suffix})";
+                suffix++;
+            }
+            while (existingNames.Contains(copyName));
+
+            presets.Add(new CustomPreset(copyName, new List<CustomPresetEntry>(original.Entries)));
+            AuraCustomPresets.Save(presets);
+        }
+
+        RefreshEffectItems();
     }
 
     /// <summary>
@@ -979,6 +1027,7 @@ internal sealed class ToggleForm : Form
             bool hotkeyChanged = settings.HotkeyEnabled != _settings.HotkeyEnabled || settings.Hotkey != _settings.Hotkey;
             _settings = settings;
             _toggle.Animate = settings.Animate;
+            TopMost = settings.AlwaysOnTop;
 
             if (languageChanged)
             {
@@ -1127,6 +1176,8 @@ internal sealed class ToggleForm : Form
             return;
         }
 
+        SaveWindowPosition();
+
         if (_identifyCts != null)
         {
             // Program.Identify's restore pass (putting every channel of that controller back to
@@ -1260,9 +1311,24 @@ internal sealed class ToggleForm : Form
     /// <summary>Sends the window to the notification area, where the tray menu takes over.</summary>
     private void HideToTray()
     {
+        SaveWindowPosition();
         _tray.Visible = true;
         _toggle.Paused = true;
         Hide();
+    }
+
+    /// <summary>
+    /// Called from every path that ends the window being visible - minimising, closing to tray,
+    /// and the real close below - so the position sticks regardless of which one the user takes.
+    /// <see cref="RestoreBounds"/> rather than <see cref="Control.Location"/> once minimised: the
+    /// live location while minimised is an off-screen placeholder Windows uses for the animation,
+    /// not where the window actually sat.
+    /// </summary>
+    private void SaveWindowPosition()
+    {
+        Point location = WindowState == FormWindowState.Normal ? Location : RestoreBounds.Location;
+        _settings = _settings with { WindowX = location.X, WindowY = location.Y };
+        _settings.Save();
     }
 
     private async void RestoreFromTray()
@@ -1496,6 +1562,7 @@ internal sealed class ToggleForm : Form
         _settings = AuraSettings.Load();
         _state = AuraState.Load();
         _toggle.Animate = _settings.Animate;
+        TopMost = _settings.AlwaysOnTop;
 
         // Reset can clear the hotkey, and a combination already registered with Windows keeps
         // switching the lighting until it is handed back - the setting alone does not do that.

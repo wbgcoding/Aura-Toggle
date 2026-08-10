@@ -34,7 +34,8 @@ namespace AuraToggle;
 /// Used to say why some effects are missing from the list.
 /// </param>
 internal sealed record SelectItem(string Key, string Text, byte? Mode, Color[]? CustomColours = null,
-    bool Editable = false, bool IsAction = false, bool Renamable = false, bool IsHint = false);
+    bool Editable = false, bool IsAction = false, bool Renamable = false, bool IsHint = false,
+    string? Hint = null);
 
 /// <summary>
 /// The main switch. While the lighting is on it animates the effect that is running, so the
@@ -239,6 +240,9 @@ internal sealed class Select : FlatControl
     /// <summary>The delete button of an editable entry was pressed and then confirmed.</summary>
     public event EventHandler<SelectItem>? DeleteRequested;
 
+    /// <summary>The duplicate button of an editable entry was pressed.</summary>
+    public event EventHandler<SelectItem>? DuplicateRequested;
+
     /// <summary>
     /// Least width the drop down opens at. The control itself can be narrow, while its list
     /// still has room for a name plus the edit and delete buttons.
@@ -372,6 +376,7 @@ internal sealed class Select : FlatControl
 
         popup.EditRequested += (_, item) => EditRequested?.Invoke(this, item);
         popup.DeleteRequested += (_, item) => DeleteRequested?.Invoke(this, item);
+        popup.DuplicateRequested += (_, item) => DuplicateRequested?.Invoke(this, item);
 
         popup.FormClosed += (_, _) =>
         {
@@ -524,6 +529,11 @@ internal sealed class SelectPopup : PopupForm
     /// <summary>The row whose delete button is waiting to be confirmed, or -1.</summary>
     private int _confirming = -1;
 
+    /// <summary>F2/Delete work on a custom preset row without any control of its own to hang a
+    /// tooltip off - shown and hidden by hand as the hovered row changes instead.</summary>
+    private readonly ToolTip _shortcutTip = new();
+    private int _tipRow = -1;
+
     /// <param name="dpi">
     /// The opening control's <see cref="Control.DeviceDpi"/>. Taken from there rather than read
     /// here: this window has no handle yet, so it has no dpi of its own to ask.
@@ -638,6 +648,7 @@ internal sealed class SelectPopup : PopupForm
         if (disposing)
         {
             _icons.Dispose();
+            _shortcutTip.Dispose();
         }
 
         base.Dispose(disposing);
@@ -650,6 +661,9 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>A delete was asked for and then confirmed on the row itself.</summary>
     public event EventHandler<SelectItem>? DeleteRequested;
+
+    /// <summary>The duplicate button of an editable row was pressed.</summary>
+    public event EventHandler<SelectItem>? DuplicateRequested;
 
     private Rectangle RowRect(int index) => new(
         _inset,
@@ -841,6 +855,12 @@ internal sealed class SelectPopup : PopupForm
             Invalidate();
         }
 
+        if (_tipRow >= 0)
+        {
+            _tipRow = -1;
+            _shortcutTip.Hide(this);
+        }
+
         base.OnMouseLeave(e);
     }
 
@@ -872,6 +892,26 @@ internal sealed class SelectPopup : PopupForm
         }
 
         Cursor = hovered >= 0 && !_items[hovered].IsHint ? Cursors.Hand : Cursors.Default;
+
+        // A custom preset row has F2/Delete as their only hint besides the two small icons
+        // themselves, and a built-in effect row explains what it does - either way shown for the
+        // whole row, not just the icon, so it is easy to find.
+        string? tip = hovered < 0
+            ? null
+            : _items[hovered].Hint ??
+              (_items[hovered].Editable || _items[hovered].Renamable ? Strings.PresetShortcutHint : null);
+
+        if (tip != null && hovered != _tipRow)
+        {
+            _tipRow = hovered;
+            _shortcutTip.Show(tip, this, e.Location.X + 12, e.Location.Y + 20, 4000);
+        }
+        else if (tip == null && _tipRow >= 0)
+        {
+            _tipRow = -1;
+            _shortcutTip.Hide(this);
+        }
+
         base.OnMouseMove(e);
     }
 
@@ -918,6 +958,14 @@ internal sealed class SelectPopup : PopupForm
             {
                 EditRequested?.Invoke(this, _items[index]);
                 Close();
+                return;
+            }
+
+            if (ButtonRect(row, 2).Contains(e.Location))
+            {
+                // The list stays open, same as delete - Resync refills it and the duplicate
+                // appears in place, right where it was just created.
+                DuplicateRequested?.Invoke(this, _items[index]);
                 return;
             }
         }
@@ -1001,7 +1049,8 @@ internal sealed class SelectPopup : PopupForm
                 left = icon.Right + Scale(10);
             }
 
-            int buttons = confirming || item.Editable ? (_button * 2) + _buttonGap + _inset
+            int buttons = confirming ? (_button * 2) + _buttonGap + _inset
+                : item.Editable ? (_button * 3) + (_buttonGap * 2) + _inset
                 : item.Renamable ? _button + _inset
                 : _inset;
             var text = new Rectangle(left, row.Y, Math.Max(0, row.Right - left - buttons), _rowHeight);
@@ -1018,6 +1067,7 @@ internal sealed class SelectPopup : PopupForm
             {
                 PaintGlyphButton(g, ButtonRect(row, 0), Theme.TextMuted, PaintCross);
                 PaintGlyphButton(g, ButtonRect(row, 1), Theme.TextMuted, PaintPencil);
+                PaintGlyphButton(g, ButtonRect(row, 2), Theme.TextMuted, PaintCopy);
             }
             else if (item.Renamable && (i == _hovered || (_keyboard && i == _highlighted)))
             {
@@ -1103,6 +1153,26 @@ internal sealed class SelectPopup : PopupForm
         float end = box.Width * 0.1f;
         g.DrawLine(pen, box.Left + end, cy, box.Right - end, cy);
         g.DrawLine(pen, cx, box.Top + end, cx, box.Bottom - end);
+    }
+
+    /// <summary>
+    /// Two overlapping squares - the front one drawn whole, the back one only where it still
+    /// peeks out, rather than erasing the overlap with a fill in a colour that would have to
+    /// match whatever is behind this row (plain, hovered or highlighted all differ).
+    /// </summary>
+    private static void PaintCopy(Graphics g, Rectangle box, Color colour)
+    {
+        using Pen pen = GlyphPen(box, colour, 0.14f);
+        float size = box.Width * 0.62f;
+        float offset = box.Width * 0.30f;
+
+        var front = new RectangleF(box.X + offset, box.Y + offset, size, size);
+        g.DrawRectangle(pen, front.X, front.Y, front.Width, front.Height);
+
+        g.DrawLine(pen, box.X, box.Y, box.X + size, box.Y);
+        g.DrawLine(pen, box.X, box.Y, box.X, box.Y + size);
+        g.DrawLine(pen, box.X + size, box.Y, box.X + size, box.Y + offset);
+        g.DrawLine(pen, box.X, box.Y + size, box.X + offset, box.Y + size);
     }
 
     /// <summary>A pencil pointing at the lower left, drawn as a body, a tip and a nib.</summary>
