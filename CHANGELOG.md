@@ -24,6 +24,8 @@ All notable changes to this project are documented here. The format follows
 - "Reset settings" now zips every file it is about to touch into `reset-backup.bak` first.
 - Export and Import buttons in the custom preset editor, to move one preset as a single `.json`
   file to another machine, profile, or just a backup.
+- The on/off button's label is now bold, wide-tracked upper case instead of the plain default
+  weight and spacing.
 
 ### Changed
 
