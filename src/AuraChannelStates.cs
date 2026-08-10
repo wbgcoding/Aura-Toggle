@@ -178,8 +178,17 @@ internal static class AuraChannelStates
                 }
 
                 byte brightness = Byte(property.Value, "brightness");
+
+                // Same rule AuraDevice.Verified applies before a mode reaches the hardware: only
+                // a mode this build actually knows - or "off" - is trusted from a hand-edited or
+                // outdated file, otherwise the window would name an effect the board never runs.
+                byte rawMode = Byte(property.Value, "mode");
+                byte mode = rawMode == AuraState.ModeOff || AuraPresets.ByMode(rawMode) != null
+                    ? rawMode
+                    : AuraState.Default.Mode;
+
                 states[property.Name] = new ChannelLighting(
-                    Byte(property.Value, "mode"),
+                    mode,
                     Byte(property.Value, "red"),
                     Byte(property.Value, "green"),
                     Byte(property.Value, "blue"),

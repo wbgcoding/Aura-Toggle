@@ -2063,8 +2063,8 @@ internal sealed class PillButton : FlatControl
 internal sealed class ArmedButton : IDisposable
 {
     private readonly PillButton _button;
-    private readonly string _idleText;
-    private readonly string _armedText;
+    private string _idleText;
+    private string _armedText;
     private readonly int? _fitPadding;
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 3000 };
     private bool _armed;
@@ -2119,6 +2119,19 @@ internal sealed class ArmedButton : IDisposable
         _button.Text = _idleText;
         Refit();
         _timer.Stop();
+    }
+
+    /// <summary>
+    /// A language switch changes both labels out from under an already-constructed button - the
+    /// idle and armed text passed to the constructor stop applying, so a caller that needs new
+    /// wording after a switch has to give it here rather than only calling <see cref="Disarm"/>,
+    /// which would just repaint the stale text it already holds.
+    /// </summary>
+    public void Relabel(string idleText, string armedText)
+    {
+        _idleText = idleText;
+        _armedText = armedText;
+        Disarm();
     }
 
     private void Refit()

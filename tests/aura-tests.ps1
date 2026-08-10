@@ -28,16 +28,21 @@ if (-not (Test-Path $Exe)) {
 # were. Getting this wrong silently destroys the user's presets and channel names.
 $dataFiles = @("state.json", "settings.json", "presets.json", "channel-names.json", "channel-state.json")
 
+# Kept apart from $dataFiles (that list is the user's own preferences); the log tests below
+# delete, overwrite and rotate log.txt on purpose, so it needs the same backup/restore net or a
+# suite run destroys whatever diagnosis someone had it open for.
+$logFiles = @("log.txt", "log.old.txt")
+
 New-Item -ItemType Directory -Force $dataDir | Out-Null
 
 $backups = @{}
-foreach ($name in $dataFiles) {
+foreach ($name in $dataFiles + $logFiles) {
     $path = Join-Path $dataDir $name
     $backups[$name] = if (Test-Path $path) { Get-Content $path -Raw -Encoding UTF8 } else { $null }
 }
 
 function Restore-UserData {
-    foreach ($name in $script:dataFiles) {
+    foreach ($name in $script:dataFiles + $script:logFiles) {
         $path = Join-Path $script:dataDir $name
         $saved = $script:backups[$name]
         if ($null -eq $saved) {
@@ -119,7 +124,7 @@ Test-Case "unknown argument reports usage and exits 2" {
     $r = Invoke-Aura @("-bla")
     Assert-Equal 2 $r.ExitCode "exit code"
     # Matched language independently: the tool answers in German or English.
-    if ($r.StdErr -notmatch "aura \[-on") { throw "no usage line on stderr" }
+    if ($r.StdErr -notmatch "AuraToggle \[-on") { throw "no usage line on stderr" }
 }
 
 Test-Case "more than one argument exits 2" {
@@ -188,6 +193,14 @@ Test-Case "a preset takes a colour name" {
 
 Test-Case "an unusable colour exits 2" {
     Assert-Equal 2 (Invoke-Aura @("-preset", "static", "not-a-colour")).ExitCode "exit code"
+}
+
+Test-Case "a transparent colour name exits 2" {
+    Assert-Equal 2 (Invoke-Aura @("-preset", "static", "transparent")).ExitCode "exit code"
+}
+
+Test-Case "a system colour name exits 2" {
+    Assert-Equal 2 (Invoke-Aura @("-preset", "static", "control")).ExitCode "exit code"
 }
 
 Write-Host "Brightness"
@@ -387,6 +400,19 @@ foreach ($junk in '[]', '5', '"x"', 'null', '{"broken":', 'not json') {
         Set-Content -Path $settings -Value $junk -Encoding ascii -NoNewline
         Assert-Equal 0 (Invoke-Aura @("-preset", "rainbow")).ExitCode "exit code"
     }
+}
+
+Test-Case "a forced write failure leaves no .tmp file behind" {
+    $locked = [System.IO.File]::Open($state, [System.IO.FileMode]::Open, `
+        [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+    try {
+        [void](Invoke-Aura @("-on"))
+    }
+    finally {
+        $locked.Dispose()
+    }
+
+    Assert-Equal $false (Test-Path "$state.tmp") "leftover state.json.tmp"
 }
 
 Test-Case "no temporary files are left behind" {

@@ -372,7 +372,7 @@ internal sealed class SettingsPopup : PopupForm
         _language.AccessibleName = Strings.SettingLanguage;
         _hotkeyHint.Text = Strings.SettingHotkeyConflict;
         _hotkeyRecord.Text = _recordingHotkey ? Strings.HotkeyRecordPrompt : HotkeyText(_pendingHotkey);
-        _resetArm.Disarm();
+        _resetArm.Relabel(Strings.SettingReset, Strings.SettingResetConfirm);
 
         string selectedAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone;
         _startAction.SetItems(StartActions());

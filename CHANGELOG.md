@@ -27,6 +27,31 @@ All notable changes to this project are documented here. The format follows
   handled twice and folded the details shut again in the same motion. Keyboard use was unaffected.
 - The screen-edge margin popups keep, and the separators between channels in the preset editor,
   now scale with the display instead of staying at their 100 % size.
+- `-list` and `-status` reported "no controller found" (exit code 3) instead of "controller busy"
+  (exit code 4) whenever another application - Armoury Crate above all - already had the
+  controller open. `-device`/`-channel` made the same mistake, reporting a bad argument instead of
+  a missing controller when no hardware was present at all.
+- A custom preset that names two controllers no longer leaves the board and the stored state
+  disagreeing if the second controller drops the write: the first controller's channels are
+  recorded either way now, matching how switching the whole board already handled the same case.
+- `-preset static transparent` (and any Windows system colour name) painted the board white
+  instead of being rejected as an unusable colour.
+- A hand-edited `channel-state.json` naming an effect this build does not know was shown as-is in
+  the window while the board silently ran the default effect instead. It now falls back to the
+  same default the window shows, so both agree.
+- A failed save (full disk, a security tool holding the file) could leave a stray `.tmp` file
+  behind in the data folder forever.
+- Two lines written to the log file at nearly the same moment - the app and a command line call
+  running together, which the test suite does constantly - could make one of them disappear.
+- The "Reset settings" button kept its old-language label and confirmation text after switching
+  languages in the settings panel.
+- The short usage line named "aura" as the program to run; the actual file is "AuraToggle.exe".
+- A rename popup opened again right after the previous one was rejected by the controller could
+  silently do nothing, with neither its display nor its "busy" state ever clearing.
+- The installer's checksum step could run arbitrary commands if the checkout path contained an
+  apostrophe.
+- The system tray's right-click menu is now released together with the tray icon on exit, instead
+  of leaking until the process ends.
 
 ## [1.1.0] - 2026-08-09
 
