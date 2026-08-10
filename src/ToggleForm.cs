@@ -87,6 +87,9 @@ internal sealed class ToggleForm : Form
     private readonly NotifyIcon _tray = new();
     private readonly ToolStripMenuItem _trayLighting = new();
 
+    /// <summary>Hidden until <see cref="CheckForUpdatesIfDue"/> actually finds a newer release.</summary>
+    private readonly ToolStripMenuItem _trayUpdate = new() { Visible = false };
+
     // A single left click on the tray icon toggles the lighting, but the first click of a
     // double-click looks identical until the second one either arrives or does not - so it is
     // held here until SystemInformation.DoubleClickTime passes with no second click, and dropped
@@ -327,6 +330,7 @@ internal sealed class ToggleForm : Form
         _trayLighting.Click += (_, _) => _ = Run(() => Program.Switch(!_state.On));
         menu.Items.Add(_trayLighting);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(_trayUpdate);
 
         var open = new ToolStripMenuItem(Strings.TrayOpen) { Tag = "open" };
         open.Click += (_, _) => RestoreFromTray();
@@ -544,6 +548,94 @@ internal sealed class ToggleForm : Form
         {
             await ApplyStartAction();
         }
+
+        _ = CheckForUpdatesIfDue();
+    }
+
+    /// <summary>
+    /// At most once every 24 hours, and only with the setting on: asks GitHub for a newer
+    /// release, entirely in the background - nothing here blocks the window or touches the
+    /// controller. A tray balloon and a new tray menu entry are the only visible result, and only
+    /// when there actually is a newer version; nothing downloads until that entry is clicked.
+    /// </summary>
+    private async Task CheckForUpdatesIfDue()
+    {
+        if (!AuraUpdate.ShouldCheck(_settings))
+        {
+            return;
+        }
+
+        UpdateInfo? found = await AuraUpdate.CheckForUpdateAsync();
+
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        _settings = _settings with
+        {
+            LastUpdateCheckUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+        };
+        _settings.Save();
+
+        if (found == null)
+        {
+            return;
+        }
+
+        if (AuraUpdate.IsInstalled)
+        {
+            _trayUpdate.Text = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateInstall, found.Version);
+            _trayUpdate.Click += async (_, _) => await InstallUpdate(found);
+        }
+        else
+        {
+            // A portable copy cannot replace the file it is currently running as, so the click
+            // goes to the release page instead of a silent self-install.
+            _trayUpdate.Text = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateOpenPage, found.Version);
+            _trayUpdate.Click += (_, _) =>
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(found.HtmlUrl)
+                {
+                    UseShellExecute = true,
+                });
+        }
+
+        _trayUpdate.Visible = true;
+        _tray.Visible = true;
+        _tray.BalloonTipTitle = Strings.WindowTitle;
+        _tray.BalloonTipText = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateAvailable, found.Version);
+        _tray.ShowBalloonTip(10000);
+    }
+
+    /// <summary>
+    /// Downloads and checksum-verifies the setup, then runs it silently and closes this process -
+    /// the installer cannot replace a running exe. A failed download or a checksum that does not
+    /// match ends here with a balloon instead, and the tray entry stays clickable to try again.
+    /// </summary>
+    private async Task InstallUpdate(UpdateInfo info)
+    {
+        _trayUpdate.Enabled = false;
+        string? path = await AuraUpdate.DownloadAndVerifyAsync(info);
+
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        if (path == null)
+        {
+            _trayUpdate.Enabled = true;
+            _tray.Visible = true;
+            _tray.BalloonTipTitle = Strings.WindowTitle;
+            _tray.BalloonTipText = Strings.TrayUpdateFailed;
+            _tray.BalloonTipIcon = ToolTipIcon.Warning;
+            _tray.ShowBalloonTip(10000);
+            return;
+        }
+
+        AuraUpdate.LaunchInstaller(path);
+        _exiting = true;
+        Close();
     }
 
     /// <summary>

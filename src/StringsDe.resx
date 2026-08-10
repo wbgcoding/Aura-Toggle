@@ -173,6 +173,21 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Immer im Vordergrund</value>
   </data>
+  <data name="SettingCheckUpdates" xml:space="preserve">
+    <value>Nach Aktualisierungen suchen</value>
+  </data>
+  <data name="TrayUpdateInstall" xml:space="preserve">
+    <value>Version {0} installieren</value>
+  </data>
+  <data name="TrayUpdateOpenPage" xml:space="preserve">
+    <value>Version {0} verf&#252;gbar - Release-Seite &#246;ffnen</value>
+  </data>
+  <data name="TrayUpdateAvailable" xml:space="preserve">
+    <value>Version {0} ist verf&#252;gbar. Im Tray-Men&#252; installieren.</value>
+  </data>
+  <data name="TrayUpdateFailed" xml:space="preserve">
+    <value>Die Aktualisierung konnte nicht heruntergeladen oder gepr&#252;ft werden.</value>
+  </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Sprache</value>
   </data>

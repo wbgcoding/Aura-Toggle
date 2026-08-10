@@ -17,7 +17,9 @@ internal sealed record AuraSettings(
     bool HotkeyEnabled,
     int Hotkey,
     int? WindowX,
-    int? WindowY)
+    int? WindowY,
+    bool CheckUpdates,
+    string LastUpdateCheckUtc)
 {
     /// <summary>Leave the lighting untouched when the tool starts.</summary>
     public const string StartActionNone = "";
@@ -37,7 +39,10 @@ internal sealed record AuraSettings(
         HotkeyEnabled: false,
         Hotkey: HotKey.Default,
         WindowX: null,
-        WindowY: null);
+        WindowY: null,
+        // Ben's decision of 10.08: on by default, one click to turn off, README says so plainly.
+        CheckUpdates: true,
+        LastUpdateCheckUtc: "");
 
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "AuraToggle";
@@ -75,7 +80,9 @@ internal sealed record AuraSettings(
                 HotkeyEnabled: AuraFiles.JsonFlag(root, "hotkeyEnabled", Default.HotkeyEnabled),
                 Hotkey: ValidHotkey(AuraFiles.JsonNumber(root, "hotkey", Default.Hotkey)),
                 WindowX: AuraFiles.JsonNumberOrNull(root, "windowX"),
-                WindowY: AuraFiles.JsonNumberOrNull(root, "windowY"));
+                WindowY: AuraFiles.JsonNumberOrNull(root, "windowY"),
+                CheckUpdates: AuraFiles.JsonFlag(root, "checkUpdates", Default.CheckUpdates),
+                LastUpdateCheckUtc: AuraFiles.JsonText(root, "lastUpdateCheckUtc"));
         }
         catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
@@ -116,6 +123,8 @@ internal sealed record AuraSettings(
             writer.WriteNumber("windowY", WindowY.Value);
         }
 
+        writer.WriteBoolean("checkUpdates", CheckUpdates);
+        writer.WriteString("lastUpdateCheckUtc", LastUpdateCheckUtc);
         writer.WriteEndObject();
     });
 
