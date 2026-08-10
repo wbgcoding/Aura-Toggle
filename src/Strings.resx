@@ -173,6 +173,21 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Always on top</value>
   </data>
+  <data name="SettingCheckUpdates" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="TrayUpdateInstall" xml:space="preserve">
+    <value>Install version {0}</value>
+  </data>
+  <data name="TrayUpdateOpenPage" xml:space="preserve">
+    <value>Version {0} available - open release page</value>
+  </data>
+  <data name="TrayUpdateAvailable" xml:space="preserve">
+    <value>Version {0} is available. Click the tray menu to install it.</value>
+  </data>
+  <data name="TrayUpdateFailed" xml:space="preserve">
+    <value>The update could not be downloaded or verified.</value>
+  </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Language</value>
   </data>

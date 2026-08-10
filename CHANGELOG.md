@@ -26,6 +26,11 @@ All notable changes to this project are documented here. The format follows
   file to another machine, profile, or just a backup.
 - The on/off button's label is now bold, wide-tracked upper case instead of the plain default
   weight and spacing.
+- Optional update check (on by default, one click to turn off): at most once every 24 hours the
+  tool asks GitHub for the latest release. An installed copy can install the update from a tray
+  menu entry once its checksum matches the release's own `SHA256SUMS.txt`; a portable copy is
+  offered a link to the release page instead, since it cannot replace itself.
+- The uninstaller now names the actual files it is about to delete when asking to remove settings.
 
 ### Changed
 

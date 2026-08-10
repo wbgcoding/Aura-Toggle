@@ -16,6 +16,7 @@ internal sealed class SettingsPopup : PopupForm
     private readonly ToggleSwitch _minimiseOnClose = new();
     private readonly ToggleSwitch _animate = new();
     private readonly ToggleSwitch _alwaysOnTop = new();
+    private readonly ToggleSwitch _checkUpdates = new();
     private readonly Select _startAction = new();
     private readonly Select _language = new();
     private readonly ToggleSwitch _hotkeyEnabled = new();
@@ -29,6 +30,7 @@ internal sealed class SettingsPopup : PopupForm
     private readonly Label _minimiseOnCloseLabel;
     private readonly Label _animateLabel;
     private readonly Label _alwaysOnTopLabel;
+    private readonly Label _checkUpdatesLabel;
     private readonly Label _hotkeyLabel;
     private readonly Layout _layout;
 
@@ -57,7 +59,7 @@ internal sealed class SettingsPopup : PopupForm
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 12,
+            RowCount = 13,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -71,22 +73,23 @@ internal sealed class SettingsPopup : PopupForm
         _minimiseOnCloseLabel = AddSwitch(1, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
         _animateLabel = AddSwitch(2, Strings.SettingAnimate, _animate, settings.Animate);
         _alwaysOnTopLabel = AddSwitch(3, Strings.SettingAlwaysOnTop, _alwaysOnTop, settings.AlwaysOnTop);
+        _checkUpdatesLabel = AddSwitch(4, Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
 
-        _startActionLabel = AddLabel(4, Strings.SettingStartAction);
-        AddSelect(5, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
+        _startActionLabel = AddLabel(5, Strings.SettingStartAction);
+        AddSelect(6, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
         UpdateStartActionVisibility();
 
-        _languageLabel = AddLabel(6, Strings.SettingLanguage);
-        AddSelect(7, _language, Strings.SettingLanguage, Languages(), settings.Language);
+        _languageLabel = AddLabel(7, Strings.SettingLanguage);
+        AddSelect(8, _language, Strings.SettingLanguage, Languages(), settings.Language);
 
-        _hotkeyLabel = AddSwitch(8, Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
-        AddButton(9, _hotkeyRecord, HotkeyText(_pendingHotkey), Theme.NeutralSoft, Theme.Text);
+        _hotkeyLabel = AddSwitch(9, Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
+        AddButton(10, _hotkeyRecord, HotkeyText(_pendingHotkey), Theme.NeutralSoft, Theme.Text);
         _hotkeyRecord.Visible = settings.HotkeyEnabled;
-        _hotkeyHint = AddLabel(10, Strings.SettingHotkeyConflict);
+        _hotkeyHint = AddLabel(11, Strings.SettingHotkeyConflict);
         _hotkeyHint.ForeColor = Theme.Danger;
         _hotkeyHint.Visible = false;
 
-        AddButton(11, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
+        AddButton(12, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
 
@@ -102,6 +105,7 @@ internal sealed class SettingsPopup : PopupForm
         _minimiseOnClose.CheckedChanged += (_, _) => Apply();
         _animate.CheckedChanged += (_, _) => Apply();
         _alwaysOnTop.CheckedChanged += (_, _) => Apply();
+        _checkUpdates.CheckedChanged += (_, _) => Apply();
         _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
         _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
 
@@ -343,6 +347,7 @@ internal sealed class SettingsPopup : PopupForm
             MinimiseOnClose = _minimiseOnClose.Checked,
             Animate = _animate.Checked,
             AlwaysOnTop = _alwaysOnTop.Checked,
+            CheckUpdates = _checkUpdates.Checked,
             StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
             Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
             HotkeyEnabled = _hotkeyEnabled.Checked,
@@ -371,6 +376,8 @@ internal sealed class SettingsPopup : PopupForm
         _animate.AccessibleName = Strings.SettingAnimate;
         _alwaysOnTopLabel.Text = Strings.SettingAlwaysOnTop;
         _alwaysOnTop.AccessibleName = Strings.SettingAlwaysOnTop;
+        _checkUpdatesLabel.Text = Strings.SettingCheckUpdates;
+        _checkUpdates.AccessibleName = Strings.SettingCheckUpdates;
         _hotkeyLabel.Text = Strings.SettingHotkey;
         _hotkeyEnabled.AccessibleName = Strings.SettingHotkey;
         _startActionLabel.Text = Strings.SettingStartAction;

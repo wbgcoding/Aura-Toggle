@@ -69,7 +69,7 @@ Name: "de"; MessagesFile: "compiler:Languages\German.isl"; LicenseFile: "license
 [CustomMessages]
 en.AutoStart=Start Aura Toggle when Windows starts
 en.DesktopIcon=Create a desktop shortcut
-en.RemoveSettings=Also delete my settings and the remembered effect
+en.RemoveSettings=Also delete my settings and the remembered effect (%1)
 en.RuntimeAsk=Aura Toggle needs the Microsoft .NET 10 Desktop Runtime, which this PC does not have yet.%n%nDownload it from Microsoft and install it now? It is about 60 MB and takes a minute.
 en.RuntimeDownloading=Downloading the .NET 10 Desktop Runtime... %1%%
 en.RuntimeInstalling=Installing the .NET 10 Desktop Runtime...
@@ -77,7 +77,7 @@ en.RuntimeDeclined=Aura Toggle cannot run without the .NET 10 Desktop Runtime, s
 en.RuntimeFailed=The .NET 10 Desktop Runtime could not be installed. Install it by hand from https://dotnet.microsoft.com/download/dotnet/10.0 and run this setup again.
 de.AutoStart=Aura Toggle mit Windows starten
 de.DesktopIcon=Verknüpfung auf dem Desktop anlegen
-de.RemoveSettings=Auch meine Einstellungen und den gemerkten Effekt löschen
+de.RemoveSettings=Auch meine Einstellungen und den gemerkten Effekt löschen (%1)
 de.RuntimeAsk=Aura Toggle benötigt die Microsoft .NET 10 Desktop Runtime, die auf diesem PC noch fehlt.%n%nJetzt von Microsoft herunterladen und installieren? Das sind etwa 60 MB und dauert eine Minute.
 de.RuntimeDownloading=.NET 10 Desktop Runtime wird heruntergeladen... %1%%
 de.RuntimeInstalling=.NET 10 Desktop Runtime wird installiert...
@@ -437,10 +437,36 @@ begin
   DeleteFile(TempFile);
 end;
 
+{ Plain file names, comma-joined, of every file (not subfolder) directly in DataDir - named
+  rather than counted, since Inno's Pascal Script has no JSON parser to count entries with and a
+  name list needs none. Used only to tell the user what the Yes below actually deletes. }
+function ListDataFiles(DataDir: String): String;
+var
+  FindRec: TFindRec;
+begin
+  Result := '';
+  if FindFirst(DataDir + '\*', FindRec) then
+  begin
+    try
+      repeat
+        if FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY = 0 then
+        begin
+          if Result <> '' then
+            Result := Result + ', ';
+          Result := Result + FindRec.Name;
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
 { User data lives outside the install folder and is kept unless the user opts out. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   DataDir: String;
+  FileList: String;
   ResultCode: Integer;
 begin
   if CurUninstallStep = usPostUninstall then
@@ -462,7 +488,11 @@ begin
 
     DataDir := OriginalUserLocalAppData + '\aura-toggle';
     if DirExists(DataDir) then
-      if SuppressibleMsgBox(ExpandConstant('{cm:RemoveSettings}'), mbConfirmation, MB_YESNO, IDNO) = IDYES then
+    begin
+      FileList := ListDataFiles(DataDir);
+      if SuppressibleMsgBox(FmtMessage(CustomMessage('RemoveSettings'), [FileList]),
+        mbConfirmation, MB_YESNO, IDNO) = IDYES then
         DelTree(DataDir, True, True, True);
+    end;
   end;
 end;

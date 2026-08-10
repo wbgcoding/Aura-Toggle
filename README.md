@@ -52,7 +52,8 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 - 📌 Lives in the notification area, right-click for on/off
 - ⌨️ Full command line with exit codes — scheduled tasks, scripts, shortcuts
 - 🔥 A global hotkey, configurable, switches the whole board from anywhere
-- 🔒 No admin rights, no driver, no telemetry — the application makes no network connections at all
+- 🔒 No admin rights, no driver, no telemetry — the only network connection this tool ever makes
+  is an optional daily check for a newer release, on by default and one click to turn off
 
 ## 🚫 What it can't do
 
@@ -96,8 +97,9 @@ asks once, downloads it from Microsoft and installs it.
    one header on its own, or set the whole board at once, which hands every channel back to the
    board-wide value.
 6. **⚙️ Gear** — autostart, minimise instead of close, lighting at start, a global hotkey,
-   animation on/off, always on top, language, reset everything back to first-run defaults (which
-   first zips every file it is about to touch into `reset-backup.bak`, right next to them).
+   animation on/off, always on top, checking for updates, language, reset everything back to
+   first-run defaults (which first zips every file it is about to touch into
+   `reset-backup.bak`, right next to them).
 
 Minimising sends the window to the notification area. Left click the icon there to toggle the
 lighting, double click to reopen the window, right click for the same options in a menu.
@@ -288,6 +290,14 @@ survive a reboot. Portable and installed builds share the folder, every write go
 temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete it.
 Nothing in there is ever sent anywhere, and your user name is replaced with `%USERPROFILE%` in
 anything the log or the error dialog writes out.
+
+At most once every 24 hours, and only with "Check for updates" on (the default, one click to turn
+off in the gear), the tool asks `api.github.com` for the latest release tag - nothing else is sent,
+not even a machine identifier. Finding a newer version only shows a tray notice and a "Install
+version …" entry in the tray menu; nothing downloads or runs until that is clicked, and the setup
+it fetches is checksummed against the same release's own `SHA256SUMS.txt` before it is allowed to
+run at all. The portable build has no self-update: it gets the same tray notice, with a link to the
+release page instead of an install entry.
 
 ## 📄 Licence and trademarks
 
