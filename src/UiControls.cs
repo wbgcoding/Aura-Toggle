@@ -56,12 +56,20 @@ internal sealed class EffectButton : FlatControl
         new(0, 1), new(1, 0), new(0, -1), new(-1, 0),
     };
 
+    /// <summary>Gap between letters of the ON/OFF label, at 96 dpi - GDI+ has no letter-spacing
+    /// of its own, so this is added by hand between characters drawn one at a time.</summary>
+    private const int LetterSpacingAt96 = 4;
+
     private bool _on;
     private byte _mode;
     private Color _colour = Color.White;
     private bool _busy;
     private bool _paused;
     private bool _animate = true;
+
+    /// <summary>The bold variant of <see cref="Control.Font"/>, rebuilt only when that changes -
+    /// which happens on every repaint's font lookup otherwise, 30 times a second while animating.</summary>
+    private Font? _boldFont;
 
     public EffectButton()
     {
@@ -138,9 +146,19 @@ internal sealed class EffectButton : FlatControl
         {
             _timer.Dispose();
             _surface.Dispose();
+            _boldFont?.Dispose();
         }
 
         base.Dispose(disposing);
+    }
+
+    /// <summary>WinForms hands this a freshly scaled <see cref="Control.Font"/> on a display-scale
+    /// change, so the bold variant built from the previous one has to go with it.</summary>
+    protected override void OnFontChanged(EventArgs e)
+    {
+        _boldFont?.Dispose();
+        _boldFont = null;
+        base.OnFontChanged(e);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -188,16 +206,60 @@ internal sealed class EffectButton : FlatControl
         }
 
         DrawFocusRing(g, path);
+        DrawTrackedLabel(g);
+    }
+
+    /// <summary>
+    /// The state word in wide upper case, drawn one letter at a time with a fixed gap between
+    /// them - GDI+ has no letter-spacing to ask for. Upper case is applied here, at paint time
+    /// only: <see cref="Control.Text"/> itself stays "On"/"Off" (or "An"/"Aus"), which is what a
+    /// screen reader spells out, so it must never become "O N" or a pre-uppercased string.
+    /// </summary>
+    private void DrawTrackedLabel(Graphics g)
+    {
+        string label = Text.ToUpperInvariant();
+        if (label.Length == 0)
+        {
+            return;
+        }
+
+        _boldFont ??= new Font(Font, FontStyle.Bold);
+        const TextFormatFlags flags = TextFormatFlags.NoPadding | TextFormatFlags.SingleLine |
+            TextFormatFlags.NoPrefix;
+        int spacing = this.Scaled(LetterSpacingAt96);
+
+        var widths = new int[label.Length];
+        int totalWidth = 0;
+        int textHeight = 0;
+        for (int i = 0; i < label.Length; i++)
+        {
+            Size measured = TextRenderer.MeasureText(g, label[i].ToString(), _boldFont,
+                new Size(int.MaxValue, int.MaxValue), flags);
+            widths[i] = measured.Width;
+            totalWidth += measured.Width + (i > 0 ? spacing : 0);
+            textHeight = Math.Max(textHeight, measured.Height);
+        }
+
+        int baseX = (Width - totalWidth) / 2;
+        int baseY = (Height - textHeight) / 2;
+
+        void Draw(int dx, int dy, Color colour)
+        {
+            int x = baseX + dx;
+            for (int i = 0; i < label.Length; i++)
+            {
+                TextRenderer.DrawText(g, label[i].ToString(), _boldFont, new Point(x, baseY + dy), colour, flags);
+                x += widths[i] + spacing;
+            }
+        }
 
         // A soft shadow keeps the label legible even over the brightest frame of an effect.
         foreach (Point offset in ShadowOffsets)
         {
-            TextRenderer.DrawText(g, Text, Font, new Rectangle(offset.X, offset.Y, Width, Height),
-                Color.FromArgb(120, 0, 0, 0),
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            Draw(offset.X, offset.Y, Color.FromArgb(120, 0, 0, 0));
         }
-        TextRenderer.DrawText(g, Text, Font, ClientRectangle, Enabled ? Color.White : Theme.TextMuted,
-            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+        Draw(0, 0, Enabled ? Color.White : Theme.TextMuted);
     }
 }
 
