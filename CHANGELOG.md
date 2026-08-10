@@ -37,6 +37,9 @@ All notable changes to this project are documented here. The format follows
 - README: release/license/download badges, a checksum-comparison command, a SmartScreen note, a
   "does this fit my board" pointer, silent install/uninstall switches, an honest OpenRGB/SignalRGB
   comparison, and why the lighting never survives a reboot on its own.
+- New screenshots (English, both themes) showing the new bold button label, now animated with a
+  moving rainbow wave over the button - `tools/make-preview-gif.py` builds them from the plain
+  screenshots, with no button coordinates hardcoded.
 
 ### Changed
 
