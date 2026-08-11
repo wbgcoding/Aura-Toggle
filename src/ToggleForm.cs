@@ -90,6 +90,12 @@ internal sealed class ToggleForm : Form
     /// <summary>Hidden until <see cref="CheckForUpdatesIfDue"/> actually finds a newer release.</summary>
     private readonly ToolStripMenuItem _trayUpdate = new() { Visible = false };
 
+    /// <summary>Once true, keeps the tray icon itself visible even while the window is open, so
+    /// <see cref="_trayUpdate"/> stays reachable - <see cref="RestoreFromTray"/> would otherwise
+    /// hide the icon the next time the window is shown, same as it always does when nothing is
+    /// minimised to it.</summary>
+    private bool _updatePending;
+
     // A single left click on the tray icon toggles the lighting, but the first click of a
     // double-click looks identical until the second one either arrives or does not - so it is
     // held here until SystemInformation.DoubleClickTime passes with no second click, and dropped
@@ -572,11 +578,14 @@ internal sealed class ToggleForm : Form
             return;
         }
 
-        _settings = _settings with
+        using (AuraFiles.Lock())
         {
-            LastUpdateCheckUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
-        };
-        _settings.Save();
+            _settings = AuraSettings.Load() with
+            {
+                LastUpdateCheckUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+            };
+            _settings.Save();
+        }
 
         if (found == null)
         {
@@ -588,18 +597,24 @@ internal sealed class ToggleForm : Form
             _trayUpdate.Text = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateInstall, found.Version);
             _trayUpdate.Click += async (_, _) => await InstallUpdate(found);
         }
-        else
+        else if (found.HtmlUrl.Length > 0)
         {
             // A portable copy cannot replace the file it is currently running as, so the click
             // goes to the release page instead of a silent self-install.
             _trayUpdate.Text = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateOpenPage, found.Version);
-            _trayUpdate.Click += (_, _) =>
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(found.HtmlUrl)
-                {
-                    UseShellExecute = true,
-                });
+            _trayUpdate.Click += (_, _) => OpenReleasePage(found.HtmlUrl);
+        }
+        else
+        {
+            // Nothing usable to offer - GitHub's response carried no page link at all.
+            return;
         }
 
+        // Kept reachable through the tray icon even after the window is reopened and closed
+        // again - RestoreFromTray would otherwise hide the icon (and this entry with it) the
+        // moment the window is next shown, the same way it always hides the icon once nothing
+        // is minimised to it.
+        _updatePending = true;
         _trayUpdate.Visible = true;
         _tray.Visible = true;
         _tray.BalloonTipTitle = Strings.WindowTitle;
@@ -607,10 +622,23 @@ internal sealed class ToggleForm : Form
         _tray.ShowBalloonTip(10000);
     }
 
+    private static void OpenReleasePage(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            AuraLog.Warn($"UpdateOpenPage: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Downloads and checksum-verifies the setup, then runs it silently and closes this process -
-    /// the installer cannot replace a running exe. A failed download or a checksum that does not
-    /// match ends here with a balloon instead, and the tray entry stays clickable to try again.
+    /// the installer cannot replace a running exe. A failed download, a checksum that does not
+    /// match, or a declined UAC prompt all end here with a balloon instead of a crash, and the
+    /// tray entry stays clickable to try again.
     /// </summary>
     private async Task InstallUpdate(UpdateInfo info)
     {
@@ -622,20 +650,19 @@ internal sealed class ToggleForm : Form
             return;
         }
 
-        if (path == null)
+        if (path != null && AuraUpdate.LaunchInstaller(path))
         {
-            _trayUpdate.Enabled = true;
-            _tray.Visible = true;
-            _tray.BalloonTipTitle = Strings.WindowTitle;
-            _tray.BalloonTipText = Strings.TrayUpdateFailed;
-            _tray.BalloonTipIcon = ToolTipIcon.Warning;
-            _tray.ShowBalloonTip(10000);
+            _exiting = true;
+            Close();
             return;
         }
 
-        AuraUpdate.LaunchInstaller(path);
-        _exiting = true;
-        Close();
+        _trayUpdate.Enabled = true;
+        _tray.Visible = true;
+        _tray.BalloonTipTitle = Strings.WindowTitle;
+        _tray.BalloonTipText = Strings.TrayUpdateFailed;
+        _tray.BalloonTipIcon = ToolTipIcon.Warning;
+        _tray.ShowBalloonTip(10000);
     }
 
     /// <summary>
@@ -1419,7 +1446,13 @@ internal sealed class ToggleForm : Form
     private void SaveWindowPosition()
     {
         Point location = WindowState == FormWindowState.Normal ? Location : RestoreBounds.Location;
-        _settings = _settings with { WindowX = location.X, WindowY = location.Y };
+
+        // Reloaded and merged under the same lock every other settings writer uses, rather than
+        // saving this object's own possibly-stale copy of Settings - an open settings popup or
+        // the background update check both save independently, and either landing between this
+        // method's read and write would otherwise be overwritten right back out.
+        using IDisposable guard = AuraFiles.Lock();
+        _settings = AuraSettings.Load() with { WindowX = location.X, WindowY = location.Y };
         _settings.Save();
     }
 
@@ -1428,7 +1461,7 @@ internal sealed class ToggleForm : Form
         Show();
         WindowState = FormWindowState.Normal;
         Activate();
-        _tray.Visible = false;
+        _tray.Visible = _updatePending;
         _toggle.Paused = false;
 
         if (_devices.Count == 0)

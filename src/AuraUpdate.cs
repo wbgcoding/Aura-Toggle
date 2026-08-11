@@ -110,9 +110,17 @@ internal static class AuraUpdate
                 }
             }
 
-            return installerUrl == null || checksumUrl == null
-                ? null
-                : new UpdateInfo(remoteVersion, installerUrl, checksumUrl, Text(root, "html_url"));
+            // The checksum only proves the download matches what GitHub published - it says
+            // nothing about which server actually answered. Both URLs have to be plain https to
+            // GitHub's own asset hosts, or a hostile redirect/proxy could hand back a setup and a
+            // matching checksum file for it that never came from the real release.
+            if (installerUrl == null || checksumUrl == null ||
+                !IsTrustedDownloadUrl(installerUrl) || !IsTrustedDownloadUrl(checksumUrl))
+            {
+                return null;
+            }
+
+            return new UpdateInfo(remoteVersion, installerUrl, checksumUrl, Text(root, "html_url"));
         }
         catch (Exception ex) when (IsExpected(ex))
         {
@@ -158,22 +166,35 @@ internal static class AuraUpdate
             await File.WriteAllBytesAsync(path, data);
             return path;
         }
-        catch (Exception ex) when (IsExpected(ex) || ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (IsExpected(ex) || ex is UnauthorizedAccessException)
         {
             AuraLog.Error("UpdateDownload", ex);
             return null;
         }
     }
 
-    /// <summary>Runs the downloaded, already-verified setup silently and lets the caller close
-    /// this process - the installer replaces the running exe, which cannot happen while it is
-    /// still open.</summary>
-    public static void LaunchInstaller(string path)
+    /// <summary>
+    /// Runs the downloaded, already-verified setup silently and lets the caller close this
+    /// process - the installer replaces the running exe, which cannot happen while it is still
+    /// open. The setup is <c>PrivilegesRequired=admin</c>, so this still raises a UAC prompt
+    /// under <c>/SILENT</c> - declining it throws (Win32Exception 1223, "cancelled by the
+    /// user"), which is a normal choice here, not a failure worth a crash dialog for.
+    /// </summary>
+    public static bool LaunchInstaller(string path)
     {
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path, "/SILENT")
+        try
         {
-            UseShellExecute = true,
-        });
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path, "/SILENT")
+            {
+                UseShellExecute = true,
+            });
+            return true;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            AuraLog.Warn($"UpdateInstall: {ex.GetType().Name}: {ex.Message}");
+            return false;
+        }
     }
 
     /// <summary>Matches <c>build.bat</c>'s own "&lt;hash&gt;  &lt;filename&gt;" format, two spaces
@@ -198,6 +219,12 @@ internal static class AuraUpdate
         return null;
     }
 
+    private static bool IsTrustedDownloadUrl(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out Uri? parsed) &&
+        parsed.Scheme == Uri.UriSchemeHttps &&
+        (parsed.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
+         parsed.Host.EndsWith(".githubusercontent.com", StringComparison.OrdinalIgnoreCase));
+
     private static string Text(JsonElement element, string name) =>
         element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() ?? ""
@@ -208,5 +235,5 @@ internal static class AuraUpdate
     /// never allowed to get in the way of switching the lights.</summary>
     private static bool IsExpected(Exception ex) =>
         ex is HttpRequestException or TaskCanceledException or JsonException or UriFormatException
-            or InvalidOperationException or NotSupportedException;
+            or InvalidOperationException or NotSupportedException or IOException;
 }
