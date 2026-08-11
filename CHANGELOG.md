@@ -93,9 +93,9 @@ All notable changes to this project are documented here. The format follows
   download.
 - Declining the installer's UAC prompt during a self-update now shows the existing "update
   failed" balloon instead of crashing.
-- Saving the window position or the last update-check time could silently discard whatever the
-  settings popup or the update check had just written, if the two landed close together - both
-  now read-modify-write under the same lock every other settings writer already uses.
+- Saving the window position, the last update-check time, or a setting from the settings panel
+  could silently discard whatever either of the other two had just written, if two of them landed
+  close together - all three now read-modify-write under the same lock.
 - The update tray entry could go unreachable the next time the window was opened and closed,
   because closing to tray always re-hid the icon regardless of a pending update.
 - The system tray's right-click menu is now released together with the tray icon on exit, instead
