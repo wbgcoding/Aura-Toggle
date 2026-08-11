@@ -342,18 +342,26 @@ internal sealed class SettingsPopup : PopupForm
         _hotkeyRecord.Visible = _hotkeyEnabled.Checked;
         FitToContent();
 
-        Settings = Settings with
+        // Reloaded and merged under the same lock every other settings writer uses, rather than
+        // building on this popup's own possibly-stale Settings snapshot - the background update
+        // check and a window-position save both write independently while this popup is open,
+        // and either landing between two Apply() calls would otherwise be overwritten right back
+        // out (the field it just wrote reverted to whatever this popup had in memory).
+        using (AuraFiles.Lock())
         {
-            MinimiseOnClose = _minimiseOnClose.Checked,
-            Animate = _animate.Checked,
-            AlwaysOnTop = _alwaysOnTop.Checked,
-            CheckUpdates = _checkUpdates.Checked,
-            StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
-            Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
-            HotkeyEnabled = _hotkeyEnabled.Checked,
-            Hotkey = _pendingHotkey,
-        };
-        Settings.Save();
+            Settings = AuraSettings.Load() with
+            {
+                MinimiseOnClose = _minimiseOnClose.Checked,
+                Animate = _animate.Checked,
+                AlwaysOnTop = _alwaysOnTop.Checked,
+                CheckUpdates = _checkUpdates.Checked,
+                StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
+                Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
+                HotkeyEnabled = _hotkeyEnabled.Checked,
+                Hotkey = _pendingHotkey,
+            };
+            Settings.Save();
+        }
 
         if (languageChanged)
         {
