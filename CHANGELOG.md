@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The executable and the setup now name `BGCoding` as their publisher in the Windows file
+  properties.
+
 ## [1.2.0] - 2026-08-14
 
 First public release. Aura Toggle switches the Aura lighting of an ASUS mainboard off and on from
