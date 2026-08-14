@@ -16,7 +16,7 @@
     <Product>Aura Toggle</Product>
     <AssemblyTitle>Aura Toggle</AssemblyTitle>
     <Description>Switches ASUS Aura mainboard lighting on and off.</Description>
-    <Copyright>© 2026 BG Coding</Copyright>
+    <Copyright>© 2026 BGCoding</Copyright>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <!-- Without this the executable carries the absolute path it was built from, symbol file
          included, straight into a public download. Mapping the project directory to a relative

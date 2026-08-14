@@ -38,7 +38,7 @@ MIT-LIZENZ
 Maßgeblich ist der englische Originaltext; diese Übersetzung dient ausschließlich dem
 Verständnis.
 
-Copyright (c) 2026 BG Coding
+Copyright (c) 2026 BGCoding
 
 Hiermit wird unentgeltlich jeder Person, die eine Kopie dieser Software und der zugehörigen
 Dokumentationsdateien (die "Software") erhält, die Erlaubnis erteilt, sie uneingeschränkt zu
