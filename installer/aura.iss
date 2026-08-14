@@ -14,7 +14,7 @@
 
 #define AppName "Aura Toggle"
 #define AppExe "AuraToggle.exe"
-#define AppPublisher "BG Coding"
+#define AppPublisher "BGCoding"
 #define AppUrl "https://github.com/wbgcoding/aura-toggle"
 #define SetupName "AuraToggle-Setup-" + AppVersion
 
@@ -29,6 +29,8 @@ AppPublisherURL={#AppUrl}
 AppSupportURL={#AppUrl}/issues
 AppUpdatesURL={#AppUrl}/releases
 VersionInfoVersion={#AppVersion}
+VersionInfoCompany={#AppPublisher}
+VersionInfoProductName={#AppName}
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes

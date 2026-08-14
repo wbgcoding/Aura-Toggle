@@ -1,0 +1,53 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead.
+    validations:
+      required: true
+
+  - type: input
+    id: board
+    attributes:
+      label: Mainboard
+      placeholder: e.g. ASUS ROG STRIX Z790-A
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Which build
+      options:
+        - Portable AuraToggle.exe
+        - Installer
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `AuraToggle.exe --version`
+      placeholder: 1.2.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: listing
+    attributes:
+      label: Output of `AuraToggle.exe -list`
+      render: text
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Last lines of the log
+      description: >
+        `%LOCALAPPDATA%\aura-toggle\log.txt` — it holds no personal data, the user name is
+        replaced with `%USERPROFILE%`.
+      render: text

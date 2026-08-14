@@ -6,7 +6,6 @@
 
 [![Latest release](https://img.shields.io/github/v/release/wbgcoding/aura-toggle)](https://github.com/wbgcoding/aura-toggle/releases/latest)
 [![License](https://img.shields.io/github/license/wbgcoding/aura-toggle)](LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/wbgcoding/aura-toggle/total)](https://github.com/wbgcoding/aura-toggle/releases)
 
 [Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) ·
 [Troubleshooting](#-troubleshooting) · [Changelog](CHANGELOG.md)
