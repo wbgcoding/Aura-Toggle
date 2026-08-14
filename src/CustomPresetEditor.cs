@@ -25,11 +25,14 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly TextField _name = new();
     private readonly PillButton _save = new();
     private readonly PillButton _delete = new();
-    private readonly PillButton _export = new();
-    private readonly PillButton _import = new();
+    private readonly TransferButton _export = new();
+    private readonly TransferButton _import = new();
     private readonly Label _transferHint = new();
     private readonly ArmedButton _deleteArm;
     private readonly string? _editing;
+
+    /// <summary>Only use in this editor: the tooltips on the icon-only export/import buttons.</summary>
+    private readonly ToolTip _tips = new();
 
     /// <summary>Every scaled distance this editor sets, so a display-scale change can put them all
     /// back at the new scale instead of leaving the rows measured for the old one.</summary>
@@ -64,6 +67,7 @@ internal sealed class CustomPresetEditor : PopupForm
         ForeColor = Theme.Text;
         Font = Theme.Ui;
         AccessibleName = Strings.CustomPresetAccessibleName;
+        Theme.StyleToolTip(_tips);
         _metrics.Add(() =>
             Padding = new Padding(this.Scaled(16), this.Scaled(14), this.Scaled(16), this.Scaled(14)));
 
@@ -124,11 +128,23 @@ internal sealed class CustomPresetEditor : PopupForm
 
         _root.Controls.Add(header);
 
-        _name.Dock = DockStyle.Top;
+        var nameRow = new Layout
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 3,
+            BackColor = Theme.Surface,
+        };
+        _metrics.Add(() => nameRow.Margin = new Padding(0, 0, 0, this.Scaled(10)));
+        nameRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        nameRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        nameRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+        _name.Dock = DockStyle.Fill;
         _name.PlaceholderText = Strings.CustomPresetNamePlaceholder;
         _name.AccessibleName = Strings.CustomPresetNamePlaceholder;
         _name.MaxLength = 40;
-        _metrics.Add(() => _name.Margin = new Padding(0, 0, 0, this.Scaled(10)));
         _name.Text = preset?.Name ?? "";
         _name.Accepted += (_, e) =>
         {
@@ -139,7 +155,38 @@ internal sealed class CustomPresetEditor : PopupForm
             }
         };
         _name.TextChanged += (_, _) => UpdateSaveState();
-        _root.Controls.Add(_name);
+        _metrics.Add(() => _name.Margin = new Padding(0, 0, this.Scaled(6), 0));
+        nameRow.Controls.Add(_name, 0, 0);
+
+        // Vertically centred against the taller name field rather than the row's default
+        // top-alignment - see TextField/TransferButton's own DesignHeight for the 4 px gap.
+        _export.Import = false;
+        _export.AccessibleName = Strings.CustomPresetExport;
+        _export.Click += (_, _) => ExportToFile();
+        _metrics.Add(() => _export.Margin = new Padding(0, this.Scaled(4), this.Scaled(4), this.Scaled(4)));
+        _tips.SetToolTip(_export, Strings.CustomPresetExport);
+        nameRow.Controls.Add(_export, 1, 0);
+
+        _import.Import = true;
+        _import.AccessibleName = Strings.CustomPresetImport;
+        _import.Click += (_, _) => ImportFromFile();
+        _metrics.Add(() => _import.Margin = new Padding(0, this.Scaled(4), 0, this.Scaled(4)));
+        _tips.SetToolTip(_import, Strings.CustomPresetImport);
+        nameRow.Controls.Add(_import, 2, 0);
+
+        _root.Controls.Add(nameRow);
+
+        _transferHint.Dock = DockStyle.Top;
+        _transferHint.AutoSize = true;
+        _transferHint.ForeColor = Theme.Danger;
+        _transferHint.BackColor = Theme.Surface;
+        _transferHint.Visible = false;
+        _metrics.Add(() =>
+        {
+            _transferHint.MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0);
+            _transferHint.Margin = new Padding(this.Scaled(2), this.Scaled(6), 0, this.Scaled(10));
+        });
+        _root.Controls.Add(_transferHint);
 
         if (devices.Count == 0)
         {
@@ -207,52 +254,6 @@ internal sealed class CustomPresetEditor : PopupForm
         buttons.Controls.Add(_delete, 1, 0);
 
         _root.Controls.Add(buttons);
-
-        var transfer = new Layout
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 2,
-            BackColor = Theme.Surface,
-        };
-        _metrics.Add(() => transfer.Margin = new Padding(0, this.Scaled(6), 0, 0));
-        transfer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        transfer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-        _export.Text = Strings.CustomPresetExport;
-        _export.DesignHeight = 36;
-        _export.Fill = Theme.NeutralSoft;
-        _export.ForeColor = Theme.Text;
-        _export.BackColor = Theme.Surface;
-        _export.Dock = DockStyle.Left;
-        _export.Click += (_, _) => ExportToFile();
-        _export.FitToText();
-        transfer.Controls.Add(_export, 0, 0);
-
-        _import.Text = Strings.CustomPresetImport;
-        _import.DesignHeight = 36;
-        _import.Fill = Theme.NeutralSoft;
-        _import.ForeColor = Theme.Text;
-        _import.BackColor = Theme.Surface;
-        _metrics.Add(() => _import.Margin = new Padding(this.Scaled(8), 0, 0, 0));
-        _import.Click += (_, _) => ImportFromFile();
-        _import.FitToText();
-        transfer.Controls.Add(_import, 1, 0);
-
-        _root.Controls.Add(transfer);
-
-        _transferHint.Dock = DockStyle.Top;
-        _transferHint.AutoSize = true;
-        _transferHint.ForeColor = Theme.Danger;
-        _transferHint.BackColor = Theme.Surface;
-        _transferHint.Visible = false;
-        _metrics.Add(() =>
-        {
-            _transferHint.MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0);
-            _transferHint.Margin = new Padding(this.Scaled(2), this.Scaled(6), 0, 0);
-        });
-        _root.Controls.Add(_transferHint);
 
         if (preset != null)
         {
@@ -934,6 +935,7 @@ internal sealed class CustomPresetEditor : PopupForm
         if (disposing)
         {
             _deleteArm.Dispose();
+            _tips.Dispose();
         }
 
         base.Dispose(disposing);

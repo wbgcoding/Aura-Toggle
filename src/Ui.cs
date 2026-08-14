@@ -370,6 +370,31 @@ internal static class Theme
         return path;
     }
 
+    /// <summary>
+    /// Makes a <see cref="ToolTip"/> draw itself in this theme's colours instead of the plain
+    /// white system tooltip. <c>BackColor</c>/<c>ForeColor</c> alone do not reach it: Windows
+    /// ignores both while visual styles are active (the normal case) unless the tooltip is
+    /// owner-drawn - so both are still set here too, for the one case they do apply, and so
+    /// nobody mistakes the <see cref="PaintToolTip"/> subscription below as dead code later.
+    /// </summary>
+    public static void StyleToolTip(ToolTip tip)
+    {
+        tip.BackColor = Surface;
+        tip.ForeColor = Text;
+        tip.OwnerDraw = true;
+        tip.Draw += (_, e) => PaintToolTip(e);
+    }
+
+    public static void PaintToolTip(DrawToolTipEventArgs e)
+    {
+        using var fill = new SolidBrush(Surface);
+        e.Graphics.FillRectangle(fill, e.Bounds);
+        using var border = new Pen(Border);
+        e.Graphics.DrawRectangle(border, 0, 0, e.Bounds.Width - 1, e.Bounds.Height - 1);
+        TextRenderer.DrawText(e.Graphics, e.ToolTipText, e.Font, e.Bounds, Text,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+
     public static Color Hue(double degrees) => FromHsv(degrees, 1.0, 1.0);
 
     public static Color FromHsv(double hueDegrees, double saturation, double value)
@@ -647,8 +672,21 @@ internal static class EffectPainter
         };
 
         Using(surface, shared => shared.Paint(g, bounds, bounds.Height / 2f, buffer =>
-            Render(buffer, new RectangleF(0, 0, bounds.Width, bounds.Height), mode, colour, seconds),
-            Outline(mode == 0 ? Theme.Neutral : UsesColour(mode) ? colour : Theme.Accent)));
+        {
+            var area = new RectangleF(0, 0, bounds.Width, bounds.Height);
+
+            // Spectrum cycle and rainbow breathing both show the same shared hue cycle on the
+            // real board, so they get the same icon here too - the live preview button still
+            // tells them apart via Render(), which stays hardware-accurate and untouched.
+            if (mode is 4 or 6)
+            {
+                Spectrum(buffer, area, seconds / 7.0, cycles: 2f);
+            }
+            else
+            {
+                Render(buffer, area, mode, colour, seconds);
+            }
+        }, Outline(mode == 0 ? Theme.Neutral : UsesColour(mode) ? colour : Theme.Accent)));
     }
 
     /// <summary>Runs <paramref name="body"/> with the surface given, or with a throwaway one.</summary>
@@ -885,12 +923,26 @@ internal abstract class PopupForm : Form
     /// past the bottom edge opens upward instead - above that control, not over it. Zero for a
     /// panel that only has to stay on screen.
     /// </param>
-    protected void Place(Point at, int flipAbove = 0)
+    /// <param name="horizontalMargin">
+    /// The breathing room kept clear of the left/right screen edge, defaulting to the usual
+    /// <c>Scaled(4)</c>. A panel anchored to a control that already keeps its own distance from
+    /// whatever it hangs off (the settings panel under the gear) passes 0 here - that distance is
+    /// baked into <paramref name="at"/> already, and stacking this margin on top of it would only
+    /// push the panel further from the control than intended.
+    /// </param>
+    /// <param name="screen">
+    /// The monitor to clamp against, when the caller already knows it more reliably than a lookup
+    /// from <paramref name="at"/> could - see <see cref="AuraToggle.SettingsPopup.Open"/> for why:
+    /// <paramref name="at"/> is often shifted left by this window's own width before it gets here,
+    /// and on a monitor placed to the left of the one the anchor control is actually on, that
+    /// shift alone can walk the point onto the wrong monitor and clamp against its bounds instead.
+    /// </param>
+    protected void Place(Point at, int flipAbove = 0, int? horizontalMargin = null, Rectangle? screen = null)
     {
-        Rectangle screen = Screen.FromPoint(at).WorkingArea;
-        int y = flipAbove > 0 && at.Y + Height > screen.Bottom ? at.Y - Height - flipAbove : at.Y;
+        Rectangle bounds = screen ?? Screen.FromPoint(at).WorkingArea;
+        int y = flipAbove > 0 && at.Y + Height > bounds.Bottom ? at.Y - Height - flipAbove : at.Y;
 
-        Location = OnScreen(new Point(at.X, y), screen);
+        Location = OnScreen(new Point(at.X, y), bounds, horizontalMargin);
     }
 
     /// <summary>
@@ -899,21 +951,22 @@ internal abstract class PopupForm : Form
     /// that brings colour chips with it - so the position it was given is no longer the one it
     /// needs. Without this the buttons at the bottom end up under the taskbar.
     /// </summary>
-    protected void KeepOnScreen()
+    protected void KeepOnScreen(int? horizontalMargin = null)
     {
         if (IsHandleCreated && Visible)
         {
-            Location = OnScreen(Location, Screen.FromControl(this).WorkingArea);
+            Location = OnScreen(Location, Screen.FromControl(this).WorkingArea, horizontalMargin);
         }
     }
 
-    private Point OnScreen(Point at, Rectangle screen)
+    private Point OnScreen(Point at, Rectangle screen, int? horizontalMargin = null)
     {
-        int margin = this.Scaled(4);
+        int marginX = horizontalMargin ?? this.Scaled(4);
+        int marginY = this.Scaled(4);
 
         return new Point(
-            Math.Max(screen.Left + margin, Math.Min(at.X, screen.Right - Width - margin)),
-            Math.Max(screen.Top + margin, Math.Min(at.Y, screen.Bottom - Height - margin)));
+            Math.Max(screen.Left + marginX, Math.Min(at.X, screen.Right - Width - marginX)),
+            Math.Max(screen.Top + marginY, Math.Min(at.Y, screen.Bottom - Height - marginY)));
     }
 }
 

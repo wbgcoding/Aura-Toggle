@@ -58,6 +58,10 @@ internal sealed class ToggleForm : Form
     private const int BrightnessGap = 12;
     private const int LabelInset = 2;
 
+    /// <summary>How far the settings panel's right edge sits inside the window's own - see
+    /// <see cref="OnSettingsClick"/>.</summary>
+    private const int SettingsEdgeGap = 4;
+
     /// <summary>WM_SETTINGCHANGE, which is how a light or dark theme switch arrives.</summary>
     private const int SettingChange = 0x001A;
 
@@ -67,8 +71,12 @@ internal sealed class ToggleForm : Form
     private const int ExitSizeMove = 0x0232;
 
     /// <summary>
-    /// True between those two, so nothing here resizes or repositions a window the user is still
-    /// holding on to - a drag from one display to another crosses a scale change halfway.
+    /// True between those two. <see cref="KeepOnScreen"/> checks this and does nothing while it
+    /// holds, so nothing here repositions a window the user is still holding on to - but
+    /// <see cref="SettleAfterDpiChange"/> does not check it any more: <c>WM_DPICHANGED</c> only
+    /// arrives once Windows has already put the window on its new monitor and knows the new
+    /// scale, so a re-measure at that point is not guessing between two displays, it is reading
+    /// the one Windows just said this window is on.
     /// </summary>
     private bool _userMoving;
 
@@ -89,6 +97,11 @@ internal sealed class ToggleForm : Form
 
     /// <summary>Hidden until <see cref="CheckForUpdatesIfDue"/> actually finds a newer release.</summary>
     private readonly ToolStripMenuItem _trayUpdate = new() { Visible = false };
+
+    /// <summary>A one-time notice that came due while there was no window to show it on
+    /// (autostart, or manually minimised to tray) - shown by <see cref="RestoreFromTray"/> the
+    /// moment there is one again, instead of waiting for the next check up to 24 hours later.</summary>
+    private UpdateInfo? _pendingNotice;
 
     /// <summary>Once true, keeps the tray icon itself visible even while the window is open, so
     /// <see cref="_trayUpdate"/> stays reachable - <see cref="RestoreFromTray"/> would otherwise
@@ -118,6 +131,15 @@ internal sealed class ToggleForm : Form
     /// <summary>When the settings panel last closed, so the gear does not immediately reopen it.</summary>
     private long _settingsClosedAt;
 
+    /// <summary>Set once <see cref="Reveal"/> has actually shown the window - guards against the
+    /// 500 ms backstop timer and the post-discovery call both firing.</summary>
+    private bool _revealed;
+
+    /// <summary>Safety net: forces the window visible even if a hung controller never lets
+    /// <see cref="DiscoverDevices"/> return. Stopped and disposed the moment <see cref="Reveal"/>
+    /// actually runs, by whichever of the two gets there first.</summary>
+    private System.Windows.Forms.Timer? _revealTimer;
+
     /// <summary>
     /// Stands in for the real controllers when <c>-review layout</c> measures the window. Never
     /// set by the normal application, which always asks the hardware.
@@ -135,6 +157,20 @@ internal sealed class ToggleForm : Form
         ClientSize = new Size(380, 214);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
+
+        // A first guess at the real width, so the window does not visibly grow the moment
+        // DiscoverDevices() finds out how wide the channel selector actually needs it to be.
+        // Never trusted outright - clamped the same as WantedWidth, in case a hand-edited file
+        // carries something absurd - and Render()/ResizeToContent still correct it afterwards if
+        // this guess turns out wrong (different monitor, renamed channel, new preset).
+        if (_settings.WindowWidth is int savedWidth)
+        {
+            int clamped = Math.Clamp(this.Scaled(savedWidth), this.Scaled(MinWidth), this.Scaled(MaxWidth));
+            ClientSize = new Size(clamped, ClientSize.Height);
+        }
+
+        // Invisible until Reveal() decides there is something worth showing - see OnShown.
+        Opacity = 0;
 
         // Only trusted when the saved point still lands on a display that exists right now -
         // unplugging the second monitor a window sat on must not open it off-screen and
@@ -475,11 +511,15 @@ internal sealed class ToggleForm : Form
     }
 
     /// <summary>
-    /// Copies a preset under "&lt;name&gt; (2)", counting up on a collision. Does not open the
-    /// editor - the point is a quick starting copy to tweak later, not an interruption right now.
+    /// Copies a preset under "&lt;name&gt; (2)", counting up on a collision, then opens the copy
+    /// in the editor straight away - the list that offered Duplicate is already closed by the
+    /// time this runs, so there is nothing left to interrupt. Cancelling out of the editor leaves
+    /// the copy in place; it was saved the moment it was created, same as the original.
     /// </summary>
     private void DuplicateCustomPreset(string name)
     {
+        CustomPreset copy;
+
         using (IDisposable guard = AuraFiles.Lock())
         {
             List<CustomPreset> presets = AuraCustomPresets.Load();
@@ -498,11 +538,13 @@ internal sealed class ToggleForm : Form
             }
             while (existingNames.Contains(copyName));
 
-            presets.Add(new CustomPreset(copyName, new List<CustomPresetEntry>(original.Entries)));
+            copy = new CustomPreset(copyName, new List<CustomPresetEntry>(original.Entries));
+            presets.Add(copy);
             AuraCustomPresets.Save(presets);
         }
 
         RefreshEffectItems();
+        OpenPresetEditor(copy);
     }
 
     /// <summary>
@@ -530,18 +572,20 @@ internal sealed class ToggleForm : Form
     /// <summary>Talking to the controller happens after the window is up, never before.</summary>
     private async void OnShown(object? sender, EventArgs e)
     {
+        // Backstop: whatever else happens, the window is visible within half a second - a hung
+        // controller must never leave it sitting fully transparent.
+        _revealTimer = new System.Windows.Forms.Timer { Interval = 500 };
+        _revealTimer.Tick += (_, _) => Reveal();
+        _revealTimer.Start();
+
         // Starting the tool by hand always shows the window; only the Run key entry may
         // open straight into the notification area.
         if (Program.LaunchedAtStartup)
         {
+            // Already hidden below, so there is nothing left for Opacity to hide - and
+            // RestoreFromTray must never bring back a window that is still transparent.
+            Opacity = 1;
             HideToTray();
-        }
-        else
-        {
-            // A fresh install hands off to this process through the installer's own de-elevated
-            // relaunch, which does not carry the right to activate a window - without this the
-            // very first start opened behind the installer instead of in front of it.
-            ForegroundWindow.Claim(this);
         }
 
         ApplyHotkeySetting(popup: null);
@@ -555,7 +599,39 @@ internal sealed class ToggleForm : Form
             await ApplyStartAction();
         }
 
+        Reveal();
+
         _ = CheckForUpdatesIfDue();
+    }
+
+    /// <summary>
+    /// Makes the window visible - once. Called after the first real measurement
+    /// (<see cref="DiscoverDevices"/> and the <see cref="Render"/> it ends with, so the window
+    /// never grows on screen) and from a 500 ms backstop timer in case a hung controller never
+    /// gets that far.
+    /// </summary>
+    private void Reveal()
+    {
+        if (_revealed)
+        {
+            return;
+        }
+
+        _revealed = true;
+        _revealTimer?.Stop();
+        _revealTimer?.Dispose();
+        _revealTimer = null;
+        Opacity = 1;
+
+        if (Visible)
+        {
+            // A fresh install hands off to this process through the installer's own de-elevated
+            // relaunch, which does not carry the right to activate a window - without this the
+            // very first start opened behind the installer instead of in front of it. Skipped
+            // when the window is hidden to the tray (autostart): there is nothing to bring
+            // forward.
+            ForegroundWindow.Claim(this);
+        }
     }
 
     /// <summary>
@@ -578,9 +654,18 @@ internal sealed class ToggleForm : Form
             return;
         }
 
+        // Nothing usable to offer for a portable copy without a release page link - the same
+        // exclusion the tray branch below applies, needed here too so it does not count as a
+        // notice the popup should ever claim it showed.
+        bool actionable = found != null && (AuraUpdate.IsInstalled || found.HtmlUrl.Length > 0);
+        bool due;
+
         using (AuraFiles.Lock())
         {
-            _settings = AuraSettings.Load() with
+            AuraSettings fresh = AuraSettings.Load();
+            due = actionable && found!.Version != fresh.UpdateNoticeVersion;
+
+            _settings = fresh with
             {
                 LastUpdateCheckUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
             };
@@ -620,6 +705,54 @@ internal sealed class ToggleForm : Form
         _tray.BalloonTipTitle = Strings.WindowTitle;
         _tray.BalloonTipText = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateAvailable, found.Version);
         _tray.ShowBalloonTip(10000);
+
+        if (!due)
+        {
+            return;
+        }
+
+        // Only worth showing where it can actually be seen: not while the window is off in the
+        // tray or minimised, which is exactly when Program.LaunchedAtStartup - or a manual
+        // minimise - routes here without ever un-hiding it. Remembered rather than dropped, so
+        // RestoreFromTray can show it the moment there is a window again.
+        if (Visible && WindowState != FormWindowState.Minimized)
+        {
+            ShowUpdateNotice(found);
+        }
+        else
+        {
+            _pendingNotice = found;
+        }
+    }
+
+    /// <summary>
+    /// Shows the one-time notice popup and records that this version's notice has now been
+    /// shown, so it never appears again - called either right away from
+    /// <see cref="CheckForUpdatesIfDue"/>, or later from <see cref="RestoreFromTray"/> for a
+    /// notice that came due while the window was off in the tray.
+    /// </summary>
+    private void ShowUpdateNotice(UpdateInfo found)
+    {
+        using (AuraFiles.Lock())
+        {
+            _settings = AuraSettings.Load() with { UpdateNoticeVersion = found.Version };
+            _settings.Save();
+        }
+
+        var popup = new UpdatePopup(found.Version, AuraUpdate.IsInstalled);
+
+        // Same paths as the tray entry above - not a second copy of the install/open logic.
+        if (AuraUpdate.IsInstalled)
+        {
+            popup.InstallRequested += async (_, _) => await InstallUpdate(found);
+        }
+        else
+        {
+            popup.OpenPageRequested += (_, _) => OpenReleasePage(found.HtmlUrl);
+        }
+
+        popup.FormClosed += (_, _) => popup.Dispose();
+        popup.Open(this);
     }
 
     private static void OpenReleasePage(string url)
@@ -1146,7 +1279,16 @@ internal sealed class ToggleForm : Form
             bool hotkeyChanged = settings.HotkeyEnabled != _settings.HotkeyEnabled || settings.Hotkey != _settings.Hotkey;
             _settings = settings;
             _toggle.Animate = settings.Animate;
-            TopMost = settings.AlwaysOnTop;
+
+            // Assigning TopMost, even to the value it already holds, makes WinForms reissue
+            // SetWindowPos(HWND_TOPMOST/HWND_NOTOPMOST) without SWP_NOACTIVATE - which activates
+            // this window and, with it, closes the settings panel sitting on top of it. Every
+            // other option's Changed handler runs whether or not that option actually changed, so
+            // this guard is what keeps the panel open for all of them, not just this one.
+            if (TopMost != settings.AlwaysOnTop)
+            {
+                TopMost = settings.AlwaysOnTop;
+            }
 
             if (languageChanged)
             {
@@ -1167,7 +1309,99 @@ internal sealed class ToggleForm : Form
             popup.Dispose();
         };
 
-        popup.Open(_gear.PointToScreen(new Point(_gear.Width, _gear.Height + this.Scaled(6))), this);
+        // Drops from under the gear, but its right edge follows the window's - a few pixels inside
+        // it, not the gear's own. The big toggle button underneath runs the full content width, so
+        // an edge lined up with the gear left a strip of the button showing next to the panel; from
+        // the window's edge inward the panel covers it completely and still keeps a hairline of
+        // window visible on the right. SettingsPopup.Open keeps this exact gap rather than adding
+        // its own screen-edge margin on top of it.
+        var anchor = new Point(
+            this.RectangleToScreen(this.ClientRectangle).Right - this.Scaled(SettingsEdgeGap),
+            _gear.PointToScreen(new Point(0, _gear.Height + this.Scaled(6))).Y);
+        popup.Open(anchor, this);
+    }
+
+    /// <summary>
+    /// Review mode only: opens the settings panel the same way a real gear click does, then keeps
+    /// it open past the deactivation that would otherwise close it immediately - with nothing else
+    /// on screen to hold focus first, anything else stealing it (another window, another process)
+    /// counts as one.
+    /// </summary>
+    internal void OpenSettingsForReview()
+    {
+        OnSettingsClick(this, EventArgs.Empty);
+        if (_settingsPopup != null)
+        {
+            _settingsPopup.KeepOpenOnDeactivate = true;
+        }
+    }
+
+    /// <summary>Review mode only: see <see cref="SettingsPopup.RefitForReview"/>.</summary>
+    internal void RefitSettingsForReview(int percent) => _settingsPopup?.RefitForReview(percent);
+
+    /// <summary>
+    /// Review mode only: closes the settings panel synchronously if one is open, so a review can
+    /// force a fresh <see cref="OpenSettingsForReview"/> at each simulated display scale instead of
+    /// reading the stale position of a panel that has been open since before the simulated move -
+    /// this popup is an owned top-level window, not a child, so it never follows the main window on
+    /// its own.
+    /// </summary>
+    internal void CloseSettingsForReview()
+    {
+        _settingsPopup?.Close();
+    }
+
+    /// <summary>
+    /// The settings panel's placement against the window edge, the gear and the big toggle button
+    /// it opened from - the regression proof for two complaints: a strip of the button left visible
+    /// next to the panel (anything but a positive <c>panel.Right - toggle.Right</c>), and the panel
+    /// landing nowhere near the gear at all (the multi-monitor case where
+    /// <see cref="SettingsPopup.Open"/> used to clamp against the wrong monitor's bounds - a gap far
+    /// wider than <see cref="SettingsEdgeGap"/> is that, not rounding).
+    /// </summary>
+    internal string DescribeSettingsAnchor()
+    {
+        if (_settingsPopup == null)
+        {
+            return "no settings panel open";
+        }
+
+        Rectangle gear = _gear.RectangleToScreen(_gear.ClientRectangle);
+        Rectangle toggle = _toggle.RectangleToScreen(_toggle.ClientRectangle);
+        Rectangle window = this.RectangleToScreen(this.ClientRectangle);
+        Rectangle panel = _settingsPopup.Bounds;
+        Rectangle screen = Screen.FromControl(this).WorkingArea;
+        int edge = panel.Right - window.Right;
+        int expectedEdge = -this.Scaled(SettingsEdgeGap);
+        int cover = panel.Right - toggle.Right;
+
+        var lines = new List<string>
+        {
+            $"gear                        {gear}",
+            $"toggle                      {toggle}",
+            $"window                      {window}",
+            $"panel                       {panel}",
+            $"screen                      {screen}",
+            $"panel.Right - window.Right  {edge}  (expected {expectedEdge})",
+            $"panel.Right - toggle.Right  {cover}",
+            $"panel.Left - toggle.Left    {panel.Left - toggle.Left}",
+            $"panel.Top - gear.Bottom     {panel.Top - gear.Bottom}",
+        };
+
+        if (edge > 0)
+        {
+            lines.Add($"OVERFLOW window: panel reaches {edge} px past the window's right edge");
+        }
+        else if (cover <= 0)
+        {
+            lines.Add($"CLIPPED toggle: {-cover} px strip of the button left visible on its right");
+        }
+        else if (Math.Abs(edge - expectedEdge) > this.Scaled(2))
+        {
+            lines.Add($"CLIPPED toggle: gap is {edge} px, expected {expectedEdge} px - panel drifted from the window edge");
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     /// <summary>
@@ -1230,18 +1464,13 @@ internal sealed class ToggleForm : Form
     /// <summary>
     /// Re-applies every dpi-dependent measurement, then checks what the complaint is actually
     /// about - whether anything is short of room, the effect list's own text included - instead of
-    /// trusting that one pass was enough.
+    /// trusting that one pass was enough. Runs while the window is still being dragged, on
+    /// purpose - see <see cref="_userMoving"/> - so the layout catches up to the new monitor
+    /// immediately instead of only once the mouse button comes back up.
     /// </summary>
     private void SettleAfterDpiChange(int attempt)
     {
         if (IsDisposed)
-        {
-            return;
-        }
-
-        // Still on the mouse: measuring a window that is halfway between two displays measures
-        // neither of them. Letting go queues this again.
-        if (_userMoving)
         {
             return;
         }
@@ -1336,6 +1565,8 @@ internal sealed class ToggleForm : Form
         _tray.ContextMenuStrip?.Dispose();
         _tray.Dispose();
         _trayClickTimer.Dispose();
+        _revealTimer?.Stop();
+        _revealTimer?.Dispose();
         Icon?.Dispose();
         _iconOff?.Dispose();
         _iconOnTray?.Dispose();
@@ -1383,10 +1614,12 @@ internal sealed class ToggleForm : Form
             _ = Run(() => Program.Switch(!_state.On));
         }
 
-        // The window is being dragged or resized by hand. Dragging it from one display to another
-        // crosses a scale change halfway through, and measuring - let alone repositioning - a
-        // window that is still following the mouse only fights the user. Everything waits for the
-        // drag to end, and then runs once.
+        // The window is being dragged or resized by hand. Repositioning it while it is still
+        // following the mouse would only fight the user, so KeepOnScreen holds off on that until
+        // the drag ends - but a WM_DPICHANGED that arrives mid-drag already names the new
+        // monitor and scale, so SettleAfterDpiChange does not wait for it; only the position is
+        // held back. WM_EXITSIZEMOVE still queues one more settle, for whatever a child control's
+        // own dpi query answered too late to catch while dragging (see SettleAfterDpiChange).
         if (m.Msg == EnterSizeMove)
         {
             _userMoving = true;
@@ -1447,12 +1680,16 @@ internal sealed class ToggleForm : Form
     {
         Point location = WindowState == FormWindowState.Normal ? Location : RestoreBounds.Location;
 
+        // Normalised to the 96 dpi baseline everything else here is written in, or a window
+        // remembered from a 150 % display would come back too wide on a 100 % one.
+        int width96 = ClientSize.Width * 96 / DeviceDpi;
+
         // Reloaded and merged under the same lock every other settings writer uses, rather than
         // saving this object's own possibly-stale copy of Settings - an open settings popup or
         // the background update check both save independently, and either landing between this
         // method's read and write would otherwise be overwritten right back out.
         using IDisposable guard = AuraFiles.Lock();
-        _settings = AuraSettings.Load() with { WindowX = location.X, WindowY = location.Y };
+        _settings = AuraSettings.Load() with { WindowX = location.X, WindowY = location.Y, WindowWidth = width96 };
         _settings.Save();
     }
 
@@ -1463,6 +1700,12 @@ internal sealed class ToggleForm : Form
         Activate();
         _tray.Visible = _updatePending;
         _toggle.Paused = false;
+
+        if (_pendingNotice is UpdateInfo notice)
+        {
+            _pendingNotice = null;
+            ShowUpdateNotice(notice);
+        }
 
         if (_devices.Count == 0)
         {

@@ -39,6 +39,8 @@ internal static class AuraUpdate
     /// <summary>
     /// Whether enough time has passed since the last check to run another one - at most once
     /// every 24 hours, so the tool does not phone home on every single start.
+    /// <see cref="AuraSettings.CheckUpdates"/> has no switch in the settings panel any more -
+    /// turning it off means hand-editing <c>"checkUpdates": false</c> into settings.json.
     /// </summary>
     public static bool ShouldCheck(AuraSettings settings)
     {

@@ -54,7 +54,7 @@
     <value>Switch mainboard lighting on or off</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: AuraToggle [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
+    <value>Usage: AuraToggle [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name|number&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
     <value>Presets: {0}</value>
@@ -173,9 +173,6 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Always on top</value>
   </data>
-  <data name="SettingCheckUpdates" xml:space="preserve">
-    <value>Check for updates</value>
-  </data>
   <data name="TrayUpdateInstall" xml:space="preserve">
     <value>Install version {0}</value>
   </data>
@@ -187,6 +184,21 @@
   </data>
   <data name="TrayUpdateFailed" xml:space="preserve">
     <value>The update could not be downloaded or verified.</value>
+  </data>
+  <data name="UpdateNoticeTitle" xml:space="preserve">
+    <value>Update available</value>
+  </data>
+  <data name="UpdateNoticeBody" xml:space="preserve">
+    <value>Version {0} is out - you are running {1}.</value>
+  </data>
+  <data name="UpdateNoticeInstall" xml:space="preserve">
+    <value>Install now</value>
+  </data>
+  <data name="UpdateNoticeOpenPage" xml:space="preserve">
+    <value>Open release page</value>
+  </data>
+  <data name="UpdateNoticeLater" xml:space="preserve">
+    <value>Later</value>
   </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Language</value>

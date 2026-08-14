@@ -62,11 +62,10 @@ internal static class AuraFiles
     }
 
     /// <summary>
-    /// Deletes every stored preference and remembered state, so the app comes back to first-run
-    /// defaults on its next read without a restart. Custom presets are the user's own created
-    /// content, not a preference with a default to fall back to, so they survive a reset - same
-    /// reasoning as leaving the log out of this list. The log is deliberately not one of the
-    /// four either - resetting is itself worth a line in it.
+    /// Deletes every stored preference, remembered state and custom preset, so the app comes back
+    /// to first-run defaults on its next read without a restart. Everything deleted here is
+    /// captured in <c>reset-backup.zip</c> first. The log is deliberately not one of the five -
+    /// resetting is itself worth a line in it.
     /// </summary>
     public static void ResetAll()
     {
@@ -77,7 +76,7 @@ internal static class AuraFiles
         foreach (string name in new[]
         {
             AuraState.FileName, AuraSettings.FileName,
-            AuraChannelNames.FileName, AuraChannelStates.FileName,
+            AuraChannelNames.FileName, AuraChannelStates.FileName, AuraCustomPresets.FileName,
         })
         {
             try
@@ -91,17 +90,27 @@ internal static class AuraFiles
     }
 
     /// <summary>
-    /// One <c>reset-backup.bak</c> zip of every file a reset can touch - including
-    /// <c>presets.json</c>, which a reset does not actually delete, as a safety net in case that
-    /// ever changes. A failed backup does not stop the reset itself, since that is the action the
-    /// user actually asked for; only the net underneath it is missing, and that goes to the log.
+    /// One <c>reset-backup.zip</c> of every file a reset is about to delete, named so it opens
+    /// directly in Explorer instead of needing a rename first. A failed backup does not stop the
+    /// reset itself, since that is the action the user actually asked for; only the net underneath
+    /// it is missing, and that goes to the log.
     /// </summary>
     private static void BackUpBeforeReset()
     {
-        string zipPath = PathTo("reset-backup.bak");
+        string zipPath = PathTo("reset-backup.zip");
 
         try
         {
+            // A stale backup from before the .bak -> .zip rename never gets written again -
+            // remove it so it does not linger in the data folder forever.
+            try
+            {
+                File.Delete(PathTo("reset-backup.bak"));
+            }
+            catch (Exception ex) when (IsExpected(ex))
+            {
+            }
+
             // A second reset replaces the backup from before it, not both at once - there is
             // only ever one.
             File.Delete(zipPath);

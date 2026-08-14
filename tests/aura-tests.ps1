@@ -604,8 +604,22 @@ Test-Case "-custom applies a saved preset by name" {
     Assert-Equal "CliPreset" ((Get-Content $state -Raw | ConvertFrom-Json).customPreset) "active preset"
 }
 
+Test-Case "-custom applies a saved preset by its number from -list" {
+    $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
+    $deviceKey = ($first.Name -split '\|')[0]
+    $escapedKey = $deviceKey -replace '\\', '\\'
+    Set-Content -Path $presets -Encoding utf8 -Value `
+        "[{`"name`":`"CliPreset`",`"entries`":[{`"deviceKey`":`"$escapedKey`",`"channel`":0,`"label`":`"x`",`"mode`":1,`"red`":10,`"green`":20,`"blue`":30}]}]"
+    Assert-Equal 0 (Invoke-Aura @("-custom", "1")).ExitCode "exit code"
+    Assert-Equal "CliPreset" ((Get-Content $state -Raw | ConvertFrom-Json).customPreset) "active preset"
+}
+
 Test-Case "-custom with an unknown name exits 2" {
     Assert-Equal 2 (Invoke-Aura @("-custom", "does-not-exist")).ExitCode "exit code"
+}
+
+Test-Case "-custom with a number past the end of the list exits 2" {
+    Assert-Equal 2 (Invoke-Aura @("-custom", "99")).ExitCode "exit code"
 }
 
 Test-Case "-custom rejects -device, since a preset names its own channels" {
@@ -717,9 +731,9 @@ Test-Case "window opens, closes and leaves no process behind" {
 # text off. "-review layout <scale>" puts the window through exactly that move, so it is a check
 # here rather than something only a second physical monitor could show.
 # The popups measure their own spacing when they open. One left open across a display-scale change
-# has to put it back at the new scale, which is what these two paddings prove: 14/12 and 16/14 at
-# 96 dpi, so exactly double at 200 %.
-foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "editor"; Padding = "32,28" })) {
+# has to put it back at the new scale, which is what these three paddings prove: 14/12, 16/14 and
+# 16/16 at 96 dpi, so exactly double at 200 %.
+foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "editor"; Padding = "32,28" }, @{ Name = "update"; Padding = "32,32" })) {
     Test-Case "the $($surface.Name) popup rescales when the display scale changes" {
         $report = Join-Path $env:TEMP "aura-layout.txt"
         Remove-Item $report -Force -ErrorAction SilentlyContinue
@@ -766,6 +780,34 @@ Test-Case "the window comes back to the same size after a round trip" {
         if ($widths[0] -ne $widths[1]) {
             throw "width $($widths[0]) px on the way out, $($widths[1]) px on the way back"
         }
+    }
+    finally {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        [void]$process.WaitForExit(5000)
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# The complaint before this fix: the layout only caught up once the mouse button came back up,
+# so a window dragged onto a second monitor sat clipped for as long as the drag lasted.
+# "-review layout 200" simulates WM_DPICHANGED arriving while the window is still between
+# WM_ENTERSIZEMOVE and WM_EXITSIZEMOVE - the 250 ms pass ("dragging") already has to show the
+# new dpi and no overflow, not just the later ones taken after the simulated release.
+Test-Case "the layout catches up mid-drag, not only after release" {
+    $report = Join-Path $env:TEMP "aura-layout.txt"
+    Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+    $process = Start-Process $Exe -ArgumentList "-review", "layout", "200" -PassThru
+    try {
+        Start-Sleep -Seconds 5
+        if (-not (Test-Path $report)) { throw "no layout report was written" }
+
+        $dragging = (Get-Content $report -Raw) -split "--- " |
+            Where-Object { $_ -match "^250 ms after the move to 200% \(dragging\)" }
+        if (-not $dragging) { throw "no 250 ms (dragging) pass in the report" }
+
+        if ($dragging -notmatch "dpi\s+192") { throw "still the old dpi while dragging:`n$dragging" }
+        if ($dragging -match "CLIPPED|OVERFLOW") { throw "clipped while dragging:`n$dragging" }
     }
     finally {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
@@ -841,6 +883,98 @@ foreach ($scale in 100, 125, 200) {
             [void]$process.WaitForExit(5000)
             Remove-Item $report -Force -ErrorAction SilentlyContinue
         }
+    }
+}
+
+# The complaint: with the window snapped flush against the screen's right edge, the settings panel
+# used to land noticeably short of the toggle button, leaving a strip of it visible past the panel's
+# own right edge - PopupForm.OnScreen's screen-edge safety margin was eating into the anchor, and
+# the anchor itself stopped at the gear rather than the window edge. Later complaint, on a
+# multi-monitor layout: the panel landed roughly centred under the gear with most of it hanging off
+# the window, because SettingsPopup.Open resolved the screen from a point already shifted left by
+# the panel's own width, which can land on the wrong monitor. Last one, again on a second monitor:
+# the panel is fitted at the scale of the display it was created on and re-fitted at the owner's,
+# and only its left edge was ever placed - so the wider panel grew rightwards and sat centred under
+# the gear. "-review gear" snaps the window to the edge itself, reopens the panel at each scale and
+# then re-fits it half again as wide, so all three are a check here rather than something only a
+# real monitor edge or a specific multi-monitor layout could show; DescribeSettingsAnchor itself
+# flags either failure as CLIPPED or OVERFLOW.
+Test-Case "the settings panel sits a few px inside the window edge and covers the button whole when snapped to the edge" {
+    $report = Join-Path $env:TEMP "aura-gear.txt"
+    Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+    $process = Start-Process $Exe -ArgumentList "-review", "gear", "125,150,200" -PassThru
+    try {
+        Start-Sleep -Seconds 8
+        if (-not (Test-Path $report)) { throw "no gear report was written" }
+
+        $blocks = @((Get-Content $report -Raw) -split "--- " | Where-Object { $_.Trim() })
+        if ($blocks.Count -lt 8) {
+            throw "expected 8 blocks (as opened, 125%, 150%, 200%, each also refitted), got $($blocks.Count):`n$($blocks -join "`n")"
+        }
+
+        foreach ($block in $blocks) {
+            if ($block -match "CLIPPED|OVERFLOW") { throw "panel drifted from the window edge:`n$block" }
+            if ($block -notmatch "panel\.Right - window\.Right\s+(-?\d+)\s+\(expected (-?\d+)\)") {
+                throw "no panel.Right - window.Right line in:`n$block"
+            }
+            if ([int]$Matches[1] -gt 0) {
+                throw "panel.Right - window.Right was $($Matches[1]), past the window's right edge:`n$block"
+            }
+            if ($block -notmatch "panel\.Right - toggle\.Right\s+(-?\d+)") {
+                throw "no panel.Right - toggle.Right line in:`n$block"
+            }
+            if ([int]$Matches[1] -le 0) {
+                throw "panel.Right - toggle.Right was $($Matches[1]), a strip of the button stays visible:`n$block"
+            }
+        }
+    }
+    finally {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        [void]$process.WaitForExit(5000)
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# The complaint: the F2/Delete and effect-hint tooltip still showed as the plain white system box
+# in dark mode, even though its BackColor/ForeColor were already set to match - Windows ignores
+# both while visual styles are active unless the tooltip draws itself. "-review tip" renders the
+# same Draw handler onto a bitmap instead of a live system tooltip, which only ever paints for the
+# foreground window and cannot be relied on headless; the corner pixel is the panel's own fill
+# colour with nothing else drawn over it yet, so it stands in for "did this draw itself at all".
+Test-Case "the effect-list tooltip actually draws in the current theme" {
+    $png = Join-Path $env:TEMP "aura-tip.png"
+    Remove-Item $png -Force -ErrorAction SilentlyContinue
+
+    $process = Start-Process $Exe -ArgumentList "-review", "tip" -PassThru
+    try {
+        Start-Sleep -Seconds 3
+        if (-not (Test-Path $png)) { throw "no aura-tip.png was written" }
+
+        Add-Type -AssemblyName System.Drawing
+        $bmp = [System.Drawing.Bitmap]::new($png)
+        try {
+            $corner = $bmp.GetPixel(2, 2)
+        }
+        finally {
+            $bmp.Dispose()
+        }
+
+        # Same registry value and same "missing means light" default as Theme.AppsUseDarkTheme.
+        $appsUseLight = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" `
+            -Name AppsUseLightTheme -ErrorAction SilentlyContinue).AppsUseLightTheme
+        $dark = $appsUseLight -eq 0
+        $expected = if ($dark) { [System.Drawing.Color]::FromArgb(45, 47, 51) } else { [System.Drawing.Color]::White }
+
+        if ($corner.R -ne $expected.R -or $corner.G -ne $expected.G -or $corner.B -ne $expected.B) {
+            $theme = if ($dark) { "dark" } else { "light" }
+            throw "tooltip background was $($corner.R),$($corner.G),$($corner.B), expected $($expected.R),$($expected.G),$($expected.B) ($theme theme)"
+        }
+    }
+    finally {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        [void]$process.WaitForExit(5000)
+        Remove-Item $png -Force -ErrorAction SilentlyContinue
     }
 }
 
