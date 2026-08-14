@@ -133,7 +133,7 @@ REM then looks for a file whose name ends in a carriage return and reports every
 echo.
 echo Checksums:
 REM %ROOT% is passed as a script argument, not spliced into the PowerShell source: a checkout
-REM path with an apostrophe (C:\Ben's Projekte\...) used to close the single-quoted string early
+REM path with an apostrophe (C:\Bob's Projects\...) used to close the single-quoted string early
 REM and run the rest of the path as PowerShell code.
 powershell -NoProfile -Command "& { param($root) $h = Get-ChildItem -LiteralPath $root -File -Filter *.exe | ForEach-Object { [pscustomobject]@{ H = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(); N = $_.Name } }; $h | ForEach-Object { '  {0}  {1}' -f $_.H, $_.N }; [IO.File]::WriteAllText((Join-Path $root 'SHA256SUMS.txt'), (($h | ForEach-Object { '{0}  {1}' -f $_.H, $_.N }) -join [string][char]10) + [char]10, [Text.Encoding]::ASCII) }" "%ROOT%dist"
 exit /b 0

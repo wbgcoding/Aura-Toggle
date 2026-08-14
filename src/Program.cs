@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -141,16 +142,19 @@ internal static class Program
 
     /// <summary>
     /// Shows one surface standalone: "settings" (the gear panel, hotkey row forced visible
-    /// regardless of the real setting) or "error" (a sample <see cref="ErrorDialog"/>, no real
-    /// exception involved). Interacting with the settings panel still saves to the real
-    /// settings.json, same as it would from the main window - this is a shortcut to the real
-    /// control, not a sandboxed mock of it.
+    /// regardless of the real setting), "error" (a sample <see cref="ErrorDialog"/>, no real
+    /// exception involved), "gear" (the real window and its settings panel together, to measure
+    /// how the panel sits against the gear and the toggle button it opened from), or "tip" (the
+    /// real effect list with its first hinted row's tooltip already showing, since the review
+    /// harness cannot reliably hover this control). Interacting with the settings panel still
+    /// saves to the real settings.json, same as it would from the main window - this is a shortcut
+    /// to the real control, not a sandboxed mock of it.
     /// </summary>
     private static int RunReview(string surface, string argument)
     {
-        if (surface is not ("settings" or "error" or "editor" or "layout"))
+        if (surface is not ("settings" or "error" or "editor" or "layout" or "update" or "gear" or "tip"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|layout [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip [scale%]");
             return 2;
         }
 
@@ -162,6 +166,11 @@ internal static class Program
         if (surface == "layout")
         {
             return ReviewLayout(argument);
+        }
+
+        if (surface == "gear")
+        {
+            return ReviewGear(argument);
         }
 
         Form? shown = null;
@@ -178,6 +187,47 @@ internal static class Program
             shown = ErrorDialog.Report(
                 new IOException("Sample error for review - the LED controller did not answer in time."),
                 "Review", owner: null, onClosed: Application.Exit, requireMessageLoop: false);
+        }
+        else if (surface == "update")
+        {
+            // A made-up version, no network access - this is the review surface, not a real check.
+            var popup = new UpdatePopup("9.9.9", installed: true);
+            popup.FormClosed += (_, _) => Application.Exit();
+            popup.Open(owner: null);
+            shown = popup;
+        }
+        else if (surface == "tip")
+        {
+            // The real effect list and its real hints, so both the window and the rendered proof
+            // below show what a user actually reads, not a placeholder string.
+            var items = AuraPresets.All
+                .Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode, Hint: p.HintText))
+                .ToList();
+            var popup = new SelectPopup(items, items[0], Color.White, 260, Theme.Ui, 96)
+            {
+                KeepOpenOnDeactivate = true,
+            };
+            popup.FormClosed += (_, _) => Application.Exit();
+            popup.Open(new Point(60, 60), owner: null, flipAbove: 0);
+
+            popup.Shown += (_, _) =>
+            {
+                // A manually shown ToolTip only ever paints for the foreground window, which a
+                // headless/automated session does not reliably hand a freshly opened one - shown
+                // for anyone testing this by hand, but %TEMP%\aura-tip.png below is what actually
+                // proves the colours: RenderTipForReview calls the exact same drawing code onto a
+                // bitmap, with nothing about window focus in the way.
+                popup.ShowTipForReview();
+
+                using var bmp = new Bitmap(280, 40);
+                using (Graphics g = Graphics.FromImage(bmp))
+                {
+                    popup.RenderTipForReview(g, new Rectangle(0, 0, 280, 40), items[0].Hint!);
+                }
+
+                bmp.Save(Path.Combine(Path.GetTempPath(), "aura-tip.png"), ImageFormat.Png);
+            };
+            shown = popup;
         }
         else
         {
@@ -255,7 +305,7 @@ internal static class Program
     /// <c>%TEMP%\aura-layout.txt</c> - this is a WinExe, so when it is started by anything that
     /// owns no console (a scheduled task, a test runner) the console output goes nowhere.
     /// </summary>
-    private static void WriteReport(List<string> reports, string heading, string body)
+    private static void WriteReport(List<string> reports, string heading, string body, string fileName = "aura-layout.txt")
     {
         string report = $"--- {heading} ---{Environment.NewLine}{body}";
         WriteLine(report);
@@ -263,7 +313,7 @@ internal static class Program
 
         try
         {
-            File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-layout.txt"),
+            File.WriteAllText(Path.Combine(Path.GetTempPath(), fileName),
                 string.Join(Environment.NewLine, reports));
         }
         catch (Exception ex) when (AuraFiles.IsExpected(ex))
@@ -323,6 +373,85 @@ internal static class Program
         return 0;
     }
 
+    /// <summary>
+    /// Opens the real window then its settings panel exactly as a gear click would, and prints the
+    /// gear/toggle/panel geometry - the regression proof for the panel leaving a strip of the big
+    /// button visible on its right, without a controller and without reading pixels off a
+    /// screenshot.
+    /// </summary>
+    private static int ReviewGear(string scaleArgument)
+    {
+        ToggleForm.ReviewDevices = ReviewControllers();
+
+        var form = new ToggleForm();
+        var reports = new List<string>();
+
+        void Report(string heading) => WriteReport(reports, heading, form.DescribeSettingsAnchor(), "aura-gear.txt");
+
+        // Snaps the window flush against the screen's right edge - an Aero-snapped or dragged-to-
+        // the-edge window, which is what actually triggers PopupForm.OnScreen's clamp and the
+        // reported sliver of the toggle button staying visible next to the panel. Centred, the
+        // panel never gets near the clamp and the report would read all zeroes. Anchored on the
+        // client area's right edge - the same one the panel hangs from - rather than the window's
+        // outer bounds, which include DWM's invisible resize border and were off by two dozen px in
+        // practice; tracked through Resize because the window still has measuring left to do at this
+        // point, same reason as ReviewLayout's first yield.
+        async Task SnapAndReopenSettings(string heading)
+        {
+            form.CloseSettingsForReview();
+
+            void SnapToRightEdge(object? s, EventArgs e)
+            {
+                Rectangle screen = Screen.FromControl(form).WorkingArea;
+                int shift = screen.Right - form.RectangleToScreen(form.ClientRectangle).Right;
+                form.Location = new Point(form.Location.X + shift, form.Location.Y);
+            }
+
+            SnapToRightEdge(null, EventArgs.Empty);
+            form.Resize += SnapToRightEdge;
+            await Task.Delay(300);
+            form.Resize -= SnapToRightEdge;
+
+            form.OpenSettingsForReview();
+            await Task.Yield();
+            Report(heading);
+
+            // The panel is its own top-level window, so a simulated move only ever changes the main
+            // window's scale - the panel keeps the real screen's dpi and never re-fits, which is
+            // exactly the step that used to walk it out from under the gear on a second monitor.
+            // Re-fitting it half again as wide stands in for that resize on a single screen.
+            form.RefitSettingsForReview(150);
+            await Task.Yield();
+            Report($"{heading}, panel refitted 150 % wider");
+        }
+
+        form.Shown += async (_, _) =>
+        {
+            await Task.Yield();
+            await SnapAndReopenSettings($"as opened, {form.DeviceDpi * 100 / 96}%, snapped to the right screen edge");
+
+            // Each scale is a fresh gear click after the simulated move settles, not a read of the
+            // panel that was already open - the panel is an owned top-level window, not a child of
+            // the main one, so Windows never moves it along on its own and reading its stale
+            // position would report a huge, unrelated misalignment instead of this bug.
+            Queue<int> scales = ParseScales(scaleArgument);
+            while (scales.Count > 0)
+            {
+                int scale = scales.Dequeue();
+                var settled = new TaskCompletionSource();
+                MoveToSimulatedScale(form, scale, _ => { }, () => settled.TrySetResult());
+                await settled.Task;
+                await SnapAndReopenSettings($"reopened at {scale}%, snapped to the right screen edge");
+            }
+
+            // Left open on purpose, same as ReviewLayout - the numbers above say whether the panel
+            // clips the button, the window itself is what shows how it actually looks.
+        };
+
+        Application.Run(form);
+        return 0;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct Rect
     {
@@ -332,18 +461,20 @@ internal static class Program
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr wParam, ref Rect lParam);
 
+    /// <summary>The two parameterless messages below take no rectangle, unlike WM_DPICHANGED.</summary>
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
     /// <summary>Windows' "your window is now on a display at another scale" notification.</summary>
     private const uint DpiChangedMessage = 0x02E0;
 
-    /// <summary>
-    /// Puts the window through exactly what dragging it onto a second monitor at
-    /// <paramref name="scale"/> percent does - the message Windows itself sends, with the window
-    /// rectangle it would suggest - and reports what the layout measured afterwards. The point of
-    /// doing it this way: the process keeps the system dpi it started with, so the mismatch
-    /// between window dpi and text dpi that only ever appeared on a real second monitor is
-    /// reproduced on a single display, and a "cut off on the right" report becomes a number here
-    /// instead of something only a second physical monitor could show.
-    /// </summary>
+    /// <summary>Windows' "the user just started/stopped dragging or resizing this window"
+    /// notifications - sent here around <see cref="DpiChangedMessage"/> so a scale change mid-drag
+    /// is reproduced without a second monitor (see <see cref="ToggleForm.SettleAfterDpiChange"/>).</summary>
+    private const uint EnterSizeMoveMessage = 0x0231;
+
+    private const uint ExitSizeMoveMessage = 0x0232;
+
     /// <summary>
     /// Walks the window through several scales in turn, so a round trip - out to the second
     /// monitor and back - is one run. A window that does not come back to the size it started at
@@ -359,6 +490,18 @@ internal static class Program
         MoveToSimulatedScale(form, scales.Dequeue(), report, () => MoveThroughScales(form, scales, report));
     }
 
+    /// <summary>
+    /// Puts the window through exactly what dragging it onto a second monitor at
+    /// <paramref name="scale"/> percent does - the messages Windows itself sends, with the window
+    /// rectangle it would suggest - and reports what the layout measured afterwards. The point of
+    /// doing it this way: the process keeps the system dpi it started with, so the mismatch
+    /// between window dpi and text dpi that only ever appeared on a real second monitor is
+    /// reproduced on a single display, and a "cut off on the right" report becomes a number here
+    /// instead of something only a second physical monitor could show. WM_DPICHANGED arrives while
+    /// WM_ENTERSIZEMOVE is still in effect and WM_EXITSIZEMOVE does not follow until well after -
+    /// a real drag between two monitors crosses the scale change with the mouse button still
+    /// down, which is the case that used to wait for a release that had not happened yet.
+    /// </summary>
     private static void MoveToSimulatedScale(Form form, int scale, Action<string> report, Action? next = null)
     {
         int target = 96 * scale / 100;
@@ -372,11 +515,16 @@ internal static class Program
             Bottom = bounds.Top + bounds.Height * target / from,
         };
 
+        SendMessage(form.Handle, EnterSizeMoveMessage, IntPtr.Zero, IntPtr.Zero);
         SendMessage(form.Handle, DpiChangedMessage, new IntPtr((target << 16) | target), ref suggested);
 
         // The window re-measures itself on a timer after a scale change, so one reading straight
-        // afterwards proves nothing; these cover every attempt it makes plus a margin.
+        // afterwards proves nothing; these cover every attempt it makes plus a margin. The
+        // simulated drag stays "in progress" through the 600 ms pass, then releases - so the same
+        // run proves both halves: the layout catching up while still dragging, and the final
+        // settle once WM_EXITSIZEMOVE follows.
         var passes = new Queue<int>(new[] { 0, 250, 600, 1200, 2000 });
+        bool dragging = true;
         var clock = new System.Windows.Forms.Timer { Interval = 50 };
         int elapsed = 0;
         clock.Tick += (_, _) =>
@@ -397,7 +545,14 @@ internal static class Program
 
             if (elapsed >= passes.Peek())
             {
-                report($"{passes.Dequeue()} ms after the move to {scale}%");
+                int pass = passes.Dequeue();
+                report($"{pass} ms after the move to {scale}% ({(dragging ? "dragging" : "released")})");
+
+                if (dragging && pass == 600)
+                {
+                    dragging = false;
+                    SendMessage(form.Handle, ExitSizeMoveMessage, IntPtr.Zero, IntPtr.Zero);
+                }
             }
         };
         clock.Start();
@@ -495,7 +650,13 @@ internal static class Program
 
         if (command == "custom" && rest.Count == 2)
         {
-            CustomPreset? custom = AuraCustomPresets.Load().Find(p => p.Name == rest[1]);
+            // By name first, since that is unambiguous; a name has to lose to a number that
+            // happens to also be a preset's name, but not the other way round - PrintList's own
+            // numbering only stays valid for as long as nothing is added, removed or reordered.
+            List<CustomPreset> presets = AuraCustomPresets.Load();
+            CustomPreset? custom = presets.Find(p => p.Name == rest[1]) ??
+                (int.TryParse(rest[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int index)
+                    && index >= 1 && index <= presets.Count ? presets[index - 1] : null);
             if (custom == null)
             {
                 return Usage();
@@ -790,7 +951,8 @@ internal static class Program
         WriteLine(Row($"-brightness <{AuraState.MinBrightness}-{AuraState.MaxBrightness}>",
             "Set the brightness in percent. Does nothing for the"));
         WriteLine(Row("", "effects the firmware colours itself."));
-        WriteLine("  -custom <name>          Apply a custom preset saved in the window.");
+        WriteLine("  -custom <name|number>   Apply a custom preset saved in the window, by name or by");
+        WriteLine(Row("", "its number from -list."));
         WriteLine("  -list                   List every controller and channel with its identifiers.");
         WriteLine(Row("-status [--json]", "Print the effect, colour, brightness and state per"));
         WriteLine(Row("", "channel, as text or as one line of JSON."));

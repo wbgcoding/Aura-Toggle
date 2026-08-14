@@ -16,7 +16,6 @@ internal sealed class SettingsPopup : PopupForm
     private readonly ToggleSwitch _minimiseOnClose = new();
     private readonly ToggleSwitch _animate = new();
     private readonly ToggleSwitch _alwaysOnTop = new();
-    private readonly ToggleSwitch _checkUpdates = new();
     private readonly Select _startAction = new();
     private readonly Select _language = new();
     private readonly ToggleSwitch _hotkeyEnabled = new();
@@ -30,7 +29,6 @@ internal sealed class SettingsPopup : PopupForm
     private readonly Label _minimiseOnCloseLabel;
     private readonly Label _animateLabel;
     private readonly Label _alwaysOnTopLabel;
-    private readonly Label _checkUpdatesLabel;
     private readonly Label _hotkeyLabel;
     private readonly Layout _layout;
 
@@ -38,9 +36,37 @@ internal sealed class SettingsPopup : PopupForm
     private bool _recordingHotkey;
     private int _pendingHotkey;
 
+    /// <summary>
+    /// <see cref="Environment.TickCount64"/> of the last change this panel itself applied - a
+    /// switch's own <c>Changed</c> handler in <see cref="ToggleForm"/> can reassign
+    /// <c>TopMost</c> or otherwise touch the main window, and Windows activates that window for
+    /// some of those touches without <c>SWP_NOACTIVATE</c>. <see cref="OnDeactivate"/> treats an
+    /// activation this soon after as the panel's own change stealing focus back, not the user
+    /// clicking away.
+    /// </summary>
+    private long _appliedAt;
+
+    private const int ReactivateWindowMs = 300;
+
     /// <summary>Every scaled distance this panel sets, so a display-scale change can put them all
     /// back at the new scale instead of leaving the rows measured for the old one.</summary>
     private readonly ScaledMetrics _metrics = new();
+
+    /// <summary>
+    /// Where <see cref="Open"/> was told to put the panel's right edge and top, and the monitor to
+    /// clamp both against. Kept because the panel is re-fitted after it has been placed - a monitor
+    /// at a different scale than the one the panel was created on hands back a different width -
+    /// and every one of those re-fits has to put the right edge back on the same screen coordinate.
+    /// </summary>
+    private Point _anchor;
+
+    private Rectangle _anchorScreen;
+
+    private bool _anchored;
+
+    /// <summary>Review mode only: the percentage of its measured width the panel is fitted to,
+    /// standing in for the resize a move to a differently scaled monitor triggers.</summary>
+    private int _reviewWidthPercent = 100;
 
     public SettingsPopup(AuraSettings settings)
     {
@@ -59,7 +85,7 @@ internal sealed class SettingsPopup : PopupForm
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 13,
+            RowCount = 12,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -73,23 +99,22 @@ internal sealed class SettingsPopup : PopupForm
         _minimiseOnCloseLabel = AddSwitch(1, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
         _animateLabel = AddSwitch(2, Strings.SettingAnimate, _animate, settings.Animate);
         _alwaysOnTopLabel = AddSwitch(3, Strings.SettingAlwaysOnTop, _alwaysOnTop, settings.AlwaysOnTop);
-        _checkUpdatesLabel = AddSwitch(4, Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
 
-        _startActionLabel = AddLabel(5, Strings.SettingStartAction);
-        AddSelect(6, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
+        _startActionLabel = AddLabel(4, Strings.SettingStartAction);
+        AddSelect(5, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
         UpdateStartActionVisibility();
 
-        _languageLabel = AddLabel(7, Strings.SettingLanguage);
-        AddSelect(8, _language, Strings.SettingLanguage, Languages(), settings.Language);
+        _languageLabel = AddLabel(6, Strings.SettingLanguage);
+        AddSelect(7, _language, Strings.SettingLanguage, Languages(), settings.Language);
 
-        _hotkeyLabel = AddSwitch(9, Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
-        AddButton(10, _hotkeyRecord, HotkeyText(_pendingHotkey), Theme.NeutralSoft, Theme.Text);
+        _hotkeyLabel = AddSwitch(8, Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
+        AddButton(9, _hotkeyRecord, HotkeyText(_pendingHotkey), Theme.NeutralSoft, Theme.Text);
         _hotkeyRecord.Visible = settings.HotkeyEnabled;
-        _hotkeyHint = AddLabel(11, Strings.SettingHotkeyConflict);
+        _hotkeyHint = AddLabel(10, Strings.SettingHotkeyConflict);
         _hotkeyHint.ForeColor = Theme.Danger;
         _hotkeyHint.Visible = false;
 
-        AddButton(12, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
+        AddButton(11, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
 
@@ -98,6 +123,7 @@ internal sealed class SettingsPopup : PopupForm
 
         _autoStart.CheckedChanged += (_, _) =>
         {
+            _appliedAt = Environment.TickCount64;
             AuraSettings.AutoStart = _autoStart.Checked;
             UpdateStartActionVisibility();
             FitToContent();
@@ -105,7 +131,6 @@ internal sealed class SettingsPopup : PopupForm
         _minimiseOnClose.CheckedChanged += (_, _) => Apply();
         _animate.CheckedChanged += (_, _) => Apply();
         _alwaysOnTop.CheckedChanged += (_, _) => Apply();
-        _checkUpdates.CheckedChanged += (_, _) => Apply();
         _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
         _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
 
@@ -123,13 +148,30 @@ internal sealed class SettingsPopup : PopupForm
     /// </summary>
     private void FitToContent()
     {
+        int width = Math.Max(this.Scaled(276), _layout.PreferredSize.Width + Padding.Horizontal);
+
         ClientSize = new Size(
-            Math.Max(this.Scaled(276), _layout.PreferredSize.Width + Padding.Horizontal),
+            width * _reviewWidthPercent / 100,
             _layout.PreferredSize.Height + Padding.Vertical);
 
-        // Switching the hotkey on adds a whole row after the panel was already placed; near the
-        // bottom of the screen that used to push Reset under the taskbar.
-        KeepOnScreen();
+        // Every re-fit puts the right edge back where Open() asked for it, rather than leaving the
+        // left one where a differently sized panel had been placed. Two things resize the panel
+        // after it was placed: switching the hotkey on adds a whole row (near the bottom of the
+        // screen that used to push Reset under the taskbar), and being shown on a monitor at
+        // another scale than the one it was created on re-fits it at that scale. The second one is
+        // what left the panel roughly centred under the gear on a second monitor - it was placed at
+        // its old, narrower width and then grew rightwards past the window. Before the first Open
+        // there is no anchor to hold yet, so the panel only has to stay on screen.
+        if (_anchored)
+        {
+            PlaceAtAnchor();
+        }
+        else
+        {
+            // No horizontal margin, same reason as Open() below - re-clamping with the default
+            // margin would pull the panel back off the window edge it was lined up with.
+            KeepOnScreen(horizontalMargin: 0);
+        }
     }
 
     /// <summary>
@@ -274,6 +316,7 @@ internal sealed class SettingsPopup : PopupForm
     /// least one modifier held becomes the new combination. Escape cancels.</summary>
     private void StartRecordingHotkey()
     {
+        _appliedAt = Environment.TickCount64;
         _recordingHotkey = true;
         _hotkeyHint.Visible = false;
         _hotkeyRecord.Text = Strings.HotkeyRecordPrompt;
@@ -337,6 +380,7 @@ internal sealed class SettingsPopup : PopupForm
 
     private void Apply()
     {
+        _appliedAt = Environment.TickCount64;
         bool languageChanged = Settings.Language != (_language.Selected?.Key ?? AuraSettings.LanguageAuto);
         _hotkeyHint.Visible = false;
         _hotkeyRecord.Visible = _hotkeyEnabled.Checked;
@@ -354,7 +398,6 @@ internal sealed class SettingsPopup : PopupForm
                 MinimiseOnClose = _minimiseOnClose.Checked,
                 Animate = _animate.Checked,
                 AlwaysOnTop = _alwaysOnTop.Checked,
-                CheckUpdates = _checkUpdates.Checked,
                 StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
                 Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
                 HotkeyEnabled = _hotkeyEnabled.Checked,
@@ -384,8 +427,6 @@ internal sealed class SettingsPopup : PopupForm
         _animate.AccessibleName = Strings.SettingAnimate;
         _alwaysOnTopLabel.Text = Strings.SettingAlwaysOnTop;
         _alwaysOnTop.AccessibleName = Strings.SettingAlwaysOnTop;
-        _checkUpdatesLabel.Text = Strings.SettingCheckUpdates;
-        _checkUpdates.AccessibleName = Strings.SettingCheckUpdates;
         _hotkeyLabel.Text = Strings.SettingHotkey;
         _hotkeyEnabled.AccessibleName = Strings.SettingHotkey;
         _startActionLabel.Text = Strings.SettingStartAction;
@@ -413,11 +454,47 @@ internal sealed class SettingsPopup : PopupForm
     /// </summary>
     public void Open(Point at, IWin32Window owner)
     {
-        // Right edge under the gear, so the panel hangs from the corner it was opened from.
-        Place(new Point(at.X - Width, at.Y));
+        // Right edge on at.X, which already sits a few pixels inside the window's own right edge
+        // (see ToggleForm.OnSettingsClick), so the panel covers the button below the gear whole and
+        // keeps exactly that gap, never more: no extra horizontal screen margin on top of it.
+        //
+        // The screen to clamp against is resolved from the owner window itself, not from this
+        // already-shifted point: on a monitor placed to the left of the one the window is really
+        // on, subtracting this panel's own width from at.X can walk the point onto that other
+        // monitor, and clamping against ITS bounds is what put the panel nowhere near the gear at
+        // all - roughly centred under it with most of it hanging off the window, on exactly one
+        // monitor in a multi-monitor layout and nowhere else, which is what made it so easy to
+        // miss until someone had that layout.
+        _anchor = at;
+        _anchorScreen = Screen.FromHandle(owner.Handle).WorkingArea;
+        _anchored = true;
 
+        PlaceAtAnchor();
         Show(owner);
         Activate();
+
+        // Showing it on the owner's monitor can put it on another scale than the one it was built
+        // at, which re-fits it to a different width - and the placement above used the old one.
+        PlaceAtAnchor();
+    }
+
+    /// <summary>
+    /// Puts the panel's right edge back on the screen coordinate <see cref="Open"/> was given, at
+    /// whatever width the panel currently has.
+    /// </summary>
+    private void PlaceAtAnchor() =>
+        Place(new Point(_anchor.X - Width, _anchor.Y), horizontalMargin: 0, screen: _anchorScreen);
+
+    /// <summary>
+    /// Review mode only: re-fits the panel at <paramref name="percent"/> of its measured width, the
+    /// way a move onto a monitor at another scale does - the regression proof that a resize after
+    /// placement keeps the right edge against the window instead of walking the panel out from
+    /// under the gear.
+    /// </summary>
+    internal void RefitForReview(int percent)
+    {
+        _reviewWidthPercent = percent;
+        FitToContent();
     }
 
     /// <summary>
@@ -465,10 +542,22 @@ internal sealed class SettingsPopup : PopupForm
 
         // A child popup (an effect list, the preset editor) is a window of its own; opening
         // one must not dismiss this panel.
-        if (!_childOpen && !KeepOpenOnDeactivate)
+        if (_childOpen || KeepOpenOnDeactivate)
         {
-            Close();
+            return;
         }
+
+        // One of this panel's own switches just touched the main window (TopMost above all) and
+        // that activated it instead of the user clicking away - reclaim activation instead of
+        // reading it as a dismissal. Reset itself is exempt: closing there is the action, not an
+        // option, same as the comment above already treats a child popup.
+        if (Environment.TickCount64 - _appliedAt < ReactivateWindowMs)
+        {
+            Activate();
+            return;
+        }
+
+        Close();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

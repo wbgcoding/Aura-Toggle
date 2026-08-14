@@ -54,7 +54,7 @@
     <value>Mainboard-Beleuchtung ein- oder ausschalten</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Aufruf: AuraToggle [-on | -off | -preset &lt;Name&gt; [Farbe] | -brightness &lt;10-100&gt; | -custom &lt;Name&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;Ziel&gt;]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
+    <value>Aufruf: AuraToggle [-on | -off | -preset &lt;Name&gt; [Farbe] | -brightness &lt;10-100&gt; | -custom &lt;Name|Nummer&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;Ziel&gt;]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
     <value>Voreinstellungen: {0}</value>
@@ -173,9 +173,6 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Immer im Vordergrund</value>
   </data>
-  <data name="SettingCheckUpdates" xml:space="preserve">
-    <value>Nach Aktualisierungen suchen</value>
-  </data>
   <data name="TrayUpdateInstall" xml:space="preserve">
     <value>Version {0} installieren</value>
   </data>
@@ -187,6 +184,21 @@
   </data>
   <data name="TrayUpdateFailed" xml:space="preserve">
     <value>Die Aktualisierung konnte nicht heruntergeladen oder gepr&#252;ft werden.</value>
+  </data>
+  <data name="UpdateNoticeTitle" xml:space="preserve">
+    <value>Aktualisierung verf&#252;gbar</value>
+  </data>
+  <data name="UpdateNoticeBody" xml:space="preserve">
+    <value>Version {0} ist da - installiert ist noch {1}.</value>
+  </data>
+  <data name="UpdateNoticeInstall" xml:space="preserve">
+    <value>Jetzt aktualisieren</value>
+  </data>
+  <data name="UpdateNoticeOpenPage" xml:space="preserve">
+    <value>Release-Seite &#246;ffnen</value>
+  </data>
+  <data name="UpdateNoticeLater" xml:space="preserve">
+    <value>Sp&#228;ter</value>
   </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Sprache</value>

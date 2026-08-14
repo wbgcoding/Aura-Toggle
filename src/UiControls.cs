@@ -615,6 +615,10 @@ internal sealed class SelectPopup : PopupForm
         Font = font;
         Measure();
 
+        // Left at its default, the tooltip is the system's own plain white box - jarring next to
+        // this list's own dark, rounded surface.
+        Theme.StyleToolTip(_shortcutTip);
+
         // A placeholder height, good enough until Open() knows which screen this actually opens
         // on and sizes it for real - the constructor cannot know that yet, and guessing the
         // primary screen was wrong on a second monitor with a shorter work area.
@@ -808,10 +812,55 @@ internal sealed class SelectPopup : PopupForm
         Activate();
     }
 
+    /// <summary>
+    /// Review mode only: shows the tooltip on the first row that has one, the same way hovering it
+    /// would - so the dark-tooltip fix can be screenshotted directly instead of trusted by reading
+    /// the code, and the effect list itself does not need a mouse hover the review harness cannot
+    /// send reliably (see <c>WORK.md</c> notes on UI Automation and this app's controls).
+    /// </summary>
+    internal void ShowTipForReview()
+    {
+        int row = _items.FindIndex(item => item.Hint != null || item.Editable || item.Renamable);
+        if (row < 0)
+        {
+            return;
+        }
+
+        string tip = _items[row].Hint ?? Strings.PresetShortcutHint;
+        Rectangle rect = RowRect(row);
+        _tipRow = row;
+        _shortcutTip.Show(tip, this, rect.Left + 12, rect.Top + 20, 4000);
+    }
+
+    /// <summary>
+    /// Review mode only: renders exactly what <see cref="Theme.PaintToolTip"/> paints for a real
+    /// tooltip, onto a bitmap instead of a live system tooltip window - a manually shown
+    /// <see cref="ToolTip"/> only ever paints for the foreground window, which a headless/automated
+    /// session does not reliably hand a newly opened one, and <see cref="ShowTipForReview"/> alone
+    /// could not be proven on that surface. This calls the same drawing code either way.
+    /// </summary>
+    internal void RenderTipForReview(Graphics g, Rectangle bounds, string text)
+    {
+        Theme.PaintToolTip(new DrawToolTipEventArgs(g, this, this, bounds, text, Theme.Surface, Theme.Text, Font));
+    }
+
+    /// <summary>
+    /// Set only by <see cref="Program"/>'s review mode: with nothing else on screen to hold focus
+    /// first, anything stealing it (another window, another process) would otherwise close this
+    /// popup before <see cref="ShowTipForReview"/>'s tooltip is ever seen - same reason
+    /// <see cref="SettingsPopup"/> has one of its own.
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal bool KeepOpenOnDeactivate { private get; set; }
+
     protected override void OnDeactivate(EventArgs e)
     {
         base.OnDeactivate(e);
-        Close();
+
+        if (!KeepOpenOnDeactivate)
+        {
+            Close();
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -1025,9 +1074,11 @@ internal sealed class SelectPopup : PopupForm
 
             if (ButtonRect(row, 2).Contains(e.Location))
             {
-                // The list stays open, same as delete - Resync refills it and the duplicate
-                // appears in place, right where it was just created.
+                // Closes the list like edit does, straight into the new copy's editor - staying
+                // open just left the copy sitting unnoticed in a list the user had to dismiss
+                // by hand to see what they got.
                 DuplicateRequested?.Invoke(this, _items[index]);
+                Close();
                 return;
             }
         }
@@ -2541,6 +2592,62 @@ internal sealed class DeleteButton : FlatControl
         float m = Width * 0.28f;
         g.DrawLine(pen, m, m, Width - m, Height - m);
         g.DrawLine(pen, Width - m, m, m, Height - m);
+    }
+}
+
+/// <summary>
+/// Icon button for exporting or importing a custom preset as a <c>.json</c> file - a labelled
+/// tray arrow rather than a text button, so the pair fits next to the name field instead of a
+/// row of its own. The direction alone tells them apart, same as every other icon-only control
+/// here, so callers are expected to give each one a tooltip and an <see cref="Control.AccessibleName"/>.
+/// </summary>
+internal sealed class TransferButton : FlatControl
+{
+    public TransferButton()
+    {
+        Radius = 6;
+        DesignSize = new Size(26, 26);
+        AccessibleRole = AccessibleRole.PushButton;
+    }
+
+    /// <summary>True for import: an arrow pointing up, out of the tray - a file coming into the
+    /// app. False for export: an arrow pointing down, into the tray - the preset going out.</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Import { get; set; }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        Theme.Prepare(g);
+        g.Clear(BackColor);
+
+        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        using GraphicsPath path = Theme.RoundedRectangle(bounds, Radius);
+
+        if (Hovered)
+        {
+            using var brush = new SolidBrush(Theme.NeutralSoft);
+            g.FillPath(brush, path);
+        }
+
+        DrawFocusRing(g, path);
+
+        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, 1.5f * DeviceDpi / 96f)
+            { StartCap = LineCap.Round, EndCap = LineCap.Round };
+
+        float cx = Width / 2f;
+        float shaftTop = Height * 0.22f;
+        float shaftBottom = Height * 0.58f;
+        float head = Width * 0.15f;
+        float trayY = Height * 0.74f;
+        float trayHalf = Width * 0.24f;
+
+        (float from, float to) = Import ? (shaftBottom, shaftTop) : (shaftTop, shaftBottom);
+        g.DrawLine(pen, cx, from, cx, to);
+        g.DrawLine(pen, cx - head, to + (Import ? head : -head), cx, to);
+        g.DrawLine(pen, cx + head, to + (Import ? head : -head), cx, to);
+
+        g.DrawLine(pen, cx - trayHalf, trayY, cx + trayHalf, trayY);
     }
 }
 

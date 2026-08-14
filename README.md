@@ -19,7 +19,7 @@
 
 | | Aura Toggle | Armoury Crate | OpenRGB / SignalRGB |
 |---|---|---|---|
-| Size | ~580 KB | Hundreds of MB | Tens of MB and up |
+| Size | ~630 KB | Hundreds of MB | Tens of MB and up |
 | Background service | None | Always running | Usually running |
 | Device range | ASUS Aura mainboard lighting only | ASUS ecosystem | Many vendors, many device types |
 | Effects | 9 built-in, plus your own presets | ASUS's own effect set | Large effect libraries, often per-LED |
@@ -62,7 +62,7 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 - ⌨️ Full command line with exit codes — scheduled tasks, scripts, shortcuts
 - 🔥 A global hotkey, configurable, switches the whole board from anywhere
 - 🔒 No admin rights, no driver, no telemetry — the only network connection this tool ever makes
-  is an optional daily check for a newer release, on by default and one click to turn off
+  is a check for a newer release, at most once a day, and nothing downloads without a click
 
 ## 🚫 What it can't do
 
@@ -89,7 +89,7 @@ attached there, along with `SHA256SUMS.txt` to check them against.
 
 | | Size | Needs |
 |---|---|---|
-| **Portable** `AuraToggle.exe` | ~580 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| **Portable** `AuraToggle.exe` | ~630 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
 | **Installer** `AuraToggle-Setup-<version>.exe` | ~2.3 MB | Nothing — it fetches the runtime if you lack it |
 
 Portable: download, double click, done. Installer: for everyone or just for you, optional
@@ -136,12 +136,15 @@ unins000.exe /VERYSILENT                                     :: silent uninstall
    one header on its own, or set the whole board at once, which hands every channel back to the
    board-wide value.
 6. **⚙️ Gear** — autostart, minimise instead of close, lighting at start, a global hotkey,
-   animation on/off, always on top, checking for updates, language, reset everything back to
-   first-run defaults (which first zips every file it is about to touch into
-   `reset-backup.bak`, right next to them).
+   animation on/off, always on top, language, reset everything back to first-run defaults -
+   including your own custom presets - after first zipping every file it is about to delete into
+   `reset-backup.zip`, right next to them.
 
 Minimising sends the window to the notification area. Left click the icon there to toggle the
 lighting, double click to reopen the window, right click for the same options in a menu.
+
+The window reopens where and how wide you last left it — unless that spot belongs to a display
+that is no longer attached, in which case it centres itself rather than opening off-screen.
 
 ### Custom presets
 
@@ -170,7 +173,8 @@ AuraToggle.exe -preset rainbow            :: switch to an effect
 AuraToggle.exe -preset static "#20C0FF"   :: effect with a colour
 AuraToggle.exe -brightness 40             :: dim the colour effects, 10 to 100
 AuraToggle.exe -custom "Movie Night"      :: apply a preset saved in the window
-AuraToggle.exe -list                      :: number every controller and channel
+AuraToggle.exe -custom 1                  :: or by its number from -list
+AuraToggle.exe -list                      :: number every controller, channel and preset
 AuraToggle.exe -status                    :: current effect, colour, brightness, on/off
 AuraToggle.exe -status --json             :: the same, as one line of JSON for scripts
 AuraToggle.exe --version                  :: version number, nothing else
@@ -330,13 +334,16 @@ temporary file so an interrupted save cannot corrupt one, and uninstalling offer
 Nothing in there is ever sent anywhere, and your user name is replaced with `%USERPROFILE%` in
 anything the log or the error dialog writes out.
 
-At most once every 24 hours, and only with "Check for updates" on (the default, one click to turn
-off in the gear), the tool asks `api.github.com` for the latest release tag - nothing else is sent,
-not even a machine identifier. Finding a newer version only shows a tray notice and a "Install
-version …" entry in the tray menu; nothing downloads or runs until that is clicked, and the setup
-it fetches is checksummed against the same release's own `SHA256SUMS.txt` before it is allowed to
-run at all. The portable build has no self-update: it gets the same tray notice, with a link to the
-release page instead of an install entry.
+At most once every 24 hours the tool asks `api.github.com` for the latest release tag. Nothing else
+is sent — no machine identifier, no version history, no usage data. The check has no switch in the
+window; to turn it off, set `"checkUpdates": false` in `settings.json` in the folder above.
+
+Finding a newer version adds a tray notice and an "Install version …" entry to the tray menu, and,
+the first time the window is open to see it, a small popup with the same choice that closes itself
+after 30 seconds. Either one is offered once per version, not on every start. Nothing downloads or
+runs until "Install" is clicked, and the setup it fetches is checksummed against that release's own
+`SHA256SUMS.txt` before it is allowed to run at all. The portable build has no self-update: it gets
+the same notices, with a link to the release page instead of an install entry.
 
 ## 📄 Licence and trademarks
 
