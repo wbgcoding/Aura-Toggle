@@ -78,6 +78,14 @@ internal static class AuraFiles
             clean.Append(char.IsControl(c) ? ' ' : c);
         }
 
+        // An emoji is two chars, and cutting between them leaves half of one. That half is not
+        // valid text any more: Utf8JsonWriter refuses to write it, so the next save of the file
+        // this name came from would be dropped. Drop the half instead.
+        if (clean.Length > 0 && char.IsHighSurrogate(clean[^1]))
+        {
+            clean.Length--;
+        }
+
         return clean.ToString().Trim();
     }
 
