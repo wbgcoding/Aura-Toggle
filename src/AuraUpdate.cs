@@ -24,6 +24,9 @@ internal static class AuraUpdate
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(3);
 
+    /// <summary>Ceiling for anything this downloads. The setup is around 1.5 MB.</summary>
+    private const int MaxDownloadBytes = 64 * 1024 * 1024;
+
     /// <summary>
     /// Whether this process runs from an installed copy rather than a portable one - the
     /// installer always drops its uninstaller, <c>unins000.exe</c>, next to the exe; a portable
@@ -73,7 +76,7 @@ internal static class AuraUpdate
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 
             using HttpResponseMessage response = await client.GetAsync(ReleasesUrl);
-            if (!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode || !EndedOnTrustedHost(response))
             {
                 return null;
             }
@@ -142,10 +145,22 @@ internal static class AuraUpdate
     {
         try
         {
-            using var client = new HttpClient { Timeout = DownloadTimeout };
+            using var client = new HttpClient
+            {
+                Timeout = DownloadTimeout,
+                // The setup is a couple of megabytes. Reading a response into memory without a
+                // ceiling would let whatever answers decide how much this process allocates.
+                MaxResponseContentBufferSize = MaxDownloadBytes,
+            };
             client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("AuraToggle", Program.VersionText));
 
-            string checksums = await client.GetStringAsync(info.ChecksumUrl);
+            using HttpResponseMessage checksumResponse = await client.GetAsync(info.ChecksumUrl);
+            if (!checksumResponse.IsSuccessStatusCode || !EndedOnTrustedHost(checksumResponse))
+            {
+                return null;
+            }
+
+            string checksums = await checksumResponse.Content.ReadAsStringAsync();
             string fileName = Path.GetFileName(new Uri(info.InstallerUrl).LocalPath);
 
             string? expected = FindChecksum(checksums, fileName);
@@ -155,7 +170,13 @@ internal static class AuraUpdate
                 return null;
             }
 
-            byte[] data = await client.GetByteArrayAsync(info.InstallerUrl);
+            using HttpResponseMessage installerResponse = await client.GetAsync(info.InstallerUrl);
+            if (!installerResponse.IsSuccessStatusCode || !EndedOnTrustedHost(installerResponse))
+            {
+                return null;
+            }
+
+            byte[] data = await installerResponse.Content.ReadAsByteArrayAsync();
             string actual = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
 
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
@@ -222,10 +243,23 @@ internal static class AuraUpdate
     }
 
     private static bool IsTrustedDownloadUrl(string url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out Uri? parsed) &&
-        parsed.Scheme == Uri.UriSchemeHttps &&
-        (parsed.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
-         parsed.Host.EndsWith(".githubusercontent.com", StringComparison.OrdinalIgnoreCase));
+        Uri.TryCreate(url, UriKind.Absolute, out Uri? parsed) && IsTrustedHost(parsed);
+
+    private static bool IsTrustedHost(Uri uri) =>
+        uri.Scheme == Uri.UriSchemeHttps &&
+        (uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
+         uri.Host.Equals("api.github.com", StringComparison.OrdinalIgnoreCase) ||
+         uri.Host.EndsWith(".githubusercontent.com", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Where the request actually ended up. A release asset answers with a redirect to GitHub's
+    /// own object storage, so redirects have to be followed - but then the URL the release named
+    /// is no longer the host the bytes came from, and checking only that URL would miss a redirect
+    /// off to somewhere else entirely. That matters more here than anywhere: a setup and a
+    /// checksum file handed over by the same foreign server verify against each other perfectly.
+    /// </summary>
+    private static bool EndedOnTrustedHost(HttpResponseMessage response) =>
+        response.RequestMessage?.RequestUri is Uri final && IsTrustedHost(final);
 
     private static string Text(JsonElement element, string name) =>
         element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String

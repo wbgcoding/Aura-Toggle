@@ -40,7 +40,7 @@ internal static class AuraChannelNames
         }
         else
         {
-            names[key] = name.Trim();
+            names[key] = AuraFiles.Caption(name, AuraFiles.MaxChannelName);
         }
 
         Save(names);
@@ -62,7 +62,7 @@ internal static class AuraChannelNames
             {
                 if (property.Value.ValueKind == JsonValueKind.String)
                 {
-                    names[property.Name] = property.Value.GetString() ?? "";
+                    names[property.Name] = AuraFiles.Caption(property.Value.GetString() ?? "", AuraFiles.MaxChannelName);
                 }
             }
 

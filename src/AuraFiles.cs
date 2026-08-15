@@ -41,6 +41,46 @@ internal static class AuraFiles
         ? text.Replace(ProfileFolder, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase)
         : text;
 
+    /// <summary>How long a custom preset's name may be, in the editor and in <c>presets.json</c>.</summary>
+    public const int MaxPresetName = 40;
+
+    /// <summary>How long a user-chosen channel name may be, in the rename box and on disk.</summary>
+    public const int MaxChannelName = 30;
+
+    /// <summary>
+    /// How long a stored channel label may be - the display fallback for a controller that is not
+    /// connected right now. Longer than a channel name because it can carry the controller's own
+    /// product string as well.
+    /// </summary>
+    public const int MaxChannelLabel = 64;
+
+    /// <summary>
+    /// Cuts a caption that came from a file down to something a control can actually show. The
+    /// editor and the rename box limit what can be typed, but a hand-edited json file or an
+    /// imported preset carries whatever someone put there: a line break rips a list row apart, and
+    /// a name of a few thousand characters is measured on every layout pass.
+    /// </summary>
+    public static string Caption(string text, int max)
+    {
+        if (text.Length == 0)
+        {
+            return text;
+        }
+
+        var clean = new StringBuilder(Math.Min(text.Length, max));
+        foreach (char c in text)
+        {
+            if (clean.Length == max)
+            {
+                break;
+            }
+
+            clean.Append(char.IsControl(c) ? ' ' : c);
+        }
+
+        return clean.ToString().Trim();
+    }
+
     /// <summary>
     /// The key a channel is stored/looked up under in <c>channel-names.json</c> and
     /// <c>channel-state.json</c> - both keyed the same way, by the device's HID path plus its
