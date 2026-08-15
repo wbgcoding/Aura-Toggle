@@ -58,7 +58,7 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 - 🧩 **Custom presets** — a name, one effect and colour per channel, saved and reusable
 - 🖥️ One window: a button that animates the running effect and switches it
 - 📌 Lives in the notification area, right-click for on/off
-- ⌨️ Full command line with exit codes — scheduled tasks, scripts, shortcuts
+- ⌨️ Full command line with exit codes — **Stream Deck**, scheduled tasks, scripts, shortcuts
 - 🔥 A global hotkey, configurable, switches the whole board from anywhere
 - 🔒 No admin rights, no driver, no telemetry — the only network connection this tool ever makes
   is a check for a newer release, at most once a day, and nothing downloads without a click
@@ -213,6 +213,22 @@ translated.
 schtasks /create /tn "LEDs off" /tr "C:\tools\AuraToggle.exe -off" /sc daily /st 23:30
 schtasks /create /tn "LEDs on"  /tr "C:\tools\AuraToggle.exe -on"  /sc daily /st 08:00
 ```
+
+**Stream Deck and other macro software:** every command above is a plain program call that ends
+on its own, so anything able to start a program can drive the lighting — no plugin, no background
+service, no window flashing up. On a Stream Deck, add a **System → Open** button and give it the
+exe plus its arguments:
+
+```bat
+C:\tools\AuraToggle.exe -toggle                :: one key that switches the board
+C:\tools\AuraToggle.exe -custom "Movie Night"  :: one key per scene
+C:\tools\AuraToggle.exe -preset static red -channel 2   :: one key for one header
+C:\tools\AuraToggle.exe -brightness 40         :: dim it for the evening
+```
+
+A Multi Action chains several of them into one key, and the same calls work from AutoHotkey,
+Voicemeeter macro buttons, a game launcher's pre/post-launch command, Home Assistant, or a `.bat`
+on the desktop. `-status --json` reads the current state back if the macro needs to know it.
 
 ## 🎨 Effects
 
