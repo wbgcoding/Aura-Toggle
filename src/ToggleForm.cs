@@ -40,6 +40,13 @@ internal sealed class ToggleForm : Form
     private const int MaxWidth = 560;
 
     /// <summary>
+    /// Client height the window is built with before anything has been measured, at 96 dpi.
+    /// <see cref="ResizeToContent"/> replaces it with the real, scaled height while the window is
+    /// still invisible.
+    /// </summary>
+    private const int InitialHeight = 214;
+
+    /// <summary>
     /// Every fixed distance the window is built from, at 96 dpi. They are applied through
     /// <see cref="ApplyScaledMetrics"/> rather than written straight onto the controls, because
     /// <see cref="ContainerControl.AutoScaleDimensions"/> is deliberately never set here: with it unset
@@ -154,7 +161,7 @@ internal sealed class ToggleForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         Text = Strings.WindowTitle;
         Icon = LoadIcon();
-        ClientSize = new Size(380, 214);
+        ClientSize = new Size(MinWidth, InitialHeight);   // unscaled: replaced by ResizeToContent before the window shows
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
 
