@@ -51,7 +51,7 @@ internal static class AuraCustomPresets
                     continue;
                 }
 
-                string name = Text(item, "name");
+                string name = AuraFiles.Caption(Text(item, "name"), AuraFiles.MaxPresetName);
                 if (name.Length == 0 ||
                     !item.TryGetProperty("entries", out JsonElement entriesElement) ||
                     entriesElement.ValueKind != JsonValueKind.Array)
@@ -74,7 +74,7 @@ internal static class AuraCustomPresets
                         entry.TryGetProperty("channel", out JsonElement c) && c.TryGetInt32(out int index)
                             ? index
                             : -1,
-                        Text(entry, "label"),
+                        AuraFiles.Caption(Text(entry, "label"), AuraFiles.MaxChannelLabel),
                         Byte(entry, "mode"), Byte(entry, "red"), Byte(entry, "green"), Byte(entry, "blue"),
                         // Missing brightness means an entry written before presets carried one:
                         // 0 leaves the channel at whatever brightness it already has.

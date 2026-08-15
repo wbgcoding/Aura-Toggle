@@ -22,6 +22,9 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly List<ChannelRow> _rows = new();
     private readonly Layout _root;
     private readonly Panel _scroll;
+    /// <summary>Ceiling for a file the import accepts at all - a real preset is a few hundred bytes.</summary>
+    private const long MaxPresetFileBytes = 256 * 1024;
+
     private readonly TextField _name = new();
     private readonly PillButton _save = new();
     private readonly PillButton _delete = new();
@@ -144,7 +147,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _name.Dock = DockStyle.Fill;
         _name.PlaceholderText = Strings.CustomPresetNamePlaceholder;
         _name.AccessibleName = Strings.CustomPresetNamePlaceholder;
-        _name.MaxLength = 40;
+        _name.MaxLength = AuraFiles.MaxPresetName;
         _name.Text = preset?.Name ?? "";
         _name.Accepted += (_, e) =>
         {
@@ -730,6 +733,15 @@ internal sealed class CustomPresetEditor : PopupForm
         try
         {
             using FileStream stream = File.OpenRead(path);
+
+            // A preset of nine channels is a few hundred bytes. Anything past this cap is not one,
+            // and parsing it would pull the whole file into memory on the interface thread - the
+            // file picker accepts whatever it is pointed at, including something hostile.
+            if (stream.Length > MaxPresetFileBytes)
+            {
+                return null;
+            }
+
             using JsonDocument document = JsonDocument.Parse(stream);
             JsonElement root = document.RootElement;
 
@@ -742,7 +754,7 @@ internal sealed class CustomPresetEditor : PopupForm
                 return null;
             }
 
-            name = AuraFiles.JsonText(root, "name");
+            name = AuraFiles.Caption(AuraFiles.JsonText(root, "name"), AuraFiles.MaxPresetName);
 
             var entries = new List<CustomPresetEntry>();
             foreach (JsonElement item in entriesElement.EnumerateArray())
@@ -756,7 +768,7 @@ internal sealed class CustomPresetEditor : PopupForm
                     AuraFiles.JsonText(item, "deviceKey"),
                     item.TryGetProperty("channel", out JsonElement channelElement) &&
                         channelElement.TryGetInt32(out int channel) ? channel : -1,
-                    AuraFiles.JsonText(item, "label"),
+                    AuraFiles.Caption(AuraFiles.JsonText(item, "label"), AuraFiles.MaxChannelLabel),
                     AuraFiles.JsonByte(item, "mode"), AuraFiles.JsonByte(item, "red"),
                     AuraFiles.JsonByte(item, "green"), AuraFiles.JsonByte(item, "blue"),
                     AuraFiles.JsonByte(item, "brightness")));

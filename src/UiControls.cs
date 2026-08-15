@@ -2674,7 +2674,7 @@ internal sealed class RenamePopup : PopupForm
         AccessibleName = Strings.ChannelRenameAccessibleName;
         _name.AccessibleName = Strings.ChannelRenameAccessibleName;
         _name.Text = currentName;
-        _name.MaxLength = 30;
+        _name.MaxLength = AuraFiles.MaxChannelName;
         _name.Accepted += (_, e) =>
         {
             if (e.KeyCode == Keys.Enter)
