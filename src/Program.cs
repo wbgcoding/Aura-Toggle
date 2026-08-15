@@ -152,16 +152,32 @@ internal static class Program
     /// </summary>
     private static int RunReview(string surface, string argument)
     {
-        if (surface is not ("settings" or "error" or "editor" or "layout" or "update" or "gear" or "tip"))
+        if (surface is not ("settings" or "error" or "editor" or "layout" or "update" or "gear" or "tip"
+            or "preview"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip|preview [scale%]");
             return 2;
         }
 
         ApplicationConfiguration.Initialize();
+
+        // "preview light" and "preview dark" pick the theme outright rather than following
+        // Windows, so both README screenshots can be taken on one machine without touching its
+        // display settings. Every other surface reviews what a user would actually see.
+        SystemColorMode colours = argument.Trim().ToLowerInvariant() switch
+        {
+            "light" when surface == "preview" => SystemColorMode.Classic,
+            "dark" when surface == "preview" => SystemColorMode.Dark,
+            _ => SystemColorMode.System,
+        };
 #pragma warning disable WFO5001 // colour mode support is still marked experimental
-        Application.SetColorMode(SystemColorMode.System);
+        Application.SetColorMode(colours);
 #pragma warning restore WFO5001
+
+        if (surface == "preview")
+        {
+            return ReviewPreview();
+        }
 
         if (surface == "layout")
         {
@@ -341,6 +357,21 @@ internal static class Program
             new(1, Onboard: false, Header: 1),
         }),
     };
+
+    /// <summary>
+    /// The window as the README shows it: stand-in controllers, the state a first run starts on,
+    /// and English regardless of this machine's language. Nothing stored is read and nothing is
+    /// written, so the screenshot carries no trace of the machine it was taken on.
+    /// </summary>
+    private static int ReviewPreview()
+    {
+        Strings.Override = "en";
+        AuraState.ReviewState = AuraState.Default;
+        ToggleForm.ReviewDevices = ReviewControllers();
+
+        Application.Run(new ToggleForm());
+        return 0;
+    }
 
     /// <summary>
     /// Opens the real window against stand-in controllers and prints what it measured, so a

@@ -10,7 +10,7 @@
 [Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) ·
 [Troubleshooting](#-troubleshooting) · [Changelog](CHANGELOG.md)
 
-<img src="docs/preview-dark.gif" alt="The Aura Toggle window" width="360">
+<img src="docs/preview-dark.webp" alt="The Aura Toggle window" width="444">
 
 </div>
 
@@ -119,7 +119,7 @@ unins000.exe /VERYSILENT                                     :: silent uninstall
 
 ## 🚀 Using it
 
-<img src="docs/preview-light.gif" alt="Light mode" width="360" align="right">
+<img src="docs/preview-light.webp" alt="Light mode" width="333" align="right">
 
 1. **Big button** — shows the state and switches it. While the lighting is on it animates
    whatever effect is running, brightness included.
