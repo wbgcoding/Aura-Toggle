@@ -829,7 +829,21 @@ internal sealed class ToggleForm : Form
         }
 
         SetBusy(true);
-        _devices = ReviewDevices ?? await Task.Run(AuraDevice.ListDevices);
+        try
+        {
+            _devices = ReviewDevices ?? await Task.Run(AuraDevice.ListDevices);
+        }
+        finally
+        {
+            // ListDevices answers a missing or unreachable controller with an empty list, but a
+            // denied device or a driver that faults outright still throws. Handing the flag back
+            // in every case matters more than the error itself: left held, the window comes up
+            // behind the error dialog with every control greyed out and no way to try again.
+            if (!IsDisposed)
+            {
+                SetBusy(false);
+            }
+        }
 
         if (IsDisposed)
         {
@@ -838,8 +852,6 @@ internal sealed class ToggleForm : Form
             // OnFormClosing has settled everything.
             return;
         }
-
-        SetBusy(false);
 
         bool found = _devices.Count > 0;
         _toggle.Enabled = found;
@@ -1776,11 +1788,25 @@ internal sealed class ToggleForm : Form
                     _previewTask = Task.Run(next);
                     await _previewTask;
                 }
-                catch (Exception ex) when (ex is AuraNotFoundException or IOException)
+                catch (Exception ex)
                 {
                     // The preview is a convenience, not the change itself - a controller that
                     // went away mid-edit is reported when Save actually tries to apply it.
-                    AuraLog.Error("Preview", ex);
+                    // Anything else is a bug, and this runs as async void: uncaught, it would
+                    // leave the loop with _previewRunning stuck and take the process with it
+                    // instead of reaching the same dialog a failed switch gets.
+                    if (ex is AuraNotFoundException or IOException)
+                    {
+                        AuraLog.Error("Preview", ex);
+                    }
+                    else if (!IsDisposed && Visible)
+                    {
+                        ErrorDialog.Report(ex, "Preview", this);
+                    }
+                    else
+                    {
+                        AuraLog.Error("Preview", ex);
+                    }
                 }
                 finally
                 {
