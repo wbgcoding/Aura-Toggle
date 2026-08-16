@@ -57,7 +57,7 @@
     <value>Aufruf: AuraToggle [-on | -off | -preset &lt;Name&gt; [Farbe] | -brightness &lt;10-100&gt; | -custom &lt;Name|Nummer&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;Ziel&gt;]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Voreinstellungen: {0}</value>
+    <value>Presets: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Kein Controller gefunden</value>
@@ -273,7 +273,7 @@
     <value>L&#246;schen</value>
   </data>
   <data name="CustomPresetConfirmDelete" xml:space="preserve">
-    <value>Wirklich l&#246;schen?</value>
+    <value>Endg&#252;ltig l&#246;schen?</value>
   </data>
   <data name="CustomPresetDiscard" xml:space="preserve">
     <value>Verwerfen</value>
@@ -300,7 +300,7 @@
     <value>Die Datei konnte nicht gespeichert werden.</value>
   </data>
   <data name="CustomPresetImportError" xml:space="preserve">
-    <value>Keine Preset-Datei oder besch&#228;digt.</value>
+    <value>Keine Preset-Datei, oder sie ist besch&#228;digt.</value>
   </data>
   <data name="ErrorTitle" xml:space="preserve">
     <value>Etwas ist schiefgelaufen</value>
@@ -327,7 +327,7 @@
     <value>Wirklich alles zur&#252;cksetzen?</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
-    <value>Globaler Hotkey (Ein/Aus)</value>
+    <value>Globaler Hotkey (An/Aus)</value>
   </data>
   <data name="SettingHotkeyConflict" xml:space="preserve">
     <value>Diese Kombination ist bereits belegt.</value>

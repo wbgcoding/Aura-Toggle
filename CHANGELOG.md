@@ -15,7 +15,11 @@ All notable changes to this project are documented here. The format follows
   same treatment, so a hand-edited file cannot put a line break or a few thousand characters into
   a list row.
 - The switch measures its ON/OFF label once per text and font instead of on every one of the 30
-  frames it draws each second.
+  frames it draws each second, and reuses its brushes from frame to frame instead of building new
+  ones for each.
+- Four German texts now say what the rest of the interface says: `Presets` instead of
+  `Voreinstellungen`, `An/Aus` beside the hotkey instead of `Ein/Aus`, a delete confirmation that
+  admits the preset is gone for good, and an import error that reads as a sentence.
 
 ### Fixed
 
@@ -27,6 +31,19 @@ All notable changes to this project are documented here. The format follows
   missing modifier already did.
 - Looking for controllers no longer leaves the window greyed out for good when the search itself
   fails, and a preview that fails unexpectedly reports it instead of ending the process.
+- The release page a new-version notice links to is opened only when the address really is
+  GitHub's - the same check the download beside it already had.
+- A stored file that damage or hand-editing has blown up to megabytes is ignored like an
+  unreadable one instead of being read into memory whole, and the update check turns down an
+  oversized answer for the same reason.
+- The preset editor's Save and Delete buttons keep the width their own label needs after the
+  window is moved to a screen with a different scale - the longer German labels could be cut off -
+  and the room the editor reserves for its scrollbar now follows that screen as well.
+- The error and the update dialog widen for a long heading instead of letting it run into their
+  right edge.
+- Focus rings, the drop-down chevron, the ring around a colour chip, the slider outline and the
+  colour picker's markers take their thickness from the window's display scale rather than from a
+  control's own, which lags behind while a window is moved between screens.
 
 ## [1.2.0] - 2026-08-14
 
