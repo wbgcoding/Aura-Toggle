@@ -159,7 +159,9 @@ title bar of its own but can be dragged by its heading, so it never sits in the 
 Export and Import in the editor move a preset as a single `.json` file — to another machine, a
 second Windows profile, or just a backup. On different hardware the channels are matched by their
 position (first channel to first channel, and so on) rather than the exact controller, since a
-different machine has no way to have the same one.
+different machine has no way to have the same one. Import takes the file as it finds it: anything
+larger than 256 KB is refused outright, and a name longer than the 40 characters the editor allows
+is shortened to fit.
 
 ## ⌨️ Command line
 
@@ -325,6 +327,14 @@ Regression suite — it switches the lighting while it runs and leaves it on aft
 
 ```bat
 powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
+```
+
+Static checks — no controller needed, they only read the source tree. Resource keys in step across
+both languages, no hardcoded interface text, no fixed pixel sizes that skip the display scaling, one
+version across project, installer and changelog:
+
+```bat
+powershell -ExecutionPolicy Bypass -File tests\static-checks.ps1
 ```
 
 ## ⚙️ How it works

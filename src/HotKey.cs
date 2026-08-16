@@ -83,6 +83,26 @@ internal static class HotKey
             : ((Keys)virtualKey).ToString();
     }
 
+    /// <summary>A modifier pressed on its own - never the key half of a combination.</summary>
+    public static bool IsModifierKey(int virtualKey) => (Keys)virtualKey is
+        Keys.ControlKey or Keys.LControlKey or Keys.RControlKey or
+        Keys.Menu or Keys.LMenu or Keys.RMenu or
+        Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey or
+        Keys.LWin or Keys.RWin;
+
+    /// <summary>
+    /// Whether a key can be the second half of a combination at all. The recorder only ever hands
+    /// over a key a keyboard actually produced, but a hand-edited <c>settings.json</c> carries
+    /// whatever someone typed into it: mouse buttons are virtual-key codes too
+    /// (<see cref="Keys.LButton"/> and its neighbours), and most of the code range belongs to no
+    /// key at all. Either one registers as a combination nobody can press, and the settings panel
+    /// would show it as the one that is set.
+    /// </summary>
+    public static bool IsUsableKey(int virtualKey) =>
+        virtualKey > (int)Keys.XButton2 &&
+        Enum.IsDefined(typeof(Keys), (Keys)virtualKey) &&
+        !IsModifierKey(virtualKey);
+
     private static bool IsExtended(int virtualKey) => (Keys)virtualKey is
         Keys.Insert or Keys.Delete or Keys.Home or Keys.End or Keys.PageUp or Keys.PageDown or
         Keys.Left or Keys.Right or Keys.Up or Keys.Down or
