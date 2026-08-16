@@ -82,6 +82,12 @@ internal sealed class EffectButton : FlatControl
     /// which happens on every repaint's font lookup otherwise, 30 times a second while animating.</summary>
     private Font? _boldFont;
 
+    // Shared rather than allocated per call: painting only ever happens on the UI thread, each
+    // call sets the colour and uses the brush immediately, and this paints at up to 30 fps.
+    private readonly SolidBrush _washBrush = new(Color.Black);
+    private readonly SolidBrush _dimBrush = new(Color.Black);
+    private readonly SolidBrush _fillBrush = new(Color.Black);
+
     public EffectButton()
     {
         Radius = 16;
@@ -158,6 +164,9 @@ internal sealed class EffectButton : FlatControl
             _timer.Dispose();
             _surface.Dispose();
             _boldFont?.Dispose();
+            _washBrush.Dispose();
+            _dimBrush.Dispose();
+            _fillBrush.Dispose();
         }
 
         base.Dispose(disposing);
@@ -197,13 +206,13 @@ internal sealed class EffectButton : FlatControl
                 EffectPainter.Render(surface, area, _mode, _colour, seconds, _animate);
 
                 // A dark wash keeps the label readable over bright and pale effects alike.
-                using var wash = new SolidBrush(Color.FromArgb(Hovered ? 52 : 74, 0, 0, 0));
-                surface.FillRectangle(wash, area);
+                _washBrush.Color = Color.FromArgb(Hovered ? 52 : 74, 0, 0, 0);
+                surface.FillRectangle(_washBrush, area);
 
                 if (_busy)
                 {
-                    using var dim = new SolidBrush(Color.FromArgb(110, BackColor));
-                    surface.FillRectangle(dim, area);
+                    _dimBrush.Color = Color.FromArgb(110, BackColor);
+                    surface.FillRectangle(_dimBrush, area);
                 }
             });
         }
@@ -217,8 +226,8 @@ internal sealed class EffectButton : FlatControl
 
             // Blended rather than washed over: a second fill of the same path would blend into
             // its anti-aliased edge again and leave a dark rim.
-            using var brush = new SolidBrush(_busy ? Theme.Blend(fill, BackColor, 110 / 255.0) : fill);
-            g.FillPath(brush, path);
+            _fillBrush.Color = _busy ? Theme.Blend(fill, BackColor, 110 / 255.0) : fill;
+            g.FillPath(_fillBrush, path);
         }
 
         DrawFocusRing(g, path);
@@ -547,7 +556,7 @@ internal sealed class Select : FlatControl
         int arm = this.Scaled(4);
         int rise = this.Scaled(2);
 
-        using var pen = new Pen(colour, 1.6f * DeviceDpi / 96f)
+        using var pen = new Pen(colour, this.ScaledF(1.6f))
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
@@ -1528,7 +1537,7 @@ internal sealed class ColourStrip : FlatControl
 
             if (i == _hoveredChip || active || keyboard)
             {
-                float width = (keyboard && !active ? 1.6f : 2f) * DeviceDpi / 96f;
+                float width = this.ScaledF(keyboard && !active ? 1.6f : 2f);
                 using var ring = new Pen(
                     active || keyboard ? Theme.Accent : Color.FromArgb(120, Theme.Accent), width);
                 g.DrawEllipse(ring, Rectangle.Inflate(box, this.Scaled(3), this.Scaled(3)));
@@ -2140,16 +2149,16 @@ internal sealed class ColourPickerPopup : PopupForm
         var svMarker = new Point(
             SvRect.X + (int)(_saturation * (SvRect.Width - 1)),
             SvRect.Y + (int)((1 - _value) * (SvRect.Height - 1)));
-        PaintRing(g, svMarker, this.Scaled(6), Current, DeviceDpi);
+        PaintRing(g, svMarker, this.Scaled(6), Current, this);
 
         g.DrawImage(HueStripBitmap, HueRect);
         int hueX = HueRect.X + (int)(_hue / 360.0 * (HueRect.Width - 1));
         int hueOverhang = this.Scaled(2);
-        using (var huePen = new Pen(Color.White, 2f * DeviceDpi / 96f))
+        using (var huePen = new Pen(Color.White, this.ScaledF(2f)))
         {
             g.DrawLine(huePen, hueX, HueRect.Y - hueOverhang, hueX, HueRect.Bottom + hueOverhang);
         }
-        using (var hueOutline = new Pen(Color.FromArgb(90, 0, 0, 0), 1f * DeviceDpi / 96f))
+        using (var hueOutline = new Pen(Color.FromArgb(90, 0, 0, 0), this.ScaledF(1f)))
         {
             g.DrawLine(hueOutline, hueX - 1, HueRect.Y - hueOverhang, hueX - 1, HueRect.Bottom + hueOverhang);
             g.DrawLine(hueOutline, hueX + 1, HueRect.Y - hueOverhang, hueX + 1, HueRect.Bottom + hueOverhang);
@@ -2166,7 +2175,7 @@ internal sealed class ColourPickerPopup : PopupForm
         }
     }
 
-    private static void PaintRing(Graphics g, Point at, int radius, Color fill, int dpi)
+    private static void PaintRing(Graphics g, Point at, int radius, Color fill, Control control)
     {
         var box = new Rectangle(at.X - radius, at.Y - radius, radius * 2, radius * 2);
         using (var brush = new SolidBrush(fill))
@@ -2174,10 +2183,10 @@ internal sealed class ColourPickerPopup : PopupForm
             g.FillEllipse(brush, box);
         }
 
-        int outlineGrow = Math.Max(1, dpi / 96);
-        using var white = new Pen(Color.White, 2f * dpi / 96f);
+        int outlineGrow = Math.Max(1, control.Scaled(1));
+        using var white = new Pen(Color.White, control.ScaledF(2f));
         g.DrawEllipse(white, box);
-        using var black = new Pen(Color.FromArgb(140, 0, 0, 0), 1f * dpi / 96f);
+        using var black = new Pen(Color.FromArgb(140, 0, 0, 0), control.ScaledF(1f));
         g.DrawEllipse(black, Rectangle.Inflate(box, outlineGrow, outlineGrow));
     }
 }
@@ -2582,14 +2591,14 @@ internal sealed class Slider : FlatControl
             g.FillEllipse(brush, knob);
         }
 
-        using (var outline = new Pen(Hovered || _dragging ? Theme.Accent : Theme.Border, 1.4f * DeviceDpi / 96f))
+        using (var outline = new Pen(Hovered || _dragging ? Theme.Accent : Theme.Border, this.ScaledF(1.4f)))
         {
             g.DrawEllipse(outline, knob);
         }
 
         if (Focused && ShowFocusCues)
         {
-            float ringGrow = 2f * DeviceDpi / 96f;
+            float ringGrow = this.ScaledF(2f);
             using var ring = new Pen(Color.FromArgb(130, Theme.Accent), ringGrow);
             g.DrawEllipse(ring, RectangleF.Inflate(knob, ringGrow, ringGrow));
         }
@@ -2623,7 +2632,7 @@ internal sealed class DeleteButton : FlatControl
 
         DrawFocusRing(g, path);
 
-        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, 1.5f * DeviceDpi / 96f)
+        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, this.ScaledF(1.5f))
             { StartCap = LineCap.Round, EndCap = LineCap.Round };
         float m = Width * 0.28f;
         g.DrawLine(pen, m, m, Width - m, Height - m);
@@ -2668,7 +2677,7 @@ internal sealed class TransferButton : FlatControl
 
         DrawFocusRing(g, path);
 
-        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, 1.5f * DeviceDpi / 96f)
+        using var pen = new Pen(Hovered ? Theme.Text : Theme.TextMuted, this.ScaledF(1.5f))
             { StartCap = LineCap.Round, EndCap = LineCap.Round };
 
         float cx = Width / 2f;
@@ -2753,11 +2762,9 @@ internal sealed class RenamePopup : PopupForm
         _name.Location = new Point(pad, pad);
         _name.Width = this.Scaled(FieldWidth);
 
-        _save.Width = this.Scaled(90);
         _save.Location = new Point(pad, _name.Bottom + gap);
         _save.FitToText(16);
 
-        _reset.Width = this.Scaled(96);
         _reset.FitToText(14);
 
         // Placed and sized after both buttons know their own width, so "Zurücksetzen" is neither
