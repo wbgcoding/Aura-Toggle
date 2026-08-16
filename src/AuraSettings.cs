@@ -111,7 +111,7 @@ internal sealed record AuraSettings(
         int modifiers = HotKey.Modifiers(packed) & knownModifiers;
         int key = HotKey.VirtualKey(packed);
 
-        return modifiers == 0 || key == 0 ? HotKey.Default : HotKey.Pack(modifiers, key);
+        return modifiers == 0 || !HotKey.IsUsableKey(key) ? HotKey.Default : HotKey.Pack(modifiers, key);
     }
 
     public void Save() => AuraFiles.Write(FileName, writer =>

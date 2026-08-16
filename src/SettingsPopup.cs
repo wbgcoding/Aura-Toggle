@@ -328,11 +328,7 @@ internal sealed class SettingsPopup : PopupForm
         _hotkeyRecord.Text = HotkeyText(_pendingHotkey);
     }
 
-    private static bool IsModifierOnly(Keys key) => key is
-        Keys.ControlKey or Keys.LControlKey or Keys.RControlKey or
-        Keys.Menu or Keys.LMenu or Keys.RMenu or
-        Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey or
-        Keys.LWin or Keys.RWin;
+    private static bool IsModifierOnly(Keys key) => HotKey.IsModifierKey((int)key);
 
     /// <summary>"Ctrl+Alt+L" - Win is packed and recognised like the others, but not offered by
     /// the recorder: Windows itself intercepts most Win combinations before a WinForms KeyDown

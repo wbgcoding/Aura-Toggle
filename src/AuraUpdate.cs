@@ -24,7 +24,7 @@ internal static class AuraUpdate
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(3);
 
-    /// <summary>Ceiling for anything this downloads. The setup is around 1.5 MB.</summary>
+    /// <summary>Ceiling for anything this downloads. The setup is around 2.3 MB.</summary>
     private const int MaxDownloadBytes = 64 * 1024 * 1024;
 
     /// <summary>
