@@ -10,6 +10,23 @@ All notable changes to this project are documented here. The format follows
 
 - The executable and the setup now name `BGCoding` as their publisher in the Windows file
   properties.
+- Importing a preset refuses a file larger than 256 KB, and shortens a name longer than the 40
+  characters the editor itself allows. Names and labels read back from the stored files get the
+  same treatment, so a hand-edited file cannot put a line break or a few thousand characters into
+  a list row.
+- The switch measures its ON/OFF label once per text and font instead of on every one of the 30
+  frames it draws each second.
+
+### Fixed
+
+- A newer version is downloaded only when the host at the *end* of the redirect chain is still
+  GitHub's. The published checksum cannot catch this on its own: a setup and a checksum file
+  served by the same foreign host agree with each other perfectly.
+- A damaged or hand-edited `settings.json` could put a hotkey nobody can press into the settings
+  panel - a mouse button, or a code no keyboard has. Such an entry falls back to Ctrl+Alt+L, as a
+  missing modifier already did.
+- Looking for controllers no longer leaves the window greyed out for good when the search itself
+  fails, and a preview that fails unexpectedly reports it instead of ending the process.
 
 ## [1.2.0] - 2026-08-14
 
