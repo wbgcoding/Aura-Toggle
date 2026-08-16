@@ -144,6 +144,7 @@ internal sealed class UpdatePopup : PopupForm
 
         int gap = this.Scaled(8);
         int width = Math.Max(Pad + BodyWidth + Pad, Pad + _primary.Width + gap + _later.Width + Pad);
+        width = Math.Max(width, Pad + _heading.PreferredSize.Width + Pad);
 
         int buttonsTop = _body.Bottom + this.Scaled(14);
         _primary.Location = new Point(width - Pad - _later.Width - gap - _primary.Width, buttonsTop);

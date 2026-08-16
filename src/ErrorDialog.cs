@@ -222,9 +222,10 @@ internal sealed class ErrorDialog : PopupForm
         // The three buttons are translated text, so their combined width is not known until they
         // are all sized - a fixed dialog width clipped or overlapped them in German. The body
         // still wraps at the plain DialogWidth; that only leaves it narrower than a wider dialog,
-        // never overlapping.
+        // never overlapping. The heading is folded in the same way, for the same reason.
         int gap = this.Scaled(8);
         _width = Math.Max(DialogWidth, Pad + _copy.Width + gap + _openLog.Width + gap + _close.Width + Pad);
+        _width = Math.Max(_width, Pad + _heading.PreferredSize.Width + Pad);
 
         _details.Width = _width - (Pad * 2);
 

@@ -203,7 +203,7 @@ internal sealed class ToggleForm : Form
         _effects.AccessibleName = Strings.PresetAccessibleName;
         _effects.Dock = DockStyle.Fill;
         _effects.TakesWhatIsLeft = true;
-        _effects.PopupWidth = 276; // room for a preset name next to its duplicate, edit and delete buttons
+        _effects.PopupWidth = this.Scaled(276); // room for a preset name next to its duplicate, edit and delete buttons
         _effects.SelectionChanged += OnEffectChosen;
         _effects.ActionPicked += (_, _) => OpenPresetEditor(null);
         _effects.EditRequested += (_, item) =>
@@ -219,8 +219,8 @@ internal sealed class ToggleForm : Form
         _effects.DuplicateRequested += (_, item) => DuplicateCustomPreset(item.Text);
 
         _channel.AccessibleName = Strings.ChannelAccessibleName;
-        _channel.Width = 112; // "Alle Kanäle" has to fit without being cut off
-        _channel.PopupWidth = 210;
+        _channel.Width = this.Scaled(112); // "Alle Kanäle" has to fit without being cut off
+        _channel.PopupWidth = this.Scaled(210);
         _channel.Visible = false; // shown once the board has more than one switchable channel
         _channel.SelectionChanged += (_, _) =>
         {
@@ -1498,10 +1498,13 @@ internal sealed class ToggleForm : Form
 
         if (_devices.Count > 0)
         {
-            SetUpChannelSelector();
+            SetUpChannelSelector(); // already ends with FitEffectList()
+        }
+        else
+        {
+            FitEffectList();
         }
 
-        FitEffectList();
         Render();
 
         // "Nothing overflows" is only worth believing once the controls agree with the window

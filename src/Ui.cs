@@ -296,6 +296,19 @@ internal static class Theme
     /// </remarks>
     public static int Scaled(this Control control, int length) => length * DpiOf(control) / 96;
 
+    /// <summary><see cref="Scaled"/> for fractional lengths, chiefly hairline pen widths - reads
+    /// the same window dpi rather than the control's own <see cref="Control.DeviceDpi"/>.</summary>
+    public static float ScaledF(this Control control, float length) => length * DpiOf(control) / 96f;
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+    private const int SM_CXVSCROLL = 2;
+
+    // SystemInformation.VerticalScrollBarWidth answers for the primary display's scale, so a
+    // popup on a second monitor at another scale reserves the wrong width.
+    public static int ScrollBarWidth(Control control) => GetSystemMetricsForDpi(SM_CXVSCROLL, (uint)DpiOf(control));
+
     /// <summary>
     /// The dpi of the window <paramref name="control"/> sits in, rather than the control's own.
     /// Windows tells a window about a display-scale change before it tells the controls inside it,
@@ -1131,7 +1144,7 @@ internal abstract class FlatControl : Control
             return;
         }
 
-        using var pen = new Pen(Color.FromArgb(130, Theme.Accent), 2f * DeviceDpi / 96f);
+        using var pen = new Pen(Color.FromArgb(130, Theme.Accent), this.ScaledF(2f));
         g.DrawPath(pen, path);
     }
 }

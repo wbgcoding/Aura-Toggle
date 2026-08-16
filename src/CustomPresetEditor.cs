@@ -22,8 +22,6 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly List<ChannelRow> _rows = new();
     private readonly Layout _root;
     private readonly Panel _scroll;
-    /// <summary>Ceiling for a file the import accepts at all - a real preset is a few hundred bytes.</summary>
-    private const long MaxPresetFileBytes = 256 * 1024;
 
     private readonly TextField _name = new();
     private readonly PillButton _save = new();
@@ -232,7 +230,6 @@ internal sealed class CustomPresetEditor : PopupForm
         _save.Primary = true;
         _save.Font = Theme.Action; // the one action this panel leads with, so it says so
         _save.DesignHeight = 40;
-        _metrics.Add(() => _save.Width = this.Scaled(130));
         _save.Dock = DockStyle.Left;
         _save.BackColor = Theme.Surface;
         _save.Click += (_, _) => SaveAndClose();
@@ -244,11 +241,9 @@ internal sealed class CustomPresetEditor : PopupForm
         _delete.Fill = Theme.NeutralSoft;
         _delete.ForeColor = Theme.Danger;
         _delete.BackColor = Theme.Surface;
-        _metrics.Add(() =>
-        {
-            _delete.Width = this.Scaled(96);
-            _delete.Margin = new Padding(this.Scaled(8), 0, 0, 0);
-        });
+        // No width here: ArmedButton measures the label itself and measures it again after a
+        // scale change, so a fixed one reapplied afterwards would only overwrite the right answer.
+        _metrics.Add(() => _delete.Margin = new Padding(this.Scaled(8), 0, 0, 0));
         _delete.Visible = _editing != null;
 
         _deleteArm = new ArmedButton(_delete, Strings.CustomPresetDelete, Strings.CustomPresetConfirmDelete, 16);
@@ -522,9 +517,12 @@ internal sealed class CustomPresetEditor : PopupForm
         // Scaled, because this runs again on every effect change - long after WinForms scaled the
         // window for the display it opened on. Assigning the plain 96 dpi number here squeezed the
         // panel back to half its width on a 200 % screen and cut the colour chips off with it.
+        // The scrollbar goes through Theme.ScrollBarWidth for the same reason:
+        // SystemInformation.VerticalScrollBarWidth answers for the primary display, not for the
+        // one this window is on.
         ClientSize = new Size(
             this.Scaled(ContentWidth) + Padding.Horizontal +
-                (scrolls ? SystemInformation.VerticalScrollBarWidth : 0),
+                (scrolls ? Theme.ScrollBarWidth(this) : 0),
             Math.Min(wanted, available));
 
         // This runs on every effect change, long after Open() placed the window - a row that grows
@@ -737,7 +735,7 @@ internal sealed class CustomPresetEditor : PopupForm
             // A preset of nine channels is a few hundred bytes. Anything past this cap is not one,
             // and parsing it would pull the whole file into memory on the interface thread - the
             // file picker accepts whatever it is pointed at, including something hostile.
-            if (stream.Length > MaxPresetFileBytes)
+            if (stream.Length > AuraFiles.MaxPresetFileBytes)
             {
                 return null;
             }
