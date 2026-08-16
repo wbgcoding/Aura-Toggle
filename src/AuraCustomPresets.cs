@@ -51,7 +51,7 @@ internal static class AuraCustomPresets
                     continue;
                 }
 
-                string name = AuraFiles.Caption(Text(item, "name"), AuraFiles.MaxPresetName);
+                string name = AuraFiles.Caption(AuraFiles.JsonText(item, "name"), AuraFiles.MaxPresetName);
                 if (name.Length == 0 ||
                     !item.TryGetProperty("entries", out JsonElement entriesElement) ||
                     entriesElement.ValueKind != JsonValueKind.Array)
@@ -68,17 +68,18 @@ internal static class AuraCustomPresets
                     }
 
                     entries.Add(new CustomPresetEntry(
-                        Text(entry, "deviceKey"),
+                        AuraFiles.JsonText(entry, "deviceKey"),
                         // Missing channel means an entry written before presets went
                         // per-channel: -1 keeps its old meaning of "the whole controller".
                         entry.TryGetProperty("channel", out JsonElement c) && c.TryGetInt32(out int index)
                             ? index
                             : -1,
-                        AuraFiles.Caption(Text(entry, "label"), AuraFiles.MaxChannelLabel),
-                        Byte(entry, "mode"), Byte(entry, "red"), Byte(entry, "green"), Byte(entry, "blue"),
+                        AuraFiles.Caption(AuraFiles.JsonText(entry, "label"), AuraFiles.MaxChannelLabel),
+                        AuraFiles.JsonByte(entry, "mode"), AuraFiles.JsonByte(entry, "red"),
+                        AuraFiles.JsonByte(entry, "green"), AuraFiles.JsonByte(entry, "blue"),
                         // Missing brightness means an entry written before presets carried one:
                         // 0 leaves the channel at whatever brightness it already has.
-                        Byte(entry, "brightness")));
+                        AuraFiles.JsonByte(entry, "brightness")));
                 }
 
                 if (entries.Count > 0)
@@ -94,10 +95,6 @@ internal static class AuraCustomPresets
             return presets;
         }
     }
-
-    private static string Text(JsonElement element, string name) => AuraFiles.JsonText(element, name);
-
-    private static byte Byte(JsonElement element, string name) => AuraFiles.JsonByte(element, name);
 
     public static void Save(List<CustomPreset> presets) => AuraFiles.Write(FileName, writer =>
     {

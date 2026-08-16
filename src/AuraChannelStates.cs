@@ -177,21 +177,21 @@ internal static class AuraChannelStates
                     continue;
                 }
 
-                byte brightness = Byte(property.Value, "brightness");
+                byte brightness = AuraFiles.JsonByte(property.Value, "brightness");
 
                 // Same rule AuraDevice.Verified applies before a mode reaches the hardware: only
                 // a mode this build actually knows - or "off" - is trusted from a hand-edited or
                 // outdated file, otherwise the window would name an effect the board never runs.
-                byte rawMode = Byte(property.Value, "mode");
+                byte rawMode = AuraFiles.JsonByte(property.Value, "mode");
                 byte mode = rawMode == AuraState.ModeOff || AuraPresets.ByMode(rawMode) != null
                     ? rawMode
                     : AuraState.Default.Mode;
 
                 states[property.Name] = new ChannelLighting(
                     mode,
-                    Byte(property.Value, "red"),
-                    Byte(property.Value, "green"),
-                    Byte(property.Value, "blue"),
+                    AuraFiles.JsonByte(property.Value, "red"),
+                    AuraFiles.JsonByte(property.Value, "green"),
+                    AuraFiles.JsonByte(property.Value, "blue"),
                     // Written before channels remembered their own power state: treat as on,
                     // which is what it meant back then.
                     AuraFiles.JsonFlag(property.Value, "on", true),
@@ -211,8 +211,6 @@ internal static class AuraChannelStates
             return states;
         }
     }
-
-    private static byte Byte(JsonElement element, string name) => AuraFiles.JsonByte(element, name);
 
     private static void Save(Dictionary<string, ChannelLighting> states) => AuraFiles.Write(FileName, writer =>
     {

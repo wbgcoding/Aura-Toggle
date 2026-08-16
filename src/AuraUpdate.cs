@@ -28,6 +28,12 @@ internal static class AuraUpdate
     private const int MaxDownloadBytes = 64 * 1024 * 1024;
 
     /// <summary>
+    /// Ceiling for the release metadata response. A release's JSON is a few tens of kilobytes -
+    /// parsing whatever answers must not be able to decide how much this process allocates.
+    /// </summary>
+    private const int MaxMetadataBytes = 4 * 1024 * 1024;
+
+    /// <summary>
     /// Whether this process runs from an installed copy rather than a portable one - the
     /// installer always drops its uninstaller, <c>unins000.exe</c>, next to the exe; a portable
     /// copy someone extracted or copied by hand never has one. Self-replacing only makes sense
@@ -71,7 +77,7 @@ internal static class AuraUpdate
     {
         try
         {
-            using var client = new HttpClient { Timeout = CheckTimeout };
+            using var client = new HttpClient { Timeout = CheckTimeout, MaxResponseContentBufferSize = MaxMetadataBytes };
             client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("AuraToggle", Program.VersionText));
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 
@@ -84,7 +90,7 @@ internal static class AuraUpdate
             using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
             JsonElement root = document.RootElement;
 
-            string tag = Text(root, "tag_name");
+            string tag = AuraFiles.JsonText(root, "tag_name");
             string remoteVersion = tag.TrimStart('v', 'V');
 
             if (!Version.TryParse(remoteVersion, out Version? remote) ||
@@ -100,8 +106,8 @@ internal static class AuraUpdate
             {
                 foreach (JsonElement asset in assets.EnumerateArray())
                 {
-                    string name = Text(asset, "name");
-                    string url = Text(asset, "browser_download_url");
+                    string name = AuraFiles.JsonText(asset, "name");
+                    string url = AuraFiles.JsonText(asset, "browser_download_url");
 
                     if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
                         name.Contains("Setup", StringComparison.OrdinalIgnoreCase))
@@ -125,7 +131,11 @@ internal static class AuraUpdate
                 return null;
             }
 
-            return new UpdateInfo(remoteVersion, installerUrl, checksumUrl, Text(root, "html_url"));
+            // The two download URLs above are checked before anything trusts them; html_url ends up
+            // in a shell-executed Process.Start (ToggleForm.OpenReleasePage), so it gets the same gate.
+            string htmlUrl = AuraFiles.JsonText(root, "html_url");
+            return new UpdateInfo(remoteVersion, installerUrl, checksumUrl,
+                IsTrustedDownloadUrl(htmlUrl) ? htmlUrl : "");
         }
         catch (Exception ex) when (IsExpected(ex))
         {
@@ -260,11 +270,6 @@ internal static class AuraUpdate
     /// </summary>
     private static bool EndedOnTrustedHost(HttpResponseMessage response) =>
         response.RequestMessage?.RequestUri is Uri final && IsTrustedHost(final);
-
-    private static string Text(JsonElement element, string name) =>
-        element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? ""
-            : "";
 
     /// <summary>Everything a flaky connection, a malformed response or a denied request can
     /// throw - none of it is worth more than a log line, since checking for an update is

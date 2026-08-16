@@ -54,6 +54,11 @@ internal static class AuraFiles
     /// </summary>
     public const int MaxChannelLabel = 64;
 
+    /// <summary>Ceiling for any stored file read whole, and for a file the preset import accepts at
+    /// all - a real preset is a few hundred bytes, and presets are the largest of these files by
+    /// far, so one number covers both.</summary>
+    public const long MaxPresetFileBytes = 256 * 1024;
+
     /// <summary>
     /// Cuts a caption that came from a file down to something a control can actually show. The
     /// editor and the rename box limit what can be typed, but a hand-edited json file or an
@@ -203,6 +208,13 @@ internal static class AuraFiles
         {
             string path = PathTo(name);
             if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            // A damaged or hand-edited multi-megabyte file falls back to defaults exactly like an
+            // unparsable one, instead of being read into memory whole.
+            if (new FileInfo(path).Length > MaxPresetFileBytes)
             {
                 return null;
             }
