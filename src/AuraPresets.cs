@@ -47,7 +47,8 @@ internal static class AuraPresets
     /// are ignored, and the display name is accepted in either language - not just whichever one
     /// the interface happens to be set to, so a script written as <c>-preset Regenbogen</c> keeps
     /// working after the user switches to English. Matches how <c>-channel</c> already resolves a
-    /// channel's default name.
+    /// channel's default name. The command line's <c>-custom</c> lookup uses this same helper,
+    /// so both spellings behave alike.
     /// </summary>
     public static AuraPreset? Find(string name)
     {
@@ -61,7 +62,7 @@ internal static class AuraPresets
 
     public static AuraPreset? ByMode(byte mode) => All.FirstOrDefault(preset => preset.Mode == mode);
 
-    internal static string Normalise(string value)
+    public static string Normalise(string value)
     {
         var builder = new StringBuilder(value.Length);
         foreach (char c in value)
