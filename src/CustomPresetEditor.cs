@@ -22,6 +22,8 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly List<ChannelRow> _rows = new();
     private readonly Layout _root;
     private readonly Panel _scroll;
+    private readonly Layout _header;
+    private readonly Layout _buttons;
 
     private readonly TextField _name = new();
     private readonly PillButton _save = new();
@@ -82,7 +84,11 @@ internal sealed class CustomPresetEditor : PopupForm
         };
 
         // A board with a lot of channels would make this taller than the screen, so the rows
-        // live in a scrolling panel and the window itself stops at the work area.
+        // live in a scrolling panel and the window itself stops at the work area. Added to the
+        // form before the pinned header and button row: WinForms docks the control list from its
+        // last entry backwards, so the filling panel has to be the first one added if it is to
+        // get what those two leave over instead of the whole client area with the header drawn
+        // across it.
         _scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Theme.Surface };
         _scroll.Controls.Add(_root);
         Controls.Add(_scroll);
@@ -93,8 +99,9 @@ internal sealed class CustomPresetEditor : PopupForm
         _root.FontChanged += (_, _) => Resettle();
 
         // Heading on the left, a discard button on the right: closing without saving needs a
-        // visible way out, not just the Escape key.
-        var header = new Layout
+        // visible way out, not just the Escape key. Pinned to the form itself (Dock.Top), not
+        // _root, so it stays in place while only the channel rows below it scroll.
+        _header = new Layout
         {
             Dock = DockStyle.Top,
             AutoSize = true,
@@ -102,9 +109,9 @@ internal sealed class CustomPresetEditor : PopupForm
             ColumnCount = 2,
             BackColor = Theme.Surface,
         };
-        _metrics.Add(() => header.Margin = new Padding(0, 0, 0, this.Scaled(8)));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _metrics.Add(() => _header.Margin = new Padding(0, 0, 0, this.Scaled(8)));
+        _header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        _header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         var heading = new Label
         {
@@ -116,7 +123,7 @@ internal sealed class CustomPresetEditor : PopupForm
             BackColor = Theme.Surface,
         };
         _metrics.Add(() => heading.Margin = new Padding(this.Scaled(2), this.Scaled(2), 0, 0));
-        header.Controls.Add(heading, 0, 0);
+        _header.Controls.Add(heading, 0, 0);
 
         var discard = new DeleteButton
         {
@@ -125,9 +132,9 @@ internal sealed class CustomPresetEditor : PopupForm
             Margin = new Padding(0),
         };
         discard.Click += (_, _) => Close();
-        header.Controls.Add(discard, 1, 0);
+        _header.Controls.Add(discard, 1, 0);
 
-        _root.Controls.Add(header);
+        Controls.Add(_header);
 
         var nameRow = new Layout
         {
@@ -214,17 +221,19 @@ internal sealed class CustomPresetEditor : PopupForm
             }
         }
 
-        var buttons = new Layout
+        // Pinned to the form itself (Dock.Bottom), not _root, so Save/Delete stay reachable even
+        // when the channel rows above them need to scroll.
+        _buttons = new Layout
         {
-            Dock = DockStyle.Top,
+            Dock = DockStyle.Bottom,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
             BackColor = Theme.Surface,
         };
-        _metrics.Add(() => buttons.Margin = new Padding(0, this.Scaled(6), 0, 0));
-        buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        buttons.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _metrics.Add(() => _buttons.Margin = new Padding(0, this.Scaled(6), 0, 0));
+        _buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        _buttons.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         _save.Text = preset == null ? Strings.CustomPresetCreate : Strings.CustomPresetSave;
         _save.Primary = true;
@@ -234,7 +243,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _save.BackColor = Theme.Surface;
         _save.Click += (_, _) => SaveAndClose();
         _save.FitToText();
-        buttons.Controls.Add(_save, 0, 0);
+        _buttons.Controls.Add(_save, 0, 0);
 
         _delete.Text = Strings.CustomPresetDelete;
         _delete.DesignHeight = 40;
@@ -249,9 +258,9 @@ internal sealed class CustomPresetEditor : PopupForm
         _deleteArm = new ArmedButton(_delete, Strings.CustomPresetDelete, Strings.CustomPresetConfirmDelete, 16);
         _deleteArm.Confirmed += (_, _) => OnDeleteConfirmed();
 
-        buttons.Controls.Add(_delete, 1, 0);
+        _buttons.Controls.Add(_delete, 1, 0);
 
-        _root.Controls.Add(buttons);
+        Controls.Add(_buttons);
 
         if (preset != null)
         {
@@ -265,7 +274,7 @@ internal sealed class CustomPresetEditor : PopupForm
         // than closing on an outside click, so it needs its own way to move. Dragged by its
         // heading, and by its own background, which is what is left of the window once the rows
         // have their say.
-        WindowDrag.Enable(this, this, header, heading);
+        WindowDrag.Enable(this, this, _header, heading);
     }
 
     /// <summary>
@@ -510,7 +519,12 @@ internal sealed class CustomPresetEditor : PopupForm
     /// </summary>
     private void FitToContent(Rectangle? workingArea = null)
     {
-        int wanted = _root.PreferredSize.Height + Padding.Vertical;
+        // The header and button row are pinned outside _scroll now, so their preferred height -
+        // plus the margin that separates each from the scrolling rows - has to be added by hand;
+        // only _root's height still follows from AutoSize.
+        int pinned = _header.PreferredSize.Height + _header.Margin.Vertical +
+            _buttons.PreferredSize.Height + _buttons.Margin.Vertical;
+        int wanted = pinned + _root.PreferredSize.Height + Padding.Vertical;
         int available = (workingArea ?? Screen.FromPoint(Location).WorkingArea).Height - this.Scaled(48);
         bool scrolls = wanted > available;
 
@@ -523,12 +537,40 @@ internal sealed class CustomPresetEditor : PopupForm
         ClientSize = new Size(
             this.Scaled(ContentWidth) + Padding.Horizontal +
                 (scrolls ? Theme.ScrollBarWidth(this) : 0),
-            Math.Min(wanted, available));
+            // The pinned rows never scroll, so the clamp can only take height back from _scroll -
+            // never below what the header and buttons need for themselves.
+            Math.Max(pinned + Padding.Vertical, Math.Min(wanted, available)));
 
         // This runs on every effect change, long after Open() placed the window - a row that grows
         // by its colour chips and brightness slider would otherwise push Save and Delete off the
         // bottom of the screen.
         KeepOnScreen();
+    }
+
+    /// <summary>
+    /// Proves the header and button row actually stay pinned outside <see cref="_scroll"/> instead
+    /// of it covering the whole client area with them drawn across it - a wrong Controls.Add order
+    /// measures perfectly fine, so the layout numbers alone never caught it. Printed by
+    /// <c>-review editor</c>.
+    /// </summary>
+    public string DescribeAnchoring()
+    {
+        var issues = new List<string>();
+        if (_header.Bottom > _scroll.Top)
+        {
+            issues.Add("OVERLAP header/scroll");
+        }
+
+        if (_buttons.Top < _scroll.Bottom)
+        {
+            issues.Add("OVERLAP buttons/scroll");
+        }
+
+        return $"client        {ClientSize.Width}x{ClientSize.Height}" + Environment.NewLine
+            + $"header        {_header.Bounds}" + Environment.NewLine
+            + $"scroll        {_scroll.Bounds}" + Environment.NewLine
+            + $"buttons       {_buttons.Bounds}" + Environment.NewLine
+            + $"verdict       {(issues.Count > 0 ? string.Join(", ", issues) : "pinned ok")}";
     }
 
     /// <summary>Fills every field from an existing preset, so it can be edited.</summary>

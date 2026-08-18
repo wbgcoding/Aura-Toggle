@@ -121,6 +121,8 @@ internal static class Strings
 
     public static string ChannelRenameReset => Get("ChannelRenameReset");
 
+    public static string ChannelRenameResetConfirm => Get("ChannelRenameResetConfirm");
+
     public static string ChannelRenameAccessibleName => Get("ChannelRenameAccessibleName");
 
     public static string SettingBrightness => Get("SettingBrightness");

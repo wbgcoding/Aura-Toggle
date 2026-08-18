@@ -239,6 +239,9 @@
   <data name="ChannelRenameReset" xml:space="preserve">
     <value>Reset</value>
   </data>
+  <data name="ChannelRenameResetConfirm" xml:space="preserve">
+    <value>Reset the name?</value>
+  </data>
   <data name="ChannelRenameAccessibleName" xml:space="preserve">
     <value>Channel name</value>
   </data>

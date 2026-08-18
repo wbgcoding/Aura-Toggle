@@ -264,13 +264,19 @@ internal static class Program
         // display-scale change puts their spacing back at the new scale rather than leaving it as
         // the display they opened on had it, which the totals below make visible.
         Queue<int> scales = ParseScales(argument);
-        if (shown != null && scales.Count > 0)
+        if (shown != null)
         {
             var reports = new List<string>();
             void Report(string heading) => WriteReport(reports, heading, DescribeSpacing(shown));
 
+            // Written even with no scale given - without this, plain "-review editor" left the
+            // file untouched, and the anchoring proof below it never ran either.
             Report($"as opened, {shown.DeviceDpi * 100 / 96}%");
-            MoveThroughScales(shown, scales, Report);
+
+            if (scales.Count > 0)
+            {
+                MoveThroughScales(shown, scales, Report);
+            }
         }
 
         Application.Run();
@@ -299,10 +305,19 @@ internal static class Program
 
         int margins = Tree(form).Sum(control => control.Margin.Horizontal + control.Margin.Vertical);
 
-        return $"dpi           {form.DeviceDpi} ({form.DeviceDpi * 100 / 96}%)" + Environment.NewLine
+        string body = $"dpi           {form.DeviceDpi} ({form.DeviceDpi * 100 / 96}%)" + Environment.NewLine
             + $"clientsize    {form.ClientSize.Width}x{form.ClientSize.Height}" + Environment.NewLine
             + $"padding       {form.Padding.Left},{form.Padding.Top}" + Environment.NewLine
             + $"margins       {margins} px over {Tree(form).Count()} controls";
+
+        // The editor's own pinned-header/pinned-buttons proof: spacing alone measures fine even
+        // when a wrong Controls.Add order left the header drawn under the scrolling panel.
+        if (form is CustomPresetEditor editor)
+        {
+            body += Environment.NewLine + editor.DescribeAnchoring();
+        }
+
+        return body;
     }
 
     /// <summary>
@@ -684,8 +699,11 @@ internal static class Program
             // By name first, since that is unambiguous; a name has to lose to a number that
             // happens to also be a preset's name, but not the other way round - PrintList's own
             // numbering only stays valid for as long as nothing is added, removed or reordered.
+            // The command line accepts forgiving spelling like -preset does; the name the program
+            // itself remembers (state.CustomPreset) was written by us, so that stays exact-only.
             List<CustomPreset> presets = AuraCustomPresets.Load();
             CustomPreset? custom = presets.Find(p => p.Name == rest[1]) ??
+                presets.Find(p => AuraPresets.Normalise(p.Name) == AuraPresets.Normalise(rest[1])) ??
                 (int.TryParse(rest[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int index)
                     && index >= 1 && index <= presets.Count ? presets[index - 1] : null);
             if (custom == null)

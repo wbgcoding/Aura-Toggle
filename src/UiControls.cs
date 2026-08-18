@@ -2708,6 +2708,7 @@ internal sealed class RenamePopup : PopupForm
     private readonly TextField _name = new();
     private readonly PillButton _save = new();
     private readonly PillButton _reset = new();
+    private readonly ArmedButton _resetArm;
 
     public RenamePopup(string currentName)
     {
@@ -2739,12 +2740,18 @@ internal sealed class RenamePopup : PopupForm
         _reset.Text = Strings.ChannelRenameReset;
         _reset.DesignHeight = 30;
         _reset.Fill = Theme.NeutralSoft;
-        _reset.ForeColor = Theme.Text;
-        _reset.Click += (_, _) =>
+        _reset.ForeColor = Theme.Danger;
+        // Throws the channel's own name away - arms on the first click like every other
+        // destructive button here, instead of acting on a single one.
+        _resetArm = new ArmedButton(_reset, Strings.ChannelRenameReset, Strings.ChannelRenameResetConfirm, Pad);
+        _resetArm.Confirmed += (_, _) =>
         {
             Renamed?.Invoke(this, "");
             Close();
         };
+        // The armed label is wider than the idle one - re-run layout whenever ArmedButton
+        // changes it, so the popup keeps fitting instead of clipping or overlapping Save.
+        _reset.TextChanged += (_, _) => Reflow();
         Controls.Add(_reset);
 
         Reflow();
@@ -2840,5 +2847,15 @@ internal sealed class RenamePopup : PopupForm
     {
         Theme.Prepare(e.Graphics);
         e.Graphics.Clear(Theme.Surface);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _resetArm.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

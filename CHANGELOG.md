@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows
 - The switch measures its ON/OFF label once per text and font instead of on every one of the 30
   frames it draws each second, and reuses its brushes from frame to frame instead of building new
   ones for each.
+- Resetting a channel to its default name now asks first: the button arms on one click and
+  only resets on the second, like every other action here that throws something away.
+- `-custom` takes a preset name the way `-preset` already takes an effect name - casing,
+  spaces, hyphens and underscores no longer have to match, while an exact name still wins.
 - Four German texts now say what the rest of the interface says: `Presets` instead of
   `Voreinstellungen`, `An/Aus` beside the hotkey instead of `Ein/Aus`, a delete confirmation that
   admits the preset is gone for good, and an import error that reads as a sentence.
@@ -39,6 +43,8 @@ All notable changes to this project are documented here. The format follows
 - The preset editor's Save and Delete buttons keep the width their own label needs after the
   window is moved to a screen with a different scale - the longer German labels could be cut off -
   and the room the editor reserves for its scrollbar now follows that screen as well.
+- The preset editor keeps its heading, its close button and its Save/Delete row in place while
+  only the channel rows scroll, so both stay reachable on a board with many channels.
 - The error and the update dialog widen for a long heading instead of letting it run into their
   right edge.
 - Focus rings, the drop-down chevron, the ring around a colour chip, the slider outline and the
