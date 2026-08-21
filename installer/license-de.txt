@@ -4,12 +4,26 @@ Aura Toggle - Lizenzvereinbarung
 ZUSAMMENFASSUNG
 
 Aura Toggle ist freie Open-Source-Software und steht unter der MIT-Lizenz. Sie dürfen die
-Software privat wie gewerblich nutzen, weitergeben und verändern - unentgeltlich. Die
-Anwendung erhebt keine Daten, benötigt kein Benutzerkonto und stellt selbst keine
-Netzwerkverbindungen her.
+Software privat wie gewerblich nutzen, weitergeben und verändern - unentgeltlich.
 
 Einzige Bedingung: Der Copyright-Hinweis und dieser Lizenztext müssen bei einer Weitergabe
 erhalten bleiben.
+
+
+DATENSCHUTZ UND NETZWERKZUGRIFF
+
+Die Anwendung erhebt keine Daten, benötigt kein Benutzerkonto und enthält weder Werbung noch
+Nachverfolgung. Ihre Einstellungen, Ihre Presets und der gemerkte Beleuchtungszustand liegen in
+Ihrem eigenen Benutzerprofil auf diesem PC und werden nirgendwohin übertragen.
+
+Einmal täglich fragt die Anwendung die Veröffentlichungsseite des Projekts bei GitHub, ob eine
+neuere Fassung vorliegt. GitHub sieht diese Anfrage so, wie jede Webseite einen Besuch sieht. Sie
+können die Prüfung in den Einstellungen abschalten; heruntergeladen wird eine Aktualisierung erst,
+wenn Sie sie anfordern.
+
+Fehlt auf diesem PC die Microsoft .NET 10 Desktop Runtime, die die Anwendung zum Laufen braucht,
+bietet dieses Setup an, sie von Microsoft herunterzuladen. Das geschieht nur mit Ihrer Zustimmung,
+und die digitale Signatur wird vor der Installation geprüft.
 
 
 AUSWIRKUNG AUF IHR MAINBOARD
@@ -17,8 +31,9 @@ AUSWIRKUNG AUF IHR MAINBOARD
 Aura Toggle kommuniziert mit dem Beleuchtungscontroller Ihres Mainboards ausschließlich über
 flüchtige Befehle. Es schreibt zu keinem Zeitpunkt in den Flash-Speicher des Controllers:
 Jede Änderung geht bei einem Neustart verloren, und die im BIOS/UEFI hinterlegte Beleuchtung
-wird automatisch wiederhergestellt. Es sind weder Administratorrechte noch Treiber oder
-Hintergrunddienste erforderlich.
+wird automatisch wiederhergestellt. Für den Betrieb sind weder Administratorrechte noch Treiber
+oder Hintergrunddienste nötig - die Installation für alle Benutzer fragt einmalig nach
+Administratorrechten, allein für diesen Vorgang.
 
 Diese Software kommuniziert direkt mit der Hardware und wird ohne jegliche Gewährleistung
 bereitgestellt, wie nachstehend in der Lizenz festgelegt. Mit der Installation erkennen Sie
