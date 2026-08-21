@@ -45,43 +45,43 @@
     <value>Aura Toggle</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
-    <value>On</value>
+    <value>Ligado</value>
   </data>
   <data name="ButtonStateOff" xml:space="preserve">
-    <value>Off</value>
+    <value>Desligado</value>
   </data>
   <data name="ButtonAccessibleName" xml:space="preserve">
-    <value>Switch mainboard lighting on or off</value>
+    <value>Ligar ou desligar a iluminação da placa-mãe</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: AuraToggle [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name|number&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
+    <value>Uso: AuraToggle [-on | -off | -preset &lt;nome&gt; [cor] | -brightness &lt;10-100&gt; | -custom &lt;nome|número&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;destino&gt;]   (sem argumento, a janela de alternância é aberta)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Presets: {0}</value>
+    <value>Predefinições: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
-    <value>No controller found</value>
+    <value>Nenhum controlador encontrado</value>
   </data>
   <data name="PresetAccessibleName" xml:space="preserve">
-    <value>Lighting effect</value>
+    <value>Efeito de iluminação</value>
   </data>
   <data name="PresetStatic" xml:space="preserve">
-    <value>Static</value>
+    <value>Estático</value>
   </data>
   <data name="PresetBreathing" xml:space="preserve">
-    <value>Breathing</value>
+    <value>Respiração</value>
   </data>
   <data name="PresetFlashing" xml:space="preserve">
-    <value>Flashing</value>
+    <value>Piscante</value>
   </data>
   <data name="PresetSpectrumCycle" xml:space="preserve">
-    <value>Spectrum Cycle</value>
+    <value>Ciclo de cores</value>
   </data>
   <data name="PresetRainbow" xml:space="preserve">
-    <value>Rainbow</value>
+    <value>Arco-íris</value>
   </data>
   <data name="PresetRainbowBreathing" xml:space="preserve">
-    <value>Rainbow Breathing</value>
+    <value>Respiração arco-íris</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
     <value>Chase Fade</value>
@@ -90,136 +90,136 @@
     <value>Chase</value>
   </data>
   <data name="PresetWave" xml:space="preserve">
-    <value>Wave</value>
+    <value>Onda</value>
   </data>
   <data name="EffectHintStatic" xml:space="preserve">
-    <value>One steady colour, no movement.</value>
+    <value>Uma cor contínua, sem movimento.</value>
   </data>
   <data name="EffectHintBreathing" xml:space="preserve">
-    <value>The colour fades in and out slowly.</value>
+    <value>A cor aumenta e diminui lentamente.</value>
   </data>
   <data name="EffectHintFlashing" xml:space="preserve">
-    <value>The colour blinks sharply on and off.</value>
+    <value>A cor pisca de forma intensa.</value>
   </data>
   <data name="EffectHintSpectrumCycle" xml:space="preserve">
-    <value>Cycles through the full colour spectrum. Not dimmable.</value>
+    <value>Percorre todo o espectro de cores. Não permite ajustar o brilho.</value>
   </data>
   <data name="EffectHintRainbow" xml:space="preserve">
-    <value>A rainbow gradient moves across the channel. Not dimmable.</value>
+    <value>Um degradê de arco-íris percorre o canal. Não permite ajustar o brilho.</value>
   </data>
   <data name="EffectHintRainbowBreathing" xml:space="preserve">
-    <value>The rainbow gradient fades in and out. Not dimmable.</value>
+    <value>O degradê de arco-íris aumenta e diminui. Não permite ajustar o brilho.</value>
   </data>
   <data name="EffectHintChaseFade" xml:space="preserve">
-    <value>A point of light runs along the channel with a fading trail.</value>
+    <value>Um ponto de luz percorre o canal com um rastro que se apaga.</value>
   </data>
   <data name="EffectHintChase" xml:space="preserve">
-    <value>A point of light runs along the channel, no trail.</value>
+    <value>Um ponto de luz percorre o canal, sem rastro.</value>
   </data>
   <data name="EffectHintWave" xml:space="preserve">
-    <value>Colour flows along the channel like a wave. Not dimmable.</value>
+    <value>A cor flui pelo canal como uma onda. Não permite ajustar o brilho.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>No AURA LED controller found (USB VID 0B05). This tool only works on ASUS mainboards with Aura USB lighting.</value>
+    <value>Nenhum controlador LED AURA encontrado (USB VID 0B05). Esta ferramenta funciona apenas em placas-mãe ASUS com iluminação Aura USB.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>The AURA LED controller is in use by another program (Armoury Crate, OpenRGB, SignalRGB). Close it and try again.</value>
+    <value>O controlador LED AURA está sendo usado por outro programa (Armoury Crate, OpenRGB, SignalRGB). Feche-o e tente novamente.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
+    <value>Falha ao gravar no controlador AURA (comando 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>The AURA controller has not answered a previous command yet.</value>
+    <value>O controlador AURA ainda não respondeu a um comando anterior.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>The AURA controller did not accept the command in time.</value>
+    <value>O controlador AURA não aceitou o comando a tempo.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Writing to the AURA controller failed.</value>
+    <value>Falha ao gravar no controlador AURA.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
-    <value>Unknown controller number. Run -list to see the valid ones.</value>
+    <value>Número de controlador desconhecido. Execute -list para ver os válidos.</value>
   </data>
   <data name="ErrorChannelNotFound" xml:space="preserve">
-    <value>Unknown or ambiguous channel. Possible targets:</value>
+    <value>Canal desconhecido ou ambíguo. Destinos possíveis:</value>
   </data>
   <data name="SettingsAccessibleName" xml:space="preserve">
-    <value>Settings</value>
+    <value>Configurações</value>
   </data>
   <data name="SettingAutoStart" xml:space="preserve">
-    <value>Start with Windows</value>
+    <value>Iniciar com o Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimise on close</value>
+    <value>Minimizar ao fechar</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
-    <value>Lighting at start</value>
+    <value>Iluminação ao iniciar</value>
   </data>
   <data name="StartActionNone" xml:space="preserve">
-    <value>Leave unchanged</value>
+    <value>Manter inalterada</value>
   </data>
   <data name="StartActionOff" xml:space="preserve">
-    <value>Switch off</value>
+    <value>Desligar</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
-    <value>Open</value>
+    <value>Abrir</value>
   </data>
   <data name="TrayExit" xml:space="preserve">
-    <value>Exit</value>
+    <value>Sair</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>Animate the button</value>
+    <value>Animar o botão</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
-    <value>Always on top</value>
+    <value>Sempre no topo</value>
   </data>
   <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>Install version {0}</value>
+    <value>Instalar versão {0}</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Version {0} available - open release page</value>
+    <value>Versão {0} disponível - abrir página de lançamento</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>Version {0} is available. Click the tray menu to install it.</value>
+    <value>A versão {0} está disponível. Clique no menu da bandeja para instalá-la.</value>
   </data>
   <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>The update could not be downloaded or verified.</value>
+    <value>Não foi possível baixar ou verificar a atualização.</value>
   </data>
   <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>Update available</value>
+    <value>Atualização disponível</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Version {0} is out - you are running {1}.</value>
+    <value>A versão {0} foi lançada - você está usando a {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>Install now</value>
+    <value>Instalar agora</value>
   </data>
   <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Open release page</value>
+    <value>Abrir página de lançamento</value>
   </data>
   <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>Later</value>
+    <value>Mais tarde</value>
   </data>
   <data name="SettingLanguage" xml:space="preserve">
-    <value>Language</value>
+    <value>Idioma</value>
   </data>
   <data name="LanguageAuto" xml:space="preserve">
-    <value>System</value>
+    <value>Sistema</value>
   </data>
   <data name="LanguageName" xml:space="preserve">
-    <value>English</value>
+    <value>Português (Brasil)</value>
   </data>
   <data name="DeviceFallbackName" xml:space="preserve">
-    <value>Aura Controller #{0}</value>
+    <value>Controlador Aura #{0}</value>
   </data>
   <data name="ChannelAll" xml:space="preserve">
-    <value>All channels</value>
+    <value>Todos os canais</value>
   </data>
   <data name="ChannelAccessibleName" xml:space="preserve">
-    <value>Which channel to switch</value>
+    <value>Canal a alternar</value>
   </data>
   <data name="ChannelOnboard" xml:space="preserve">
-    <value>Onboard</value>
+    <value>Integrado</value>
   </data>
   <data name="ChannelHeader" xml:space="preserve">
     <value>ARGB {0}</value>
@@ -228,115 +228,115 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>One dynamic effect per controller</value>
+    <value>Um efeito dinâmico por controlador</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
-    <value>Save</value>
+    <value>Salvar</value>
   </data>
   <data name="ChannelRenameReset" xml:space="preserve">
-    <value>Reset</value>
+    <value>Redefinir</value>
   </data>
   <data name="ChannelRenameResetConfirm" xml:space="preserve">
-    <value>Reset the name?</value>
+    <value>Redefinir o nome?</value>
   </data>
   <data name="ChannelRenameAccessibleName" xml:space="preserve">
-    <value>Channel name</value>
+    <value>Nome do canal</value>
   </data>
   <data name="SettingBrightness" xml:space="preserve">
-    <value>Brightness</value>
+    <value>Brilho</value>
   </data>
   <data name="ColourAccessibleName" xml:space="preserve">
-    <value>Effect colour</value>
+    <value>Cor do efeito</value>
   </data>
   <data name="ColourHexAccessibleName" xml:space="preserve">
-    <value>Colour as a hex value</value>
+    <value>Cor como valor hexadecimal</value>
   </data>
   <data name="BrightnessValue" xml:space="preserve">
     <value>{0}%</value>
   </data>
   <data name="ButtonNewCustomPreset" xml:space="preserve">
-    <value>New preset</value>
+    <value>Nova predefinição</value>
   </data>
   <data name="CustomPresetNamePlaceholder" xml:space="preserve">
-    <value>Preset name</value>
+    <value>Nome da predefinição</value>
   </data>
   <data name="CustomPresetSave" xml:space="preserve">
-    <value>Save</value>
+    <value>Salvar</value>
   </data>
   <data name="CustomPresetCreate" xml:space="preserve">
-    <value>Create</value>
+    <value>Criar</value>
   </data>
   <data name="CustomPresetReplace" xml:space="preserve">
-    <value>Replace</value>
+    <value>Substituir</value>
   </data>
   <data name="CustomPresetDelete" xml:space="preserve">
-    <value>Delete</value>
+    <value>Excluir</value>
   </data>
   <data name="CustomPresetConfirmDelete" xml:space="preserve">
-    <value>Delete for good?</value>
+    <value>Excluir permanentemente?</value>
   </data>
   <data name="CustomPresetDiscard" xml:space="preserve">
-    <value>Discard</value>
+    <value>Descartar</value>
   </data>
   <data name="CustomPresetNew" xml:space="preserve">
-    <value>New preset</value>
+    <value>Nova predefinição</value>
   </data>
   <data name="CustomPresetEdit" xml:space="preserve">
-    <value>Edit preset</value>
+    <value>Editar predefinição</value>
   </data>
   <data name="CustomPresetNoDevices" xml:space="preserve">
-    <value>No controller found.</value>
+    <value>Nenhum controlador encontrado.</value>
   </data>
   <data name="CustomPresetAccessibleName" xml:space="preserve">
-    <value>Custom preset editor</value>
+    <value>Editor de predefinições personalizadas</value>
   </data>
   <data name="CustomPresetExport" xml:space="preserve">
-    <value>Export</value>
+    <value>Exportar</value>
   </data>
   <data name="CustomPresetImport" xml:space="preserve">
-    <value>Import</value>
+    <value>Importar</value>
   </data>
   <data name="CustomPresetExportError" xml:space="preserve">
-    <value>Could not save the file.</value>
+    <value>Não foi possível salvar o arquivo.</value>
   </data>
   <data name="CustomPresetImportError" xml:space="preserve">
-    <value>Not a preset file, or it is damaged.</value>
+    <value>Não é um arquivo de predefinição ou ele está corrompido.</value>
   </data>
   <data name="ErrorTitle" xml:space="preserve">
-    <value>Something went wrong</value>
+    <value>Algo deu errado</value>
   </data>
   <data name="ErrorUnexpected" xml:space="preserve">
-    <value>That was not supposed to happen. Closing and reopening Aura Toggle usually fixes it.</value>
+    <value>Isso não deveria ter acontecido. Fechar e reabrir o Aura Toggle geralmente resolve.</value>
   </data>
   <data name="ErrorDetails" xml:space="preserve">
-    <value>Details</value>
+    <value>Detalhes</value>
   </data>
   <data name="ErrorCopyDetails" xml:space="preserve">
-    <value>Copy details</value>
+    <value>Copiar detalhes</value>
   </data>
   <data name="ErrorOpenLog" xml:space="preserve">
-    <value>Open log folder</value>
+    <value>Abrir pasta de logs</value>
   </data>
   <data name="ErrorClose" xml:space="preserve">
-    <value>Close</value>
+    <value>Fechar</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Reset settings</value>
+    <value>Redefinir configurações</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Reset everything?</value>
+    <value>Redefinir tudo?</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
-    <value>Global hotkey (On/Off)</value>
+    <value>Atalho global (Ligado/Desligado)</value>
   </data>
   <data name="SettingHotkeyConflict" xml:space="preserve">
-    <value>That combination is already in use.</value>
+    <value>Essa combinação já está em uso.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 to rename, Del to delete</value>
+    <value>F2 para renomear, Del para excluir</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
-    <value>Press a key...</value>
+    <value>Pressione uma tecla...</value>
   </data>
   <data name="HotkeyModifierControl" xml:space="preserve">
     <value>Ctrl</value>

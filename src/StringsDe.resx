@@ -206,10 +206,7 @@
   <data name="LanguageAuto" xml:space="preserve">
     <value>System</value>
   </data>
-  <data name="LanguageEnglish" xml:space="preserve">
-    <value>English</value>
-  </data>
-  <data name="LanguageGerman" xml:space="preserve">
+  <data name="LanguageName" xml:space="preserve">
     <value>Deutsch</value>
   </data>
   <data name="DeviceFallbackName" xml:space="preserve">

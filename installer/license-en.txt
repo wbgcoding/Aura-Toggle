@@ -4,20 +4,34 @@ Aura Toggle - License Agreement
 SUMMARY
 
 Aura Toggle is free, open-source software licensed under the MIT License. You may use it
-for private or commercial purposes, redistribute it, and modify it, all free of charge. The
-application collects no data, requires no account, and makes no network connections of its
-own.
+for private or commercial purposes, redistribute it, and modify it, all free of charge.
 
 The sole condition is that the copyright notice and this license text remain with the
 software if you redistribute it.
+
+
+PRIVACY AND NETWORK USE
+
+The application collects no data, requires no account, and contains no advertising or
+tracking. Your settings, presets and the remembered lighting state are stored in your own
+user profile on this PC and are never sent anywhere.
+
+Once a day, the application asks the project's GitHub release page whether a newer version
+exists. GitHub sees that request the way any website sees a visit. You can switch the check
+off in the settings, and an update is only ever downloaded after you ask for it.
+
+If this PC does not have the Microsoft .NET 10 Desktop Runtime, which the application needs
+to run, this setup offers to download it from Microsoft. That download happens only with
+your consent, and its digital signature is verified before it is installed.
 
 
 EFFECT ON YOUR MAINBOARD
 
 Aura Toggle communicates with your mainboard's lighting controller using volatile commands
 only. It never writes to the controller's flash memory: every change is lost on restart, and
-the lighting configured in your BIOS/UEFI is restored automatically. No administrator
-privileges, drivers, or background services are required.
+the lighting configured in your BIOS/UEFI is restored automatically. Running the application
+needs no administrator privileges, no driver and no background service - installing it for
+all users asks for administrator rights once, for that installation alone.
 
 This software communicates directly with hardware and is provided without warranty of any
 kind, as set out in the license below. By installing it, you accept these terms.

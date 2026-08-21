@@ -30,6 +30,14 @@
     <!-- Logical names are set by hand: the default would carry the src folder into them. -->
     <EmbeddedResource Include="src\Strings.resx" LogicalName="AuraToggle.Strings.resources" />
     <EmbeddedResource Include="src\StringsDe.resx" LogicalName="AuraToggle.StringsDe.resources" />
+    <EmbeddedResource Include="src\StringsEs.resx" LogicalName="AuraToggle.StringsEs.resources" />
+    <EmbeddedResource Include="src\StringsPtBr.resx" LogicalName="AuraToggle.StringsPtBr.resources" />
+    <EmbeddedResource Include="src\StringsIt.resx" LogicalName="AuraToggle.StringsIt.resources" />
+    <EmbeddedResource Include="src\StringsNl.resx" LogicalName="AuraToggle.StringsNl.resources" />
+    <EmbeddedResource Include="src\StringsPl.resx" LogicalName="AuraToggle.StringsPl.resources" />
+    <EmbeddedResource Include="src\StringsTr.resx" LogicalName="AuraToggle.StringsTr.resources" />
+    <EmbeddedResource Include="src\StringsJa.resx" LogicalName="AuraToggle.StringsJa.resources" />
+    <EmbeddedResource Include="src\StringsZh.resx" LogicalName="AuraToggle.StringsZh.resources" />
     <!-- Embedded as well as being the executable icon, so the window can show it crisply. -->
     <EmbeddedResource Include="assets\aura.ico" LogicalName="AuraToggle.aura.ico" />
     <!-- Dimmed variant shown in the tray while the lighting is off. -->

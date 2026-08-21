@@ -199,8 +199,14 @@ internal sealed class SettingsPopup : PopupForm
     private static IEnumerable<SelectItem> Languages()
     {
         yield return new SelectItem(AuraSettings.LanguageAuto, Strings.LanguageAuto, null);
-        yield return new SelectItem("en", Strings.LanguageEnglish, null);
-        yield return new SelectItem("de", Strings.LanguageGerman, null);
+
+        // Each language named in itself, never translated: someone who opened the tool in a
+        // language they cannot read has to be able to find their own in this list. The name comes
+        // out of that language's own resource file, so it is the one place it can go stale.
+        foreach ((string code, string _) in Strings.Offered)
+        {
+            yield return new SelectItem(code, Strings.InLanguage("LanguageName", code), null);
+        }
     }
 
     private static IEnumerable<SelectItem> StartActions()

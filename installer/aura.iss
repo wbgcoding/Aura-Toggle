@@ -61,12 +61,40 @@ RestartApplications=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
+; Setup's own "Select Setup Language" dialog is off, and the language follows the Windows display
+; language instead. Not a preference: that dialog is put on screen by the setup engine before any
+; line of the [Code] section below runs, so nothing here can raise it - and it was the window that
+; came up behind whatever the user was looking at, which made the whole setup look like it never
+; started. Measured on the test VM: the dialog sat third in the z-order while the window that
+; launched it kept the foreground. With the dialog gone the wizard is the first window Setup shows,
+; and InitializeWizard raises that one. A different language than the system's is still available
+; through /LANG=<code> - documented in the README next to the silent-install switches.
+ShowLanguageDialog=no
+LanguageDetectionMethod=uilanguage
+
 [Languages]
+; The same ten languages the application itself speaks, in the same order. Codes match the ones in
+; Strings.cs, so the setup and the program it installs come up in the same language.
+;
 ; The licence page carries a plain-language preamble in front of the MIT text: what the licence
 ; allows, what the tool does to the board and who the trademarks belong to. The MIT text alone
-; answers none of the questions somebody actually has at that point in a setup.
+; answers none of the questions somebody actually has at that point in a setup. That preamble is
+; written and reviewed in English and German only - a legal text is worth nothing if nobody can
+; vouch for the wording - so the other eight languages get the English licence file. Their setup
+; is translated; the licence page is not.
+;
+; Simplified Chinese is the one language Inno Setup ships no translation for, so the community
+; file lives in this folder next to the script rather than under "compiler:".
 Name: "en"; MessagesFile: "compiler:Default.isl"; LicenseFile: "license-en.txt"
 Name: "de"; MessagesFile: "compiler:Languages\German.isl"; LicenseFile: "license-de.txt"
+Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"; LicenseFile: "license-en.txt"
+Name: "pt"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"; LicenseFile: "license-en.txt"
+Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; LicenseFile: "license-en.txt"
+Name: "nl"; MessagesFile: "compiler:Languages\Dutch.isl"; LicenseFile: "license-en.txt"
+Name: "pl"; MessagesFile: "compiler:Languages\Polish.isl"; LicenseFile: "license-en.txt"
+Name: "tr"; MessagesFile: "compiler:Languages\Turkish.isl"; LicenseFile: "license-en.txt"
+Name: "ja"; MessagesFile: "compiler:Languages\Japanese.isl"; LicenseFile: "license-en.txt"
+Name: "zh"; MessagesFile: "ChineseSimplified.isl"; LicenseFile: "license-en.txt"
 
 [CustomMessages]
 en.AutoStart=Start Aura Toggle when Windows starts
@@ -85,6 +113,70 @@ de.RuntimeDownloading=.NET 10 Desktop Runtime wird heruntergeladen... %1%%
 de.RuntimeInstalling=.NET 10 Desktop Runtime wird installiert...
 de.RuntimeDeclined=Ohne die .NET 10 Desktop Runtime kann Aura Toggle nicht laufen, es wurde nichts installiert.
 de.RuntimeFailed=Die .NET 10 Desktop Runtime konnte nicht installiert werden. Installieren Sie sie von Hand über https://dotnet.microsoft.com/download/dotnet/10.0 und starten Sie dieses Setup erneut.
+es.AutoStart=Iniciar Aura Toggle al iniciar Windows
+es.DesktopIcon=Crear un acceso directo en el escritorio
+es.RemoveSettings=Eliminar también mi configuración y el efecto recordado (%1)
+es.RuntimeAsk=Aura Toggle necesita Microsoft .NET 10 Desktop Runtime, que este equipo aún no tiene.%n%n¿Desea descargarlo de Microsoft e instalarlo ahora? Ocupa unos 60 MB y tarda un minuto.
+es.RuntimeDownloading=Descargando .NET 10 Desktop Runtime... %1%%
+es.RuntimeInstalling=Instalando .NET 10 Desktop Runtime...
+es.RuntimeDeclined=Aura Toggle no puede ejecutarse sin .NET 10 Desktop Runtime, por lo que no se instaló nada.
+es.RuntimeFailed=No se pudo instalar .NET 10 Desktop Runtime. Instálelo manualmente desde https://dotnet.microsoft.com/download/dotnet/10.0 y ejecute de nuevo este instalador.
+pt.AutoStart=Iniciar o Aura Toggle com o Windows
+pt.DesktopIcon=Criar atalho na área de trabalho
+pt.RemoveSettings=Também excluir minhas configurações e o efeito lembrado (%1)
+pt.RuntimeAsk=O Aura Toggle precisa do Microsoft .NET 10 Desktop Runtime, que este PC ainda não tem.%n%nDeseja baixá-lo da Microsoft e instalá-lo agora? Ele tem cerca de 60 MB e leva um minuto.
+pt.RuntimeDownloading=Baixando o .NET 10 Desktop Runtime... %1%%
+pt.RuntimeInstalling=Instalando o .NET 10 Desktop Runtime...
+pt.RuntimeDeclined=O Aura Toggle não pode ser executado sem o .NET 10 Desktop Runtime, portanto nada foi instalado.
+pt.RuntimeFailed=Não foi possível instalar o .NET 10 Desktop Runtime. Instale-o manualmente em https://dotnet.microsoft.com/download/dotnet/10.0 e execute esta instalação novamente.
+it.AutoStart=Avvia Aura Toggle all'avvio di Windows
+it.DesktopIcon=Crea un collegamento sul desktop
+it.RemoveSettings=Elimina anche le mie impostazioni e l'effetto memorizzato (%1)
+it.RuntimeAsk=Aura Toggle richiede Microsoft .NET 10 Desktop Runtime, che non è ancora presente in questo PC.%n%nScaricarlo da Microsoft e installarlo ora? Occupa circa 60 MB e richiede un minuto.
+it.RuntimeDownloading=Download di .NET 10 Desktop Runtime in corso... %1%%
+it.RuntimeInstalling=Installazione di .NET 10 Desktop Runtime in corso...
+it.RuntimeDeclined=Aura Toggle non può essere eseguito senza .NET 10 Desktop Runtime, quindi non è stato installato nulla.
+it.RuntimeFailed=Impossibile installare .NET 10 Desktop Runtime. Installarlo manualmente da https://dotnet.microsoft.com/download/dotnet/10.0 ed eseguire nuovamente questo programma di installazione.
+nl.AutoStart=Aura Toggle starten wanneer Windows wordt gestart
+nl.DesktopIcon=Een snelkoppeling op het bureaublad maken
+nl.RemoveSettings=Ook mijn instellingen en het onthouden effect verwijderen (%1)
+nl.RuntimeAsk=Aura Toggle heeft Microsoft .NET 10 Desktop Runtime nodig, maar deze pc beschikt daar nog niet over.%n%nNu downloaden van Microsoft en installeren? Dit is ongeveer 60 MB en duurt een minuut.
+nl.RuntimeDownloading=.NET 10 Desktop Runtime wordt gedownload... %1%%
+nl.RuntimeInstalling=.NET 10 Desktop Runtime wordt geïnstalleerd...
+nl.RuntimeDeclined=Aura Toggle kan niet worden uitgevoerd zonder .NET 10 Desktop Runtime, dus er is niets geïnstalleerd.
+nl.RuntimeFailed=De .NET 10 Desktop Runtime kon niet worden geïnstalleerd. Installeer deze handmatig via https://dotnet.microsoft.com/download/dotnet/10.0 en voer deze installatie opnieuw uit.
+pl.AutoStart=Uruchamiaj Aura Toggle podczas uruchamiania Windows
+pl.DesktopIcon=Utwórz skrót na pulpicie
+pl.RemoveSettings=Usuń również moje ustawienia i zapamiętany efekt (%1)
+pl.RuntimeAsk=Aura Toggle wymaga składnika Microsoft .NET 10 Desktop Runtime, którego nie ma jeszcze na tym komputerze.%n%nPobrać go z Microsoft i zainstalować teraz? Ma około 60 MB, a instalacja zajmuje minutę.
+pl.RuntimeDownloading=Pobieranie .NET 10 Desktop Runtime... %1%%
+pl.RuntimeInstalling=Instalowanie .NET 10 Desktop Runtime...
+pl.RuntimeDeclined=Aura Toggle nie może działać bez .NET 10 Desktop Runtime, więc nic nie zostało zainstalowane.
+pl.RuntimeFailed=Nie udało się zainstalować .NET 10 Desktop Runtime. Zainstaluj go ręcznie ze strony https://dotnet.microsoft.com/download/dotnet/10.0, a następnie uruchom ten instalator ponownie.
+tr.AutoStart=Windows başladığında Aura Toggle'ı başlat
+tr.DesktopIcon=Masaüstünde kısayol oluştur
+tr.RemoveSettings=Ayarlarımı ve hatırlanan efekti de sil (%1)
+tr.RuntimeAsk=Aura Toggle, bu bilgisayarda henüz bulunmayan Microsoft .NET 10 Desktop Runtime'a ihtiyaç duyar.%n%nMicrosoft'tan indirip şimdi yüklemek ister misiniz? Yaklaşık 60 MB'tır ve bir dakika sürer.
+tr.RuntimeDownloading=.NET 10 Desktop Runtime indiriliyor... %1%%
+tr.RuntimeInstalling=.NET 10 Desktop Runtime yükleniyor...
+tr.RuntimeDeclined=Aura Toggle, .NET 10 Desktop Runtime olmadan çalışamaz; bu nedenle hiçbir şey yüklenmedi.
+tr.RuntimeFailed=.NET 10 Desktop Runtime yüklenemedi. https://dotnet.microsoft.com/download/dotnet/10.0 adresinden elle yükleyin ve bu kurulumu yeniden çalıştırın.
+ja.AutoStart=Windows の起動時に Aura Toggle を起動する
+ja.DesktopIcon=デスクトップにショートカットを作成する
+ja.RemoveSettings=設定と記憶されたエフェクトも削除する（%1）
+ja.RuntimeAsk=Aura Toggle には、この PC にはまだインストールされていない Microsoft .NET 10 Desktop Runtime が必要です。%n%nMicrosoft からダウンロードして今すぐインストールしますか？ 約 60 MB で、1 分ほどかかります。
+ja.RuntimeDownloading=.NET 10 Desktop Runtime をダウンロードしています... %1%%
+ja.RuntimeInstalling=.NET 10 Desktop Runtime をインストールしています...
+ja.RuntimeDeclined=Aura Toggle は .NET 10 Desktop Runtime がないと実行できないため、何もインストールされませんでした。
+ja.RuntimeFailed=.NET 10 Desktop Runtime をインストールできませんでした。https://dotnet.microsoft.com/download/dotnet/10.0 から手動でインストールして、このセットアップをもう一度実行してください。
+zh.AutoStart=Windows 启动时启动 Aura Toggle
+zh.DesktopIcon=创建桌面快捷方式
+zh.RemoveSettings=同时删除我的设置和记住的效果（%1）
+zh.RuntimeAsk=Aura Toggle 需要此电脑尚未安装的 Microsoft .NET 10 Desktop Runtime。%n%n是否要从 Microsoft 下载并立即安装？它约为 60 MB，只需一分钟。
+zh.RuntimeDownloading=正在下载 .NET 10 Desktop Runtime... %1%%
+zh.RuntimeInstalling=正在安装 .NET 10 Desktop Runtime...
+zh.RuntimeDeclined=Aura Toggle 无法在没有 .NET 10 Desktop Runtime 的情况下运行，因此未安装任何内容。
+zh.RuntimeFailed=无法安装 .NET 10 Desktop Runtime。请从 https://dotnet.microsoft.com/download/dotnet/10.0 手动安装，然后再次运行此安装程序。
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
@@ -166,6 +258,8 @@ function SetForegroundWindow(hWnd: HWND): Boolean;
 function SetWindowPos(hWnd: HWND; hWndInsertAfter: Integer; X, Y, cx, cy: Integer;
   uFlags: LongWord): Boolean; external 'SetWindowPos@user32.dll stdcall';
 
+function GetForegroundWindow(): HWND; external 'GetForegroundWindow@user32.dll stdcall';
+
 { Setup itself can come up behind whatever the user was looking at: the elevated process that
   actually runs the wizard is started by the elevation service, not by the window that had the
   foreground, so Windows does not hand it the foreground automatically. Asking for it is the
@@ -177,9 +271,20 @@ var
 
 procedure BringWizardToFront;
 begin
+  AllowSetForegroundWindow(AnyProcess);
   SetForegroundWindow(WizardForm.Handle);
   SetWindowPos(WizardForm.Handle, TopMost, 0, 0, 0, 0, KeepPlace);
   SetWindowPos(WizardForm.Handle, NoTopMost, 0, 0, 0, 0, KeepPlace);
+end;
+
+{ Runs in the un-elevated instance as well, before it hands over to the elevated one. Windows only
+  lets a process take the foreground if the process that currently has it says so first, and after
+  elevation the wizard belongs to a *different* process than the one that was started - without
+  this the request from over there is refused and only the z-order half below still works. }
+function InitializeSetup(): Boolean;
+begin
+  AllowSetForegroundWindow(AnyProcess);
+  Result := True;
 end;
 
 procedure InitializeWizard;
@@ -187,15 +292,21 @@ begin
   BringWizardToFront;
 end;
 
-{ Again on the first page: InitializeWizard runs before the wizard is on screen, and a window that
-  is not visible yet cannot be raised above anything. }
+{ Again on every page until it has actually worked: InitializeWizard runs before the wizard is on
+  screen, and a window that is not visible yet cannot be raised above anything. One attempt on the
+  first page is not enough either - the request can be refused outright while another process holds
+  the foreground lock. Checking instead of assuming also means a wizard that came up in front by
+  itself is left alone, so this never yanks focus back from an application the user switched to on
+  purpose: it can only run while the wizard is not the window they are working in. }
 procedure CurPageChanged(CurPageID: Integer);
 begin
-  if not WizardRaised then
-  begin
-    WizardRaised := True;
+  if WizardRaised then
+    Exit;
+
+  if GetForegroundWindow = WizardForm.Handle then
+    WizardRaised := True
+  else
     BringWizardToFront;
-  end;
 end;
 
 { Checks one candidate ".dotnet root\shared\Microsoft.WindowsDesktop.App" for any 10.x - a

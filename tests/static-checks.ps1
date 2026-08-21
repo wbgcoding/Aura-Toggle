@@ -51,24 +51,73 @@ function Get-ResxKeys {
     $keys
 }
 
-$englishPath = Join-Path $root "src\Strings.resx"
-$germanPath = Join-Path $root "src\StringsDe.resx"
-$english = Get-ResxKeys $englishPath
-$german = Get-ResxKeys $germanPath
-
-Write-Host "  Strings.resx: $($english.Count) keys, StringsDe.resx: $($german.Count) keys"
-
-foreach ($key in $english.Keys) {
-    if (-not $german.ContainsKey($key)) { Add-Finding "src\StringsDe.resx" "key '$key' exists only in English" }
-}
-foreach ($key in $german.Keys) {
-    if (-not $english.ContainsKey($key)) { Add-Finding "src\Strings.resx" "key '$key' exists only in German" }
-}
-foreach ($pair in @(@($englishPath, $english), @($germanPath, $german))) {
-    $name = $pair[0].Substring($root.Length + 1)
-    foreach ($key in $pair[1].Keys) {
-        if ([string]::IsNullOrWhiteSpace($pair[1][$key])) { Add-Finding $name "key '$key' has no text" }
+# Every language file the application embeds, read out of the one table in Strings.cs that
+# declares them - a language added there and nowhere else is caught here rather than at run time,
+# where it would only show up as English text in a Japanese window.
+$bundles = @()
+$stringsCs = Get-Content (Join-Path $root "src\Strings.cs") -Raw
+foreach ($match in [regex]::Matches($stringsCs, '\("([a-z]{2})",\s*"(Strings[A-Za-z]*)"\)')) {
+    $bundles += [pscustomobject]@{
+        Code = $match.Groups[1].Value
+        Name = "src\" + $match.Groups[2].Value + ".resx"
+        Path = Join-Path $root ("src\" + $match.Groups[2].Value + ".resx")
     }
+}
+
+if ($bundles.Count -lt 2) {
+    Add-Finding "src\Strings.cs" "the language table could not be read - resource checks skipped"
+}
+
+$missingFile = @($bundles | Where-Object { -not (Test-Path $_.Path) })
+foreach ($bundle in $missingFile) { Add-Finding $bundle.Name "declared in Strings.cs but not on disk" }
+$bundles = @($bundles | Where-Object { Test-Path $_.Path })
+
+foreach ($bundle in $bundles) {
+    $bundle | Add-Member -NotePropertyName Keys -NotePropertyValue (Get-ResxKeys $bundle.Path)
+}
+
+$english = $bundles[0].Keys
+$englishPath = $bundles[0].Path
+Write-Host "  $($bundles.Count) languages, $($english.Count) keys in $($bundles[0].Name)"
+
+# Placeholders are what actually breaks: a translation that loses "{0}" prints a sentence with a
+# hole in it, and one that invents "{2}" throws a FormatException at the user.
+function Get-Placeholders {
+    param([string]$Text)
+    $found = @([regex]::Matches($Text, '\{\d+\}') | ForEach-Object { $_.Value } | Sort-Object -Unique)
+    ($found -join ",")
+}
+
+$names = @{}
+foreach ($bundle in $bundles) {
+    foreach ($key in $english.Keys) {
+        if (-not $bundle.Keys.ContainsKey($key)) {
+            Add-Finding $bundle.Name "key '$key' is missing"
+            continue
+        }
+        if ([string]::IsNullOrWhiteSpace($bundle.Keys[$key])) {
+            Add-Finding $bundle.Name "key '$key' has no text"
+        }
+        $wanted = Get-Placeholders $english[$key]
+        $have = Get-Placeholders $bundle.Keys[$key]
+        if ($wanted -ne $have) {
+            Add-Finding $bundle.Name "key '$key' uses placeholders '$have' where English uses '$wanted'"
+        }
+    }
+    foreach ($key in $bundle.Keys.Keys) {
+        if (-not $english.ContainsKey($key)) { Add-Finding $bundle.Name "key '$key' exists in no other language" }
+    }
+
+    # The settings list names every language in itself, so two files carrying the same name means
+    # one of them was copied and never translated.
+    $own = $bundle.Keys["LanguageName"]
+    if ([string]::IsNullOrWhiteSpace($own)) {
+        Add-Finding $bundle.Name "no LanguageName - the settings list would show an empty entry"
+    }
+    elseif ($names.ContainsKey($own)) {
+        Add-Finding $bundle.Name "calls itself '$own', the same as $($names[$own])"
+    }
+    else { $names[$own] = $bundle.Name }
 }
 
 # Keys reached through Strings.Get(...) plus the two families built at run time: every preset's
@@ -78,6 +127,11 @@ $used = New-Object System.Collections.Generic.HashSet[string]
 foreach ($match in [regex]::Matches((Get-Content (Join-Path $root "src\Strings.cs") -Raw), 'Get\("([A-Za-z0-9_]+)"\)')) {
     [void]$used.Add($match.Groups[1].Value)
 }
+foreach ($file in Get-ChildItem (Join-Path $root "src") -Filter *.cs) {
+    foreach ($match in [regex]::Matches((Get-Content $file.FullName -Raw), 'InLanguage\("([A-Za-z0-9_]+)"')) {
+        [void]$used.Add($match.Groups[1].Value)
+    }
+}
 foreach ($match in [regex]::Matches((Get-Content (Join-Path $root "src\AuraPresets.cs") -Raw), 'new AuraPreset\("[^"]+",\s*\d+,\s*"(Preset[A-Za-z0-9]+)"')) {
     $key = $match.Groups[1].Value
     [void]$used.Add($key)
@@ -85,11 +139,12 @@ foreach ($match in [regex]::Matches((Get-Content (Join-Path $root "src\AuraPrese
 }
 
 foreach ($key in $used) {
-    if (-not $english.ContainsKey($key)) { Add-Finding "src\Strings.resx" "key '$key' is used in code but missing" }
-    if (-not $german.ContainsKey($key)) { Add-Finding "src\StringsDe.resx" "key '$key' is used in code but missing" }
+    foreach ($bundle in $bundles) {
+        if (-not $bundle.Keys.ContainsKey($key)) { Add-Finding $bundle.Name "key '$key' is used in code but missing" }
+    }
 }
 foreach ($key in $english.Keys) {
-    if (-not $used.Contains($key)) { Add-Finding "src\Strings.resx" "key '$key' is never used" }
+    if (-not $used.Contains($key)) { Add-Finding $bundles[0].Name "key '$key' is never used" }
 }
 
 # --------------------------------------------------------------------------------------------

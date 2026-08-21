@@ -966,8 +966,8 @@ internal static class Program
             return true;
         }
 
-        return AuraPresets.Normalise(DefaultChannelName(entry.Channel, "en")) == wanted ||
-               AuraPresets.Normalise(DefaultChannelName(entry.Channel, "de")) == wanted;
+        return Strings.Codes.Any(language =>
+            AuraPresets.Normalise(DefaultChannelName(entry.Channel, language)) == wanted);
     }
 
     private static string DefaultChannelName(AuraChannel channel, string language) => channel.Onboard

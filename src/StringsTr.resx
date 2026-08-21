@@ -45,181 +45,181 @@
     <value>Aura Toggle</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
-    <value>On</value>
+    <value>Açık</value>
   </data>
   <data name="ButtonStateOff" xml:space="preserve">
-    <value>Off</value>
+    <value>Kapalı</value>
   </data>
   <data name="ButtonAccessibleName" xml:space="preserve">
-    <value>Switch mainboard lighting on or off</value>
+    <value>Anakart aydınlatmasını aç veya kapat</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: AuraToggle [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name|number&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
+    <value>Kullanım: AuraToggle [-on | -off | -preset &lt;ad&gt; [renk] | -brightness &lt;10-100&gt; | -custom &lt;ad|numara&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;hedef&gt;]   (bağımsız değişken olmadan açma/kapatma penceresi açılır)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Presets: {0}</value>
+    <value>Ön ayarlar: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
-    <value>No controller found</value>
+    <value>Denetleyici bulunamadı</value>
   </data>
   <data name="PresetAccessibleName" xml:space="preserve">
-    <value>Lighting effect</value>
+    <value>Aydınlatma efekti</value>
   </data>
   <data name="PresetStatic" xml:space="preserve">
-    <value>Static</value>
+    <value>Sabit</value>
   </data>
   <data name="PresetBreathing" xml:space="preserve">
-    <value>Breathing</value>
+    <value>Nefes Alma</value>
   </data>
   <data name="PresetFlashing" xml:space="preserve">
-    <value>Flashing</value>
+    <value>Yanıp Sönme</value>
   </data>
   <data name="PresetSpectrumCycle" xml:space="preserve">
-    <value>Spectrum Cycle</value>
+    <value>Spektrum Döngüsü</value>
   </data>
   <data name="PresetRainbow" xml:space="preserve">
-    <value>Rainbow</value>
+    <value>Gökkuşağı</value>
   </data>
   <data name="PresetRainbowBreathing" xml:space="preserve">
-    <value>Rainbow Breathing</value>
+    <value>Gökkuşağı Nefes Alma</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
-    <value>Chase Fade</value>
+    <value>Kayan Işık Solma</value>
   </data>
   <data name="PresetChase" xml:space="preserve">
-    <value>Chase</value>
+    <value>Kayan Işık</value>
   </data>
   <data name="PresetWave" xml:space="preserve">
-    <value>Wave</value>
+    <value>Dalga</value>
   </data>
   <data name="EffectHintStatic" xml:space="preserve">
-    <value>One steady colour, no movement.</value>
+    <value>Tek sabit renk, hareket yok.</value>
   </data>
   <data name="EffectHintBreathing" xml:space="preserve">
-    <value>The colour fades in and out slowly.</value>
+    <value>Renk yavaşça belirip kaybolur.</value>
   </data>
   <data name="EffectHintFlashing" xml:space="preserve">
-    <value>The colour blinks sharply on and off.</value>
+    <value>Renk keskin biçimde yanıp söner.</value>
   </data>
   <data name="EffectHintSpectrumCycle" xml:space="preserve">
-    <value>Cycles through the full colour spectrum. Not dimmable.</value>
+    <value>Tüm renk spektrumunda döner. Parlaklık ayarlanamaz.</value>
   </data>
   <data name="EffectHintRainbow" xml:space="preserve">
-    <value>A rainbow gradient moves across the channel. Not dimmable.</value>
+    <value>Gökkuşağı geçişi kanal boyunca hareket eder. Parlaklık ayarlanamaz.</value>
   </data>
   <data name="EffectHintRainbowBreathing" xml:space="preserve">
-    <value>The rainbow gradient fades in and out. Not dimmable.</value>
+    <value>Gökkuşağı geçişi belirip kaybolur. Parlaklık ayarlanamaz.</value>
   </data>
   <data name="EffectHintChaseFade" xml:space="preserve">
-    <value>A point of light runs along the channel with a fading trail.</value>
+    <value>Bir ışık noktası, solan bir iz bırakarak kanal boyunca ilerler.</value>
   </data>
   <data name="EffectHintChase" xml:space="preserve">
-    <value>A point of light runs along the channel, no trail.</value>
+    <value>Bir ışık noktası kanal boyunca ilerler, iz bırakmaz.</value>
   </data>
   <data name="EffectHintWave" xml:space="preserve">
-    <value>Colour flows along the channel like a wave. Not dimmable.</value>
+    <value>Renk kanal boyunca dalga gibi akar. Parlaklık ayarlanamaz.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>No AURA LED controller found (USB VID 0B05). This tool only works on ASUS mainboards with Aura USB lighting.</value>
+    <value>AURA LED denetleyicisi bulunamadı (USB VID 0B05). Bu araç yalnızca Aura USB aydınlatmalı ASUS anakartlarda çalışır.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>The AURA LED controller is in use by another program (Armoury Crate, OpenRGB, SignalRGB). Close it and try again.</value>
+    <value>AURA LED denetleyicisi başka bir program tarafından kullanılıyor (Armoury Crate, OpenRGB, SignalRGB). Programı kapatıp yeniden deneyin.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
+    <value>AURA denetleyicisine yazma başarısız oldu (komut 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>The AURA controller has not answered a previous command yet.</value>
+    <value>AURA denetleyicisi önceki bir komuta henüz yanıt vermedi.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>The AURA controller did not accept the command in time.</value>
+    <value>AURA denetleyicisi komutu zamanında kabul etmedi.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Writing to the AURA controller failed.</value>
+    <value>AURA denetleyicisine yazma başarısız oldu.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
-    <value>Unknown controller number. Run -list to see the valid ones.</value>
+    <value>Bilinmeyen denetleyici numarası. Geçerlileri görmek için -list çalıştırın.</value>
   </data>
   <data name="ErrorChannelNotFound" xml:space="preserve">
-    <value>Unknown or ambiguous channel. Possible targets:</value>
+    <value>Bilinmeyen veya belirsiz kanal. Olası hedefler:</value>
   </data>
   <data name="SettingsAccessibleName" xml:space="preserve">
-    <value>Settings</value>
+    <value>Ayarlar</value>
   </data>
   <data name="SettingAutoStart" xml:space="preserve">
-    <value>Start with Windows</value>
+    <value>Windows ile başlat</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimise on close</value>
+    <value>Kapatınca simge durumuna küçült</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
-    <value>Lighting at start</value>
+    <value>Başlangıçta aydınlatma</value>
   </data>
   <data name="StartActionNone" xml:space="preserve">
-    <value>Leave unchanged</value>
+    <value>Değiştirme</value>
   </data>
   <data name="StartActionOff" xml:space="preserve">
-    <value>Switch off</value>
+    <value>Kapat</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
-    <value>Open</value>
+    <value>Aç</value>
   </data>
   <data name="TrayExit" xml:space="preserve">
-    <value>Exit</value>
+    <value>Çıkış</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>Animate the button</value>
+    <value>Düğmeyi canlandır</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
-    <value>Always on top</value>
+    <value>Her zaman üstte</value>
   </data>
   <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>Install version {0}</value>
+    <value>{0} sürümünü yükle</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Version {0} available - open release page</value>
+    <value>{0} sürümü mevcut - sürüm sayfasını aç</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>Version {0} is available. Click the tray menu to install it.</value>
+    <value>{0} sürümü mevcut. Yüklemek için sistem tepsisi menüsüne tıklayın.</value>
   </data>
   <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>The update could not be downloaded or verified.</value>
+    <value>Güncelleme indirilemedi veya doğrulanamadı.</value>
   </data>
   <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>Update available</value>
+    <value>Güncelleme mevcut</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Version {0} is out - you are running {1}.</value>
+    <value>{0} sürümü çıktı - kullandığınız sürüm {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>Install now</value>
+    <value>Şimdi yükle</value>
   </data>
   <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Open release page</value>
+    <value>Sürüm sayfasını aç</value>
   </data>
   <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>Later</value>
+    <value>Sonra</value>
   </data>
   <data name="SettingLanguage" xml:space="preserve">
-    <value>Language</value>
+    <value>Dil</value>
   </data>
   <data name="LanguageAuto" xml:space="preserve">
-    <value>System</value>
+    <value>Sistem</value>
   </data>
   <data name="LanguageName" xml:space="preserve">
-    <value>English</value>
+    <value>Türkçe</value>
   </data>
   <data name="DeviceFallbackName" xml:space="preserve">
-    <value>Aura Controller #{0}</value>
+    <value>Aura Denetleyicisi #{0}</value>
   </data>
   <data name="ChannelAll" xml:space="preserve">
-    <value>All channels</value>
+    <value>Tüm kanallar</value>
   </data>
   <data name="ChannelAccessibleName" xml:space="preserve">
-    <value>Which channel to switch</value>
+    <value>Değiştirilecek kanal</value>
   </data>
   <data name="ChannelOnboard" xml:space="preserve">
-    <value>Onboard</value>
+    <value>Anakart</value>
   </data>
   <data name="ChannelHeader" xml:space="preserve">
     <value>ARGB {0}</value>
@@ -228,115 +228,115 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>One dynamic effect per controller</value>
+    <value>Denetleyici başına bir dinamik efekt</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
-    <value>Save</value>
+    <value>Kaydet</value>
   </data>
   <data name="ChannelRenameReset" xml:space="preserve">
-    <value>Reset</value>
+    <value>Sıfırla</value>
   </data>
   <data name="ChannelRenameResetConfirm" xml:space="preserve">
-    <value>Reset the name?</value>
+    <value>Ad sıfırlansın mı?</value>
   </data>
   <data name="ChannelRenameAccessibleName" xml:space="preserve">
-    <value>Channel name</value>
+    <value>Kanal adı</value>
   </data>
   <data name="SettingBrightness" xml:space="preserve">
-    <value>Brightness</value>
+    <value>Parlaklık</value>
   </data>
   <data name="ColourAccessibleName" xml:space="preserve">
-    <value>Effect colour</value>
+    <value>Efekt rengi</value>
   </data>
   <data name="ColourHexAccessibleName" xml:space="preserve">
-    <value>Colour as a hex value</value>
+    <value>Onaltılık değer olarak renk</value>
   </data>
   <data name="BrightnessValue" xml:space="preserve">
     <value>{0}%</value>
   </data>
   <data name="ButtonNewCustomPreset" xml:space="preserve">
-    <value>New preset</value>
+    <value>Yeni ön ayar</value>
   </data>
   <data name="CustomPresetNamePlaceholder" xml:space="preserve">
-    <value>Preset name</value>
+    <value>Ön ayar adı</value>
   </data>
   <data name="CustomPresetSave" xml:space="preserve">
-    <value>Save</value>
+    <value>Kaydet</value>
   </data>
   <data name="CustomPresetCreate" xml:space="preserve">
-    <value>Create</value>
+    <value>Oluştur</value>
   </data>
   <data name="CustomPresetReplace" xml:space="preserve">
-    <value>Replace</value>
+    <value>Değiştir</value>
   </data>
   <data name="CustomPresetDelete" xml:space="preserve">
-    <value>Delete</value>
+    <value>Sil</value>
   </data>
   <data name="CustomPresetConfirmDelete" xml:space="preserve">
-    <value>Delete for good?</value>
+    <value>Kalıcı olarak silinsin mi?</value>
   </data>
   <data name="CustomPresetDiscard" xml:space="preserve">
-    <value>Discard</value>
+    <value>Vazgeç</value>
   </data>
   <data name="CustomPresetNew" xml:space="preserve">
-    <value>New preset</value>
+    <value>Yeni ön ayar</value>
   </data>
   <data name="CustomPresetEdit" xml:space="preserve">
-    <value>Edit preset</value>
+    <value>Ön ayarı düzenle</value>
   </data>
   <data name="CustomPresetNoDevices" xml:space="preserve">
-    <value>No controller found.</value>
+    <value>Denetleyici bulunamadı.</value>
   </data>
   <data name="CustomPresetAccessibleName" xml:space="preserve">
-    <value>Custom preset editor</value>
+    <value>Özel ön ayar düzenleyicisi</value>
   </data>
   <data name="CustomPresetExport" xml:space="preserve">
-    <value>Export</value>
+    <value>Dışa aktar</value>
   </data>
   <data name="CustomPresetImport" xml:space="preserve">
-    <value>Import</value>
+    <value>İçe aktar</value>
   </data>
   <data name="CustomPresetExportError" xml:space="preserve">
-    <value>Could not save the file.</value>
+    <value>Dosya kaydedilemedi.</value>
   </data>
   <data name="CustomPresetImportError" xml:space="preserve">
-    <value>Not a preset file, or it is damaged.</value>
+    <value>Ön ayar dosyası değil veya hasarlı.</value>
   </data>
   <data name="ErrorTitle" xml:space="preserve">
-    <value>Something went wrong</value>
+    <value>Bir şeyler ters gitti</value>
   </data>
   <data name="ErrorUnexpected" xml:space="preserve">
-    <value>That was not supposed to happen. Closing and reopening Aura Toggle usually fixes it.</value>
+    <value>Bu olmamalıydı. Aura Toggle'ı kapatıp yeniden açmak genellikle sorunu çözer.</value>
   </data>
   <data name="ErrorDetails" xml:space="preserve">
-    <value>Details</value>
+    <value>Ayrıntılar</value>
   </data>
   <data name="ErrorCopyDetails" xml:space="preserve">
-    <value>Copy details</value>
+    <value>Ayrıntıları kopyala</value>
   </data>
   <data name="ErrorOpenLog" xml:space="preserve">
-    <value>Open log folder</value>
+    <value>Günlük klasörünü aç</value>
   </data>
   <data name="ErrorClose" xml:space="preserve">
-    <value>Close</value>
+    <value>Kapat</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Reset settings</value>
+    <value>Ayarları sıfırla</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Reset everything?</value>
+    <value>Her şey sıfırlansın mı?</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
-    <value>Global hotkey (On/Off)</value>
+    <value>Genel kısayol tuşu (Açık/Kapalı)</value>
   </data>
   <data name="SettingHotkeyConflict" xml:space="preserve">
-    <value>That combination is already in use.</value>
+    <value>Bu tuş birleşimi zaten kullanılıyor.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 to rename, Del to delete</value>
+    <value>Yeniden adlandırmak için F2, silmek için Del</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
-    <value>Press a key...</value>
+    <value>Bir tuşa basın...</value>
   </data>
   <data name="HotkeyModifierControl" xml:space="preserve">
     <value>Ctrl</value>

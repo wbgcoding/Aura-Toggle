@@ -44,7 +44,8 @@ internal static class AuraPresets
 
     /// <summary>
     /// Finds a preset by name. Spelling is forgiving: casing, spaces, hyphens and underscores
-    /// are ignored, and the display name is accepted in either language - not just whichever one
+    /// are ignored, and the display name is accepted in any of the interface languages - not just
+    /// whichever one
     /// the interface happens to be set to, so a script written as <c>-preset Regenbogen</c> keeps
     /// working after the user switches to English. Matches how <c>-channel</c> already resolves a
     /// channel's default name. The command line's <c>-custom</c> lookup uses this same helper,
@@ -56,8 +57,8 @@ internal static class AuraPresets
 
         return All.FirstOrDefault(preset =>
             Normalise(preset.Key) == wanted ||
-            Normalise(Strings.InLanguage(preset.ResourceKey, "en")) == wanted ||
-            Normalise(Strings.InLanguage(preset.ResourceKey, "de")) == wanted);
+            Strings.Codes.Any(language =>
+                Normalise(Strings.InLanguage(preset.ResourceKey, language)) == wanted));
     }
 
     public static AuraPreset? ByMode(byte mode) => All.FirstOrDefault(preset => preset.Mode == mode);

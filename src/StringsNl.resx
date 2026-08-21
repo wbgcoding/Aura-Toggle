@@ -45,43 +45,43 @@
     <value>Aura Toggle</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
-    <value>On</value>
+    <value>Aan</value>
   </data>
   <data name="ButtonStateOff" xml:space="preserve">
-    <value>Off</value>
+    <value>Uit</value>
   </data>
   <data name="ButtonAccessibleName" xml:space="preserve">
-    <value>Switch mainboard lighting on or off</value>
+    <value>Moederbordverlichting in- of uitschakelen</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: AuraToggle [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name|number&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
+    <value>Gebruik: AuraToggle [-on | -off | -preset &lt;naam&gt; [kleur] | -brightness &lt;10-100&gt; | -custom &lt;naam|nummer&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;doel&gt;]   (zonder argument wordt het schakelvenster geopend)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Presets: {0}</value>
+    <value>Voorinstellingen: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
-    <value>No controller found</value>
+    <value>Geen controller gevonden</value>
   </data>
   <data name="PresetAccessibleName" xml:space="preserve">
-    <value>Lighting effect</value>
+    <value>Lichteffect</value>
   </data>
   <data name="PresetStatic" xml:space="preserve">
-    <value>Static</value>
+    <value>Statisch</value>
   </data>
   <data name="PresetBreathing" xml:space="preserve">
-    <value>Breathing</value>
+    <value>Ademend</value>
   </data>
   <data name="PresetFlashing" xml:space="preserve">
-    <value>Flashing</value>
+    <value>Knipperend</value>
   </data>
   <data name="PresetSpectrumCycle" xml:space="preserve">
-    <value>Spectrum Cycle</value>
+    <value>Spectrumcyclus</value>
   </data>
   <data name="PresetRainbow" xml:space="preserve">
-    <value>Rainbow</value>
+    <value>Regenboog</value>
   </data>
   <data name="PresetRainbowBreathing" xml:space="preserve">
-    <value>Rainbow Breathing</value>
+    <value>Regenboog ademend</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
     <value>Chase Fade</value>
@@ -90,136 +90,136 @@
     <value>Chase</value>
   </data>
   <data name="PresetWave" xml:space="preserve">
-    <value>Wave</value>
+    <value>Golf</value>
   </data>
   <data name="EffectHintStatic" xml:space="preserve">
-    <value>One steady colour, no movement.</value>
+    <value>Eén vaste kleur, zonder beweging.</value>
   </data>
   <data name="EffectHintBreathing" xml:space="preserve">
-    <value>The colour fades in and out slowly.</value>
+    <value>De kleur wordt langzaam feller en zwakker.</value>
   </data>
   <data name="EffectHintFlashing" xml:space="preserve">
-    <value>The colour blinks sharply on and off.</value>
+    <value>De kleur knippert scherp aan en uit.</value>
   </data>
   <data name="EffectHintSpectrumCycle" xml:space="preserve">
-    <value>Cycles through the full colour spectrum. Not dimmable.</value>
+    <value>Doorloopt het volledige kleurenspectrum. Niet dimbaar.</value>
   </data>
   <data name="EffectHintRainbow" xml:space="preserve">
-    <value>A rainbow gradient moves across the channel. Not dimmable.</value>
+    <value>Een regenboogverloop beweegt over het kanaal. Niet dimbaar.</value>
   </data>
   <data name="EffectHintRainbowBreathing" xml:space="preserve">
-    <value>The rainbow gradient fades in and out. Not dimmable.</value>
+    <value>Het regenboogverloop wordt feller en zwakker. Niet dimbaar.</value>
   </data>
   <data name="EffectHintChaseFade" xml:space="preserve">
-    <value>A point of light runs along the channel with a fading trail.</value>
+    <value>Een lichtpunt loopt over het kanaal met een vervagend spoor.</value>
   </data>
   <data name="EffectHintChase" xml:space="preserve">
-    <value>A point of light runs along the channel, no trail.</value>
+    <value>Een lichtpunt loopt over het kanaal, zonder spoor.</value>
   </data>
   <data name="EffectHintWave" xml:space="preserve">
-    <value>Colour flows along the channel like a wave. Not dimmable.</value>
+    <value>Kleur stroomt als een golf over het kanaal. Niet dimbaar.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>No AURA LED controller found (USB VID 0B05). This tool only works on ASUS mainboards with Aura USB lighting.</value>
+    <value>Geen AURA-ledcontroller gevonden (USB VID 0B05). Dit hulpmiddel werkt alleen op ASUS-moederborden met Aura USB-verlichting.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>The AURA LED controller is in use by another program (Armoury Crate, OpenRGB, SignalRGB). Close it and try again.</value>
+    <value>De AURA-ledcontroller wordt door een ander programma gebruikt (Armoury Crate, OpenRGB, SignalRGB). Sluit het programma en probeer het opnieuw.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
+    <value>Schrijven naar de AURA-controller is mislukt (opdracht 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>The AURA controller has not answered a previous command yet.</value>
+    <value>De AURA-controller heeft nog niet op een vorige opdracht geantwoord.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>The AURA controller did not accept the command in time.</value>
+    <value>De AURA-controller heeft de opdracht niet op tijd geaccepteerd.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Writing to the AURA controller failed.</value>
+    <value>Schrijven naar de AURA-controller is mislukt.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
-    <value>Unknown controller number. Run -list to see the valid ones.</value>
+    <value>Onbekend controllernummer. Voer -list uit om de geldige nummers te zien.</value>
   </data>
   <data name="ErrorChannelNotFound" xml:space="preserve">
-    <value>Unknown or ambiguous channel. Possible targets:</value>
+    <value>Onbekend of dubbelzinnig kanaal. Mogelijke doelen:</value>
   </data>
   <data name="SettingsAccessibleName" xml:space="preserve">
-    <value>Settings</value>
+    <value>Instellingen</value>
   </data>
   <data name="SettingAutoStart" xml:space="preserve">
-    <value>Start with Windows</value>
+    <value>Starten met Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimise on close</value>
+    <value>Minimaliseren bij sluiten</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
-    <value>Lighting at start</value>
+    <value>Verlichting bij starten</value>
   </data>
   <data name="StartActionNone" xml:space="preserve">
-    <value>Leave unchanged</value>
+    <value>Ongewijzigd laten</value>
   </data>
   <data name="StartActionOff" xml:space="preserve">
-    <value>Switch off</value>
+    <value>Uitschakelen</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
-    <value>Open</value>
+    <value>Openen</value>
   </data>
   <data name="TrayExit" xml:space="preserve">
-    <value>Exit</value>
+    <value>Afsluiten</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>Animate the button</value>
+    <value>Knop animeren</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
-    <value>Always on top</value>
+    <value>Altijd op voorgrond</value>
   </data>
   <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>Install version {0}</value>
+    <value>Versie {0} installeren</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Version {0} available - open release page</value>
+    <value>Versie {0} beschikbaar - releasepagina openen</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>Version {0} is available. Click the tray menu to install it.</value>
+    <value>Versie {0} is beschikbaar. Klik op het systeemvakmenu om deze te installeren.</value>
   </data>
   <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>The update could not be downloaded or verified.</value>
+    <value>De update kon niet worden gedownload of geverifieerd.</value>
   </data>
   <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>Update available</value>
+    <value>Update beschikbaar</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Version {0} is out - you are running {1}.</value>
+    <value>Versie {0} is uit - u gebruikt {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>Install now</value>
+    <value>Nu installeren</value>
   </data>
   <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Open release page</value>
+    <value>Releasepagina openen</value>
   </data>
   <data name="UpdateNoticeLater" xml:space="preserve">
     <value>Later</value>
   </data>
   <data name="SettingLanguage" xml:space="preserve">
-    <value>Language</value>
+    <value>Taal</value>
   </data>
   <data name="LanguageAuto" xml:space="preserve">
-    <value>System</value>
+    <value>Systeem</value>
   </data>
   <data name="LanguageName" xml:space="preserve">
-    <value>English</value>
+    <value>Nederlands</value>
   </data>
   <data name="DeviceFallbackName" xml:space="preserve">
-    <value>Aura Controller #{0}</value>
+    <value>Aura-controller #{0}</value>
   </data>
   <data name="ChannelAll" xml:space="preserve">
-    <value>All channels</value>
+    <value>Alle kanalen</value>
   </data>
   <data name="ChannelAccessibleName" xml:space="preserve">
-    <value>Which channel to switch</value>
+    <value>Welk kanaal moet worden geschakeld</value>
   </data>
   <data name="ChannelOnboard" xml:space="preserve">
-    <value>Onboard</value>
+    <value>Ingebouwd</value>
   </data>
   <data name="ChannelHeader" xml:space="preserve">
     <value>ARGB {0}</value>
@@ -228,115 +228,115 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>One dynamic effect per controller</value>
+    <value>Eén dynamisch effect per controller</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
-    <value>Save</value>
+    <value>Opslaan</value>
   </data>
   <data name="ChannelRenameReset" xml:space="preserve">
-    <value>Reset</value>
+    <value>Herstellen</value>
   </data>
   <data name="ChannelRenameResetConfirm" xml:space="preserve">
-    <value>Reset the name?</value>
+    <value>Naam herstellen?</value>
   </data>
   <data name="ChannelRenameAccessibleName" xml:space="preserve">
-    <value>Channel name</value>
+    <value>Kanaalnaam</value>
   </data>
   <data name="SettingBrightness" xml:space="preserve">
-    <value>Brightness</value>
+    <value>Helderheid</value>
   </data>
   <data name="ColourAccessibleName" xml:space="preserve">
-    <value>Effect colour</value>
+    <value>Effectkleur</value>
   </data>
   <data name="ColourHexAccessibleName" xml:space="preserve">
-    <value>Colour as a hex value</value>
+    <value>Kleur als hexadecimale waarde</value>
   </data>
   <data name="BrightnessValue" xml:space="preserve">
     <value>{0}%</value>
   </data>
   <data name="ButtonNewCustomPreset" xml:space="preserve">
-    <value>New preset</value>
+    <value>Nieuwe voorinstelling</value>
   </data>
   <data name="CustomPresetNamePlaceholder" xml:space="preserve">
-    <value>Preset name</value>
+    <value>Naam voorinstelling</value>
   </data>
   <data name="CustomPresetSave" xml:space="preserve">
-    <value>Save</value>
+    <value>Opslaan</value>
   </data>
   <data name="CustomPresetCreate" xml:space="preserve">
-    <value>Create</value>
+    <value>Maken</value>
   </data>
   <data name="CustomPresetReplace" xml:space="preserve">
-    <value>Replace</value>
+    <value>Vervangen</value>
   </data>
   <data name="CustomPresetDelete" xml:space="preserve">
-    <value>Delete</value>
+    <value>Verwijderen</value>
   </data>
   <data name="CustomPresetConfirmDelete" xml:space="preserve">
-    <value>Delete for good?</value>
+    <value>Definitief verwijderen?</value>
   </data>
   <data name="CustomPresetDiscard" xml:space="preserve">
-    <value>Discard</value>
+    <value>Verwerpen</value>
   </data>
   <data name="CustomPresetNew" xml:space="preserve">
-    <value>New preset</value>
+    <value>Nieuwe voorinstelling</value>
   </data>
   <data name="CustomPresetEdit" xml:space="preserve">
-    <value>Edit preset</value>
+    <value>Voorinstelling bewerken</value>
   </data>
   <data name="CustomPresetNoDevices" xml:space="preserve">
-    <value>No controller found.</value>
+    <value>Geen controller gevonden.</value>
   </data>
   <data name="CustomPresetAccessibleName" xml:space="preserve">
-    <value>Custom preset editor</value>
+    <value>Editor voor aangepaste voorinstellingen</value>
   </data>
   <data name="CustomPresetExport" xml:space="preserve">
-    <value>Export</value>
+    <value>Exporteren</value>
   </data>
   <data name="CustomPresetImport" xml:space="preserve">
-    <value>Import</value>
+    <value>Importeren</value>
   </data>
   <data name="CustomPresetExportError" xml:space="preserve">
-    <value>Could not save the file.</value>
+    <value>Het bestand kon niet worden opgeslagen.</value>
   </data>
   <data name="CustomPresetImportError" xml:space="preserve">
-    <value>Not a preset file, or it is damaged.</value>
+    <value>Geen voorinstellingsbestand, of het is beschadigd.</value>
   </data>
   <data name="ErrorTitle" xml:space="preserve">
-    <value>Something went wrong</value>
+    <value>Er is iets misgegaan</value>
   </data>
   <data name="ErrorUnexpected" xml:space="preserve">
-    <value>That was not supposed to happen. Closing and reopening Aura Toggle usually fixes it.</value>
+    <value>Dit had niet mogen gebeuren. Aura Toggle sluiten en opnieuw openen helpt meestal.</value>
   </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Details</value>
   </data>
   <data name="ErrorCopyDetails" xml:space="preserve">
-    <value>Copy details</value>
+    <value>Details kopiëren</value>
   </data>
   <data name="ErrorOpenLog" xml:space="preserve">
-    <value>Open log folder</value>
+    <value>Logmap openen</value>
   </data>
   <data name="ErrorClose" xml:space="preserve">
-    <value>Close</value>
+    <value>Sluiten</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Reset settings</value>
+    <value>Instellingen herstellen</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Reset everything?</value>
+    <value>Alles herstellen?</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
-    <value>Global hotkey (On/Off)</value>
+    <value>Globale sneltoets (Aan/Uit)</value>
   </data>
   <data name="SettingHotkeyConflict" xml:space="preserve">
-    <value>That combination is already in use.</value>
+    <value>Die combinatie wordt al gebruikt.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 to rename, Del to delete</value>
+    <value>F2 om te hernoemen, Del om te verwijderen</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
-    <value>Press a key...</value>
+    <value>Druk op een toets...</value>
   </data>
   <data name="HotkeyModifierControl" xml:space="preserve">
     <value>Ctrl</value>

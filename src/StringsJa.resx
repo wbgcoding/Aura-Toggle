@@ -45,181 +45,181 @@
     <value>Aura Toggle</value>
   </data>
   <data name="ButtonStateOn" xml:space="preserve">
-    <value>On</value>
+    <value>オン</value>
   </data>
   <data name="ButtonStateOff" xml:space="preserve">
-    <value>Off</value>
+    <value>オフ</value>
   </data>
   <data name="ButtonAccessibleName" xml:space="preserve">
-    <value>Switch mainboard lighting on or off</value>
+    <value>マザーボードの照明をオンまたはオフに切り替えます</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: AuraToggle [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name|number&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
+    <value>使い方: AuraToggle [-on | -off | -preset &lt;名前&gt; [色] | -brightness &lt;10-100&gt; | -custom &lt;名前|番号&gt; | -list | -status | --version] [-device &lt;番号&gt;] [-channel &lt;対象&gt;]   （引数なしで切り替えウィンドウを開きます）</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Presets: {0}</value>
+    <value>プリセット: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
-    <value>No controller found</value>
+    <value>コントローラーが見つかりません</value>
   </data>
   <data name="PresetAccessibleName" xml:space="preserve">
-    <value>Lighting effect</value>
+    <value>照明効果</value>
   </data>
   <data name="PresetStatic" xml:space="preserve">
-    <value>Static</value>
+    <value>固定</value>
   </data>
   <data name="PresetBreathing" xml:space="preserve">
-    <value>Breathing</value>
+    <value>ブリージング</value>
   </data>
   <data name="PresetFlashing" xml:space="preserve">
-    <value>Flashing</value>
+    <value>点滅</value>
   </data>
   <data name="PresetSpectrumCycle" xml:space="preserve">
-    <value>Spectrum Cycle</value>
+    <value>スペクトラムサイクル</value>
   </data>
   <data name="PresetRainbow" xml:space="preserve">
-    <value>Rainbow</value>
+    <value>レインボー</value>
   </data>
   <data name="PresetRainbowBreathing" xml:space="preserve">
-    <value>Rainbow Breathing</value>
+    <value>レインボーブリージング</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
-    <value>Chase Fade</value>
+    <value>チェイスフェード</value>
   </data>
   <data name="PresetChase" xml:space="preserve">
-    <value>Chase</value>
+    <value>チェイス</value>
   </data>
   <data name="PresetWave" xml:space="preserve">
-    <value>Wave</value>
+    <value>ウェーブ</value>
   </data>
   <data name="EffectHintStatic" xml:space="preserve">
-    <value>One steady colour, no movement.</value>
+    <value>動きのない単色です。</value>
   </data>
   <data name="EffectHintBreathing" xml:space="preserve">
-    <value>The colour fades in and out slowly.</value>
+    <value>色がゆっくり明滅します。</value>
   </data>
   <data name="EffectHintFlashing" xml:space="preserve">
-    <value>The colour blinks sharply on and off.</value>
+    <value>色が鋭く点滅します。</value>
   </data>
   <data name="EffectHintSpectrumCycle" xml:space="preserve">
-    <value>Cycles through the full colour spectrum. Not dimmable.</value>
+    <value>色のスペクトル全体を循環します。明るさは変更できません。</value>
   </data>
   <data name="EffectHintRainbow" xml:space="preserve">
-    <value>A rainbow gradient moves across the channel. Not dimmable.</value>
+    <value>レインボーグラデーションがチャンネル上を移動します。明るさは変更できません。</value>
   </data>
   <data name="EffectHintRainbowBreathing" xml:space="preserve">
-    <value>The rainbow gradient fades in and out. Not dimmable.</value>
+    <value>レインボーグラデーションが明滅します。明るさは変更できません。</value>
   </data>
   <data name="EffectHintChaseFade" xml:space="preserve">
-    <value>A point of light runs along the channel with a fading trail.</value>
+    <value>光点が残光を伴ってチャンネル上を走ります。</value>
   </data>
   <data name="EffectHintChase" xml:space="preserve">
-    <value>A point of light runs along the channel, no trail.</value>
+    <value>光点が残光なしでチャンネル上を走ります。</value>
   </data>
   <data name="EffectHintWave" xml:space="preserve">
-    <value>Colour flows along the channel like a wave. Not dimmable.</value>
+    <value>色が波のようにチャンネル上を流れます。明るさは変更できません。</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>No AURA LED controller found (USB VID 0B05). This tool only works on ASUS mainboards with Aura USB lighting.</value>
+    <value>AURA LEDコントローラーが見つかりません（USB VID 0B05）。このツールはAura USB照明対応のASUSマザーボードでのみ動作します。</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>The AURA LED controller is in use by another program (Armoury Crate, OpenRGB, SignalRGB). Close it and try again.</value>
+    <value>AURA LEDコントローラーは別のプログラム（Armoury Crate、OpenRGB、SignalRGB）で使用中です。そのプログラムを閉じてからもう一度試してください。</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
+    <value>AURAコントローラーへの書き込みに失敗しました（コマンド 0x{0}）: {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>The AURA controller has not answered a previous command yet.</value>
+    <value>AURAコントローラーは前のコマンドにまだ応答していません。</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>The AURA controller did not accept the command in time.</value>
+    <value>AURAコントローラーが時間内にコマンドを受け付けませんでした。</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Writing to the AURA controller failed.</value>
+    <value>AURAコントローラーへの書き込みに失敗しました。</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
-    <value>Unknown controller number. Run -list to see the valid ones.</value>
+    <value>不明なコントローラー番号です。有効な番号は -list で確認してください。</value>
   </data>
   <data name="ErrorChannelNotFound" xml:space="preserve">
-    <value>Unknown or ambiguous channel. Possible targets:</value>
+    <value>不明またはあいまいなチャンネルです。指定可能な対象:</value>
   </data>
   <data name="SettingsAccessibleName" xml:space="preserve">
-    <value>Settings</value>
+    <value>設定</value>
   </data>
   <data name="SettingAutoStart" xml:space="preserve">
-    <value>Start with Windows</value>
+    <value>Windowsと同時に起動</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimise on close</value>
+    <value>閉じると最小化</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
-    <value>Lighting at start</value>
+    <value>起動時の照明</value>
   </data>
   <data name="StartActionNone" xml:space="preserve">
-    <value>Leave unchanged</value>
+    <value>変更しない</value>
   </data>
   <data name="StartActionOff" xml:space="preserve">
-    <value>Switch off</value>
+    <value>オフにする</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
-    <value>Open</value>
+    <value>開く</value>
   </data>
   <data name="TrayExit" xml:space="preserve">
-    <value>Exit</value>
+    <value>終了</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>Animate the button</value>
+    <value>ボタンをアニメーション表示</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
-    <value>Always on top</value>
+    <value>常に手前に表示</value>
   </data>
   <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>Install version {0}</value>
+    <value>バージョン {0} をインストール</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Version {0} available - open release page</value>
+    <value>バージョン {0} が利用可能です - リリースページを開く</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>Version {0} is available. Click the tray menu to install it.</value>
+    <value>バージョン {0} が利用可能です。トレイメニューをクリックしてインストールしてください。</value>
   </data>
   <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>The update could not be downloaded or verified.</value>
+    <value>更新プログラムをダウンロードまたは検証できませんでした。</value>
   </data>
   <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>Update available</value>
+    <value>更新があります</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Version {0} is out - you are running {1}.</value>
+    <value>バージョン {0} が公開されました - 現在のバージョンは {1} です。</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>Install now</value>
+    <value>今すぐインストール</value>
   </data>
   <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Open release page</value>
+    <value>リリースページを開く</value>
   </data>
   <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>Later</value>
+    <value>後で</value>
   </data>
   <data name="SettingLanguage" xml:space="preserve">
-    <value>Language</value>
+    <value>言語</value>
   </data>
   <data name="LanguageAuto" xml:space="preserve">
-    <value>System</value>
+    <value>システム</value>
   </data>
   <data name="LanguageName" xml:space="preserve">
-    <value>English</value>
+    <value>日本語</value>
   </data>
   <data name="DeviceFallbackName" xml:space="preserve">
-    <value>Aura Controller #{0}</value>
+    <value>Aura コントローラー #{0}</value>
   </data>
   <data name="ChannelAll" xml:space="preserve">
-    <value>All channels</value>
+    <value>すべてのチャンネル</value>
   </data>
   <data name="ChannelAccessibleName" xml:space="preserve">
-    <value>Which channel to switch</value>
+    <value>切り替えるチャンネル</value>
   </data>
   <data name="ChannelOnboard" xml:space="preserve">
-    <value>Onboard</value>
+    <value>オンボード</value>
   </data>
   <data name="ChannelHeader" xml:space="preserve">
     <value>ARGB {0}</value>
@@ -228,115 +228,115 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>One dynamic effect per controller</value>
+    <value>コントローラーごとに動的効果は1つのみ</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
-    <value>Save</value>
+    <value>保存</value>
   </data>
   <data name="ChannelRenameReset" xml:space="preserve">
-    <value>Reset</value>
+    <value>リセット</value>
   </data>
   <data name="ChannelRenameResetConfirm" xml:space="preserve">
-    <value>Reset the name?</value>
+    <value>名前をリセットしますか?</value>
   </data>
   <data name="ChannelRenameAccessibleName" xml:space="preserve">
-    <value>Channel name</value>
+    <value>チャンネル名</value>
   </data>
   <data name="SettingBrightness" xml:space="preserve">
-    <value>Brightness</value>
+    <value>明るさ</value>
   </data>
   <data name="ColourAccessibleName" xml:space="preserve">
-    <value>Effect colour</value>
+    <value>効果の色</value>
   </data>
   <data name="ColourHexAccessibleName" xml:space="preserve">
-    <value>Colour as a hex value</value>
+    <value>16進数で指定する色</value>
   </data>
   <data name="BrightnessValue" xml:space="preserve">
     <value>{0}%</value>
   </data>
   <data name="ButtonNewCustomPreset" xml:space="preserve">
-    <value>New preset</value>
+    <value>新しいプリセット</value>
   </data>
   <data name="CustomPresetNamePlaceholder" xml:space="preserve">
-    <value>Preset name</value>
+    <value>プリセット名</value>
   </data>
   <data name="CustomPresetSave" xml:space="preserve">
-    <value>Save</value>
+    <value>保存</value>
   </data>
   <data name="CustomPresetCreate" xml:space="preserve">
-    <value>Create</value>
+    <value>作成</value>
   </data>
   <data name="CustomPresetReplace" xml:space="preserve">
-    <value>Replace</value>
+    <value>置き換え</value>
   </data>
   <data name="CustomPresetDelete" xml:space="preserve">
-    <value>Delete</value>
+    <value>削除</value>
   </data>
   <data name="CustomPresetConfirmDelete" xml:space="preserve">
-    <value>Delete for good?</value>
+    <value>完全に削除しますか?</value>
   </data>
   <data name="CustomPresetDiscard" xml:space="preserve">
-    <value>Discard</value>
+    <value>破棄</value>
   </data>
   <data name="CustomPresetNew" xml:space="preserve">
-    <value>New preset</value>
+    <value>新しいプリセット</value>
   </data>
   <data name="CustomPresetEdit" xml:space="preserve">
-    <value>Edit preset</value>
+    <value>プリセットを編集</value>
   </data>
   <data name="CustomPresetNoDevices" xml:space="preserve">
-    <value>No controller found.</value>
+    <value>コントローラーが見つかりません。</value>
   </data>
   <data name="CustomPresetAccessibleName" xml:space="preserve">
-    <value>Custom preset editor</value>
+    <value>カスタムプリセットエディター</value>
   </data>
   <data name="CustomPresetExport" xml:space="preserve">
-    <value>Export</value>
+    <value>エクスポート</value>
   </data>
   <data name="CustomPresetImport" xml:space="preserve">
-    <value>Import</value>
+    <value>インポート</value>
   </data>
   <data name="CustomPresetExportError" xml:space="preserve">
-    <value>Could not save the file.</value>
+    <value>ファイルを保存できませんでした。</value>
   </data>
   <data name="CustomPresetImportError" xml:space="preserve">
-    <value>Not a preset file, or it is damaged.</value>
+    <value>プリセットファイルではないか、破損しています。</value>
   </data>
   <data name="ErrorTitle" xml:space="preserve">
-    <value>Something went wrong</value>
+    <value>問題が発生しました</value>
   </data>
   <data name="ErrorUnexpected" xml:space="preserve">
-    <value>That was not supposed to happen. Closing and reopening Aura Toggle usually fixes it.</value>
+    <value>これは想定外の動作です。Aura Toggle を閉じて再度開くと、通常は解決します。</value>
   </data>
   <data name="ErrorDetails" xml:space="preserve">
-    <value>Details</value>
+    <value>詳細</value>
   </data>
   <data name="ErrorCopyDetails" xml:space="preserve">
-    <value>Copy details</value>
+    <value>詳細をコピー</value>
   </data>
   <data name="ErrorOpenLog" xml:space="preserve">
-    <value>Open log folder</value>
+    <value>ログフォルダーを開く</value>
   </data>
   <data name="ErrorClose" xml:space="preserve">
-    <value>Close</value>
+    <value>閉じる</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Reset settings</value>
+    <value>設定をリセット</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Reset everything?</value>
+    <value>すべてリセットしますか?</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
-    <value>Global hotkey (On/Off)</value>
+    <value>グローバルホットキー（オン/オフ）</value>
   </data>
   <data name="SettingHotkeyConflict" xml:space="preserve">
-    <value>That combination is already in use.</value>
+    <value>このキーの組み合わせはすでに使用されています。</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 to rename, Del to delete</value>
+    <value>F2で名前変更、Delで削除</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
-    <value>Press a key...</value>
+    <value>キーを押してください...</value>
   </data>
   <data name="HotkeyModifierControl" xml:space="preserve">
     <value>Ctrl</value>
