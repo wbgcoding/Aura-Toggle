@@ -1740,64 +1740,80 @@ internal static class Program
         }
     }
 
-    /// <summary>Every non-target header dims to this instead of going dark - see <see cref="Identify"/>.</summary>
-    private const byte IdentifyDim = 0x18;
-
     /// <summary>
-    /// Lights one channel red at full brightness, unmistakably its own colour, and holds every
-    /// other channel of the same controller at a faint white so the right header is obvious. Full
-    /// off was tried first, but on boards where the RGB headers share one bus (channels 2-4 on the
-    /// reference board) an "off" neighbour can still catch stray colour from whichever header is
-    /// actually driving the bus, so a dark header no longer proved it was not the one lit red - a
-    /// faint white neighbour stays visibly distinct from the bright red target either way. A
-    /// blink was tried before that, but toggling a channel between red and off in a loop ran into
-    /// a dynamic-lighting limit on some boards - past a certain channel index the colour command
-    /// was silently dropped, so it never blinked at all. A steady colour has no such rate to hit.
-    /// Runs until <paramref name="token"/> is cancelled, then puts every channel of the
-    /// controller back to what <c>channel-state.json</c> already says it should be - nothing is
-    /// written here, this only replays what was already on record.
+    /// Lights one channel white at full brightness and takes every other channel on the board -
+    /// every controller, not just the one the channel belongs to - to a static black. One lit
+    /// header against an otherwise dark board leaves nothing to work out.
+    /// <para>
+    /// Black here means the static mode carrying the colour 0,0,0, which is what the brightness
+    /// model already produces for a channel set to black: the controller has no brightness of its
+    /// own, colours are scaled before they are sent. That is not the same as the mode-off that was
+    /// tried when this was first written and rejected, because on boards whose headers share one
+    /// bus an off neighbour can still catch stray colour from whichever header is driving it. A
+    /// static black holds the channel at a colour instead of releasing it, and measured on the
+    /// reference board that is genuinely dark (21.08.). If a board ever does show a glow on a
+    /// neighbour again, the answer is a faint white on the others - not a blink: toggling a
+    /// channel in a loop runs into the dynamic-lighting limit that silently drops the colour
+    /// command past a certain channel index, so it never blinks at all.
+    /// </para>
+    /// Runs until <paramref name="token"/> is cancelled, then puts every channel it touched back
+    /// to what <c>channel-state.json</c> already says it should be - nothing is written here, this
+    /// only replays what was already on record.
     /// </summary>
     /// <remarks>
-    /// The dim channels and the red one go out in the same burst, not as separate operations.
-    /// Sending every "off" first and the target channel's colour last, as its own later call, hit
-    /// the same dropped-command limit the blink already ran into on the higher-indexed headers -
-    /// arriving well behind a run of other reports is exactly the pattern that trips it.
+    /// Each controller's dark channels and its white one go out in the same burst, not as separate
+    /// operations. Sending every black first and the target channel's colour last, as its own later
+    /// call, hit the same dropped-command limit on the higher-indexed headers - arriving well
+    /// behind a run of other reports is exactly the pattern that trips it.
     /// </remarks>
     public static void Identify(string deviceKey, int channel, CancellationToken token)
     {
         var devices = AuraDevice.DiscoverAll();
-        AuraDevice? device = devices.Find(d => d.Key == deviceKey);
 
         try
         {
-            if (device == null)
+            if (!devices.Exists(d => d.Key == deviceKey))
             {
-                // Unplugged since the window last saw it - nothing to light or restore.
+                // Unplugged since the window last saw it - nothing to light, and no reason to
+                // darken the controllers that are still there.
                 return;
             }
 
             AuraState state = AuraState.Load();
             Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
 
-            var looks = new List<ChannelLook>();
-            foreach (AuraChannel other in device.Channels)
-            {
-                looks.Add(other.Index == channel
-                    ? new ChannelLook(channel, AuraState.ModeStatic, 0xFF, 0, 0)
-                    : new ChannelLook(other.Index, AuraState.ModeStatic, IdentifyDim, IdentifyDim, IdentifyDim));
-            }
+            // Recorded before each controller is written, not after: a controller that throws
+            // half way through its burst has still been changed and has to be put back.
+            var touched = new List<AuraDevice>();
 
             try
             {
-                device.Apply(looks);
+                foreach (AuraDevice device in devices)
+                {
+                    var looks = new List<ChannelLook>();
+
+                    foreach (AuraChannel other in device.Channels)
+                    {
+                        looks.Add(device.Key == deviceKey && other.Index == channel
+                            ? new ChannelLook(other.Index, AuraState.ModeStatic, 0xFF, 0xFF, 0xFF)
+                            : new ChannelLook(other.Index, AuraState.ModeStatic, 0, 0, 0));
+                    }
+
+                    touched.Add(device);
+                    device.Apply(looks);
+                }
+
                 token.WaitHandle.WaitOne(Timeout.Infinite);
             }
             finally
             {
-                // Even when lighting the target channel itself failed, whatever channels this did
-                // turn dark still need to go back to their own record - a failure here must not
-                // leave a controller stuck dark with channel-state.json still describing it as lit.
-                Replay(device, state, remembered);
+                // Even when lighting the target channel itself failed, whatever this did turn dark
+                // still needs to go back to its own record - a failure here must not leave a
+                // controller stuck dark with channel-state.json still describing it as lit.
+                foreach (AuraDevice device in touched)
+                {
+                    Replay(device, state, remembered);
+                }
             }
         }
         finally

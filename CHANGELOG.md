@@ -16,6 +16,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Naming a channel now lights that one white and takes every other channel on the board dark,
+  across all controllers, instead of lighting the chosen one red and holding the rest at a faint
+  white. One lit header on an unlit board leaves nothing to work out.
+- The button animates a custom preset's own effect: the one most of the preset's channels run, in
+  the colour of the first channel running it. It used to keep animating whatever board-wide effect
+  was set before the preset took over, which could be a rainbow wash under a preset that runs no
+  rainbow anywhere.
+- "Start Aura Toggle when Windows starts" is unticked every time the setup runs. Setup used to
+  remember which boxes were ticked last time and tick them again, so once it had been switched on
+  it came back switched on with every later install.
 - The setup no longer opens its own "Select Setup Language" dialog. That window is put on screen
   before the setup can run a line of its own code, which is why it could end up behind whatever
   the user was looking at, making the setup look like it never started. The language now comes

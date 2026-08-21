@@ -726,6 +726,47 @@ Test-Case "window opens, closes and leaves no process behind" {
     Assert-Equal 0 $leftover.Count "leftover processes"
 }
 
+# A custom preset is a bundle of different effects, so the button used to animate whatever
+# board-wide effect happened to be set before the preset took over - a rainbow wash under a preset
+# that runs no rainbow anywhere. It now animates the effect most of the preset's channels run, in
+# the colour of the first channel running it. Two channels breathing red and green, one static
+# blue, one chase yellow: breathing wins on count, and the colour is the first breathing channel's.
+Test-Case "the button animates a custom preset's most used effect" {
+    $report = Join-Path $env:TEMP "aura-layout.txt"
+    Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+    $bundle = @'
+[{"name":"Suite Mix","entries":[
+ {"device":"review-1","channel":0,"label":"Onboard","mode":2,"red":255,"green":0,"blue":0,"brightness":100},
+ {"device":"review-1","channel":1,"label":"ARGB 1","mode":1,"red":0,"green":0,"blue":255,"brightness":100},
+ {"device":"review-1","channel":2,"label":"ARGB 2","mode":2,"red":0,"green":255,"blue":0,"brightness":100},
+ {"device":"review-2","channel":0,"label":"Onboard","mode":9,"red":255,"green":255,"blue":0,"brightness":100}]}]
+'@
+
+    # Both files are on the suite's backup list, so whatever the machine had comes back at the end.
+    Set-Content -Path $presets -Value $bundle -Encoding utf8
+    Set-Content -Path $state -Encoding utf8 `
+        -Value '{"on":true,"mode":5,"red":255,"green":255,"blue":255,"brightness":100,"customPreset":"Suite Mix"}'
+
+    $process = Start-Process $Exe -ArgumentList "-review", "layout" -PassThru
+    try {
+        Start-Sleep -Seconds 6
+        if (-not (Test-Path $report)) { throw "no layout report was written" }
+
+        $line = @(Get-Content $report | Where-Object { $_ -match "^button" }) | Select-Object -Last 1
+        if (-not $line) { throw "the report says nothing about the button" }
+
+        # Rainbow is the board-wide effect in state.json above - the one the button must NOT show.
+        if ($line -notmatch "effect=breathing") { throw "expected breathing:`n$line" }
+        if ($line -notmatch "colour=#FF0000") { throw "expected the first breathing channel's red:`n$line" }
+    }
+    finally {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        [void]$process.WaitForExit(5000)
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+    }
+}
+
 # The complaint that came back three times: after the window is moved to a monitor at another
 # display scale, the effect list is handed less room than its own longest entry needs and cuts the
 # text off. "-review layout <scale>" puts the window through exactly that move, so it is a check

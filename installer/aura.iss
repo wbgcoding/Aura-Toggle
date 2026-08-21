@@ -54,6 +54,14 @@ WizardStyle=modern
 ; Windows 10 and newer only.
 MinVersion=10.0
 
+; Both checkboxes on the tasks page start off, every time, and "start with Windows" in
+; particular. Setup remembers which tasks were ticked last time and re-ticks them by default,
+; which measured out as a box that stays checked on every later install once it was ticked once -
+; the value it reads back sits under "Inno Setup: Selected Tasks" in the uninstall key. Turning
+; that memory off is what makes the [Tasks] flags below mean what they say. Someone re-running the
+; setup to update ticks it again if they want it; nobody gets it switched on without noticing.
+UsePreviousTasks=no
+
 ; Offers to close a running copy instead of failing, and restores it afterwards.
 CloseApplications=yes
 RestartApplications=yes
