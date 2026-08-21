@@ -83,8 +83,9 @@ LanguageDetectionMethod=uilanguage
 ; vouch for the wording - so the other eight languages get the English licence file. Their setup
 ; is translated; the licence page is not.
 ;
-; Simplified Chinese is the one language Inno Setup ships no translation for, so the community
-; file lives in this folder next to the script rather than under "compiler:".
+; Simplified Chinese is the one language Inno Setup ships no translation for, so the message file
+; for it belongs to this project and sits next to this script rather than under "compiler:". It
+; follows Default.isl key for key; anything missing there falls back to English.
 Name: "en"; MessagesFile: "compiler:Default.isl"; LicenseFile: "license-en.txt"
 Name: "de"; MessagesFile: "compiler:Languages\German.isl"; LicenseFile: "license-de.txt"
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"; LicenseFile: "license-en.txt"
