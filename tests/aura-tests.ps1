@@ -757,6 +757,54 @@ foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "edi
     }
 }
 
+# The window is transparent until it has measured itself, but a controller that takes longer to
+# answer than the reveal backstop waits shows it anyway - and then the channel selector arrives and
+# widens it while the user is looking at it. The remembered width is what covers that gap, so it has
+# to survive the constructor's own Render(), which measures a row that has no selector in it yet.
+# First run writes the width down on close, second run has to open at it.
+Test-Case "the window opens at the width it will keep, before anything is discovered" {
+    $report = Join-Path $env:TEMP "aura-layout.txt"
+
+    function Invoke-LayoutRun {
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+        $process = Start-Process $Exe -ArgumentList "-review", "layout" -PassThru
+        try {
+            Start-Sleep -Seconds 4
+            if (-not (Test-Path $report)) { throw "no layout report was written" }
+            $text = Get-Content $report -Raw
+            # Closed rather than killed: the width is written down on the way out.
+            [void]$process.CloseMainWindow()
+            [void]$process.WaitForExit(3000)
+            return $text
+        }
+        finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            [void]$process.WaitForExit(5000)
+        }
+    }
+
+    try {
+        [void](Invoke-LayoutRun)
+        $text = Invoke-LayoutRun
+
+        $blocks = @($text -split "--- ")
+        $before = @($blocks | Where-Object { $_ -match "^before shown" }) | Select-Object -Last 1
+        $opened = @($blocks | Where-Object { $_ -match "^as opened" }) | Select-Object -Last 1
+        if (-not $before -or -not $opened) { throw "the report is missing one of the two passes" }
+        if ($before -notmatch "clientsize\s+(\d+)x") { throw "no client size before the window was shown" }
+        $start = [int]$Matches[1]
+        if ($opened -notmatch "clientsize\s+(\d+)x") { throw "no client size once open" }
+        $final = [int]$Matches[1]
+
+        if ($start -ne $final) {
+            throw "shown at $start px, then grew to $final px - visible if discovery outlasts the reveal backstop"
+        }
+    }
+    finally {
+        Remove-Item $report -Force -ErrorAction SilentlyContinue
+    }
+}
+
 # Out to another display and back has to land on the size it started at - the window is meant to
 # follow the scale, not to grow a little on every trip. Two stops at the same scale with a
 # different one in between, so the check holds whatever scale this machine itself runs at.
