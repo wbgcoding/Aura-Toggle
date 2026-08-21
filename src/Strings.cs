@@ -1,32 +1,65 @@
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Resources;
 
 namespace AuraToggle;
 
 /// <summary>
-/// User facing text in German and English. The language follows the Windows display language,
-/// English is the fallback for everything else.
+/// User facing text in the ten interface languages. The language follows the Windows display
+/// language, English is the fallback for everything else.
 /// </summary>
 internal static class Strings
 {
-    private static readonly ResourceManager English = new("AuraToggle.Strings", typeof(Strings).Assembly);
-    private static readonly ResourceManager German = new("AuraToggle.StringsDe", typeof(Strings).Assembly);
+    /// <summary>
+    /// Every language the interface exists in, keyed by the two-letter code Windows reports for
+    /// the display language - which is also what <c>settings.json</c> stores, so one lookup serves
+    /// both. Two of the ten are regional variants of a wider language: Brazilian Portuguese answers
+    /// for "pt" and Simplified Chinese for "zh", the two by far the most Windows installations are
+    /// set to. The order here is the order the settings list shows.
+    /// </summary>
+    public static readonly (string Code, string Bundle)[] Offered =
+    {
+        ("en", "Strings"),
+        ("de", "StringsDe"),
+        ("es", "StringsEs"),
+        ("pt", "StringsPtBr"),
+        ("it", "StringsIt"),
+        ("nl", "StringsNl"),
+        ("pl", "StringsPl"),
+        ("tr", "StringsTr"),
+        ("ja", "StringsJa"),
+        ("zh", "StringsZh"),
+    };
 
-    /// <summary>Empty follows Windows; "de" or "en" force one language.</summary>
+    private static readonly Dictionary<string, ResourceManager> All = Offered.ToDictionary(
+        language => language.Code,
+        language => new ResourceManager("AuraToggle." + language.Bundle, typeof(Strings).Assembly));
+
+    private static readonly ResourceManager English = All["en"];
+
+    /// <summary>Empty follows Windows; a two-letter code from <see cref="Codes"/> forces one
+    /// language.</summary>
     public static string Override { get; set; } = "";
 
+    /// <summary>The two-letter codes of every language on offer, in display order.</summary>
+    public static IEnumerable<string> Codes => All.Keys;
+
     private static ResourceManager Current =>
-        (Override.Length > 0 ? Override : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName) == "de"
-            ? German
-            : English;
+        Bundle(Override.Length > 0 ? Override : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+
+    /// <summary>Falls back to English for anything not translated - an unknown code, a hand-edited
+    /// settings file, or a Windows display language the tool does not speak.</summary>
+    private static ResourceManager Bundle(string language) =>
+        All.TryGetValue(language, out ResourceManager? found) ? found : English;
 
     /// <summary>
     /// One specific language regardless of <see cref="Override"/> - the CLI's forgiving
-    /// <c>-channel</c> matching accepts a channel's default name in either language, not just
-    /// whichever one is currently active.
+    /// <c>-preset</c> and <c>-channel</c> matching accepts a name in any of the ten languages, not
+    /// just whichever one is currently active.
     /// </summary>
     internal static string InLanguage(string key, string language) =>
-        (language == "de" ? German : English).GetString(key) ?? English.GetString(key) ?? key;
+        Bundle(language).GetString(key) ?? English.GetString(key) ?? key;
 
     public static string WindowTitle => Get("WindowTitle");
 
@@ -91,10 +124,6 @@ internal static class Strings
     public static string SettingLanguage => Get("SettingLanguage");
 
     public static string LanguageAuto => Get("LanguageAuto");
-
-    public static string LanguageEnglish => Get("LanguageEnglish");
-
-    public static string LanguageGerman => Get("LanguageGerman");
 
     public static string DeviceFallbackName => Get("DeviceFallbackName");
 

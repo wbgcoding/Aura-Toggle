@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Aura Toggle</value>
+  </data>
+  <data name="ButtonStateOn" xml:space="preserve">
+    <value>Açık</value>
+  </data>
+  <data name="ButtonStateOff" xml:space="preserve">
+    <value>Kapalı</value>
+  </data>
+  <data name="ButtonAccessibleName" xml:space="preserve">
+    <value>Anakart aydınlatmasını aç veya kapat</value>
+  </data>
+  <data name="UsageLine" xml:space="preserve">
+    <value>Kullanım: AuraToggle [-on | -off | -preset &lt;ad&gt; [renk] | -brightness &lt;10-100&gt; | -custom &lt;ad|numara&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;hedef&gt;]   (bağımsız değişken olmadan açma/kapatma penceresi açılır)</value>
+  </data>
+  <data name="UsagePresets" xml:space="preserve">
+    <value>Ön ayarlar: {0}</value>
+  </data>
+  <data name="StatusControllerMissing" xml:space="preserve">
+    <value>Denetleyici bulunamadı</value>
+  </data>
+  <data name="PresetAccessibleName" xml:space="preserve">
+    <value>Aydınlatma efekti</value>
+  </data>
+  <data name="PresetStatic" xml:space="preserve">
+    <value>Sabit</value>
+  </data>
+  <data name="PresetBreathing" xml:space="preserve">
+    <value>Nefes Alma</value>
+  </data>
+  <data name="PresetFlashing" xml:space="preserve">
+    <value>Yanıp Sönme</value>
+  </data>
+  <data name="PresetSpectrumCycle" xml:space="preserve">
+    <value>Spektrum Döngüsü</value>
+  </data>
+  <data name="PresetRainbow" xml:space="preserve">
+    <value>Gökkuşağı</value>
+  </data>
+  <data name="PresetRainbowBreathing" xml:space="preserve">
+    <value>Gökkuşağı Nefes Alma</value>
+  </data>
+  <data name="PresetChaseFade" xml:space="preserve">
+    <value>Kayan Işık Solma</value>
+  </data>
+  <data name="PresetChase" xml:space="preserve">
+    <value>Kayan Işık</value>
+  </data>
+  <data name="PresetWave" xml:space="preserve">
+    <value>Dalga</value>
+  </data>
+  <data name="EffectHintStatic" xml:space="preserve">
+    <value>Tek sabit renk, hareket yok.</value>
+  </data>
+  <data name="EffectHintBreathing" xml:space="preserve">
+    <value>Renk yavaşça belirip kaybolur.</value>
+  </data>
+  <data name="EffectHintFlashing" xml:space="preserve">
+    <value>Renk keskin biçimde yanıp söner.</value>
+  </data>
+  <data name="EffectHintSpectrumCycle" xml:space="preserve">
+    <value>Tüm renk spektrumunda döner. Parlaklık ayarlanamaz.</value>
+  </data>
+  <data name="EffectHintRainbow" xml:space="preserve">
+    <value>Gökkuşağı geçişi kanal boyunca hareket eder. Parlaklık ayarlanamaz.</value>
+  </data>
+  <data name="EffectHintRainbowBreathing" xml:space="preserve">
+    <value>Gökkuşağı geçişi belirip kaybolur. Parlaklık ayarlanamaz.</value>
+  </data>
+  <data name="EffectHintChaseFade" xml:space="preserve">
+    <value>Bir ışık noktası, solan bir iz bırakarak kanal boyunca ilerler.</value>
+  </data>
+  <data name="EffectHintChase" xml:space="preserve">
+    <value>Bir ışık noktası kanal boyunca ilerler, iz bırakmaz.</value>
+  </data>
+  <data name="EffectHintWave" xml:space="preserve">
+    <value>Renk kanal boyunca dalga gibi akar. Parlaklık ayarlanamaz.</value>
+  </data>
+  <data name="ErrorControllerNotFound" xml:space="preserve">
+    <value>AURA LED denetleyicisi bulunamadı (USB VID 0B05). Bu araç yalnızca Aura USB aydınlatmalı ASUS anakartlarda çalışır.</value>
+  </data>
+  <data name="ErrorControllerBusy" xml:space="preserve">
+    <value>AURA LED denetleyicisi başka bir program tarafından kullanılıyor (Armoury Crate, OpenRGB, SignalRGB). Programı kapatıp yeniden deneyin.</value>
+  </data>
+  <data name="ErrorWriteFailed" xml:space="preserve">
+    <value>AURA denetleyicisine yazma başarısız oldu (komut 0x{0}): {1}</value>
+  </data>
+  <data name="ErrorWriteBusy" xml:space="preserve">
+    <value>AURA denetleyicisi önceki bir komuta henüz yanıt vermedi.</value>
+  </data>
+  <data name="ErrorWriteTimeout" xml:space="preserve">
+    <value>AURA denetleyicisi komutu zamanında kabul etmedi.</value>
+  </data>
+  <data name="ErrorWriteGeneric" xml:space="preserve">
+    <value>AURA denetleyicisine yazma başarısız oldu.</value>
+  </data>
+  <data name="ErrorDeviceNotFound" xml:space="preserve">
+    <value>Bilinmeyen denetleyici numarası. Geçerlileri görmek için -list çalıştırın.</value>
+  </data>
+  <data name="ErrorChannelNotFound" xml:space="preserve">
+    <value>Bilinmeyen veya belirsiz kanal. Olası hedefler:</value>
+  </data>
+  <data name="SettingsAccessibleName" xml:space="preserve">
+    <value>Ayarlar</value>
+  </data>
+  <data name="SettingAutoStart" xml:space="preserve">
+    <value>Windows ile başlat</value>
+  </data>
+  <data name="SettingMinimiseOnClose" xml:space="preserve">
+    <value>Kapatınca simge durumuna küçült</value>
+  </data>
+  <data name="SettingStartAction" xml:space="preserve">
+    <value>Başlangıçta aydınlatma</value>
+  </data>
+  <data name="StartActionNone" xml:space="preserve">
+    <value>Değiştirme</value>
+  </data>
+  <data name="StartActionOff" xml:space="preserve">
+    <value>Kapat</value>
+  </data>
+  <data name="TrayOpen" xml:space="preserve">
+    <value>Aç</value>
+  </data>
+  <data name="TrayExit" xml:space="preserve">
+    <value>Çıkış</value>
+  </data>
+  <data name="SettingAnimate" xml:space="preserve">
+    <value>Düğmeyi canlandır</value>
+  </data>
+  <data name="SettingAlwaysOnTop" xml:space="preserve">
+    <value>Her zaman üstte</value>
+  </data>
+  <data name="TrayUpdateInstall" xml:space="preserve">
+    <value>{0} sürümünü yükle</value>
+  </data>
+  <data name="TrayUpdateOpenPage" xml:space="preserve">
+    <value>{0} sürümü mevcut - sürüm sayfasını aç</value>
+  </data>
+  <data name="TrayUpdateAvailable" xml:space="preserve">
+    <value>{0} sürümü mevcut. Yüklemek için sistem tepsisi menüsüne tıklayın.</value>
+  </data>
+  <data name="TrayUpdateFailed" xml:space="preserve">
+    <value>Güncelleme indirilemedi veya doğrulanamadı.</value>
+  </data>
+  <data name="UpdateNoticeTitle" xml:space="preserve">
+    <value>Güncelleme mevcut</value>
+  </data>
+  <data name="UpdateNoticeBody" xml:space="preserve">
+    <value>{0} sürümü çıktı - kullandığınız sürüm {1}.</value>
+  </data>
+  <data name="UpdateNoticeInstall" xml:space="preserve">
+    <value>Şimdi yükle</value>
+  </data>
+  <data name="UpdateNoticeOpenPage" xml:space="preserve">
+    <value>Sürüm sayfasını aç</value>
+  </data>
+  <data name="UpdateNoticeLater" xml:space="preserve">
+    <value>Sonra</value>
+  </data>
+  <data name="SettingLanguage" xml:space="preserve">
+    <value>Dil</value>
+  </data>
+  <data name="LanguageAuto" xml:space="preserve">
+    <value>Sistem</value>
+  </data>
+  <data name="LanguageName" xml:space="preserve">
+    <value>Türkçe</value>
+  </data>
+  <data name="DeviceFallbackName" xml:space="preserve">
+    <value>Aura Denetleyicisi #{0}</value>
+  </data>
+  <data name="ChannelAll" xml:space="preserve">
+    <value>Tüm kanallar</value>
+  </data>
+  <data name="ChannelAccessibleName" xml:space="preserve">
+    <value>Değiştirilecek kanal</value>
+  </data>
+  <data name="ChannelOnboard" xml:space="preserve">
+    <value>Anakart</value>
+  </data>
+  <data name="ChannelHeader" xml:space="preserve">
+    <value>ARGB {0}</value>
+  </data>
+  <data name="ChannelQualified" xml:space="preserve">
+    <value>{0} - {1}</value>
+  </data>
+  <data name="ChannelEffectHint" xml:space="preserve">
+    <value>Denetleyici başına bir dinamik efekt</value>
+  </data>
+  <data name="ChannelRenameSave" xml:space="preserve">
+    <value>Kaydet</value>
+  </data>
+  <data name="ChannelRenameReset" xml:space="preserve">
+    <value>Sıfırla</value>
+  </data>
+  <data name="ChannelRenameResetConfirm" xml:space="preserve">
+    <value>Ad sıfırlansın mı?</value>
+  </data>
+  <data name="ChannelRenameAccessibleName" xml:space="preserve">
+    <value>Kanal adı</value>
+  </data>
+  <data name="SettingBrightness" xml:space="preserve">
+    <value>Parlaklık</value>
+  </data>
+  <data name="ColourAccessibleName" xml:space="preserve">
+    <value>Efekt rengi</value>
+  </data>
+  <data name="ColourHexAccessibleName" xml:space="preserve">
+    <value>Onaltılık değer olarak renk</value>
+  </data>
+  <data name="BrightnessValue" xml:space="preserve">
+    <value>{0}%</value>
+  </data>
+  <data name="ButtonNewCustomPreset" xml:space="preserve">
+    <value>Yeni ön ayar</value>
+  </data>
+  <data name="CustomPresetNamePlaceholder" xml:space="preserve">
+    <value>Ön ayar adı</value>
+  </data>
+  <data name="CustomPresetSave" xml:space="preserve">
+    <value>Kaydet</value>
+  </data>
+  <data name="CustomPresetCreate" xml:space="preserve">
+    <value>Oluştur</value>
+  </data>
+  <data name="CustomPresetReplace" xml:space="preserve">
+    <value>Değiştir</value>
+  </data>
+  <data name="CustomPresetDelete" xml:space="preserve">
+    <value>Sil</value>
+  </data>
+  <data name="CustomPresetConfirmDelete" xml:space="preserve">
+    <value>Kalıcı olarak silinsin mi?</value>
+  </data>
+  <data name="CustomPresetDiscard" xml:space="preserve">
+    <value>Vazgeç</value>
+  </data>
+  <data name="CustomPresetNew" xml:space="preserve">
+    <value>Yeni ön ayar</value>
+  </data>
+  <data name="CustomPresetEdit" xml:space="preserve">
+    <value>Ön ayarı düzenle</value>
+  </data>
+  <data name="CustomPresetNoDevices" xml:space="preserve">
+    <value>Denetleyici bulunamadı.</value>
+  </data>
+  <data name="CustomPresetAccessibleName" xml:space="preserve">
+    <value>Özel ön ayar düzenleyicisi</value>
+  </data>
+  <data name="CustomPresetExport" xml:space="preserve">
+    <value>Dışa aktar</value>
+  </data>
+  <data name="CustomPresetImport" xml:space="preserve">
+    <value>İçe aktar</value>
+  </data>
+  <data name="CustomPresetExportError" xml:space="preserve">
+    <value>Dosya kaydedilemedi.</value>
+  </data>
+  <data name="CustomPresetImportError" xml:space="preserve">
+    <value>Ön ayar dosyası değil veya hasarlı.</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>Bir şeyler ters gitti</value>
+  </data>
+  <data name="ErrorUnexpected" xml:space="preserve">
+    <value>Bu olmamalıydı. Aura Toggle'ı kapatıp yeniden açmak genellikle sorunu çözer.</value>
+  </data>
+  <data name="ErrorDetails" xml:space="preserve">
+    <value>Ayrıntılar</value>
+  </data>
+  <data name="ErrorCopyDetails" xml:space="preserve">
+    <value>Ayrıntıları kopyala</value>
+  </data>
+  <data name="ErrorOpenLog" xml:space="preserve">
+    <value>Günlük klasörünü aç</value>
+  </data>
+  <data name="ErrorClose" xml:space="preserve">
+    <value>Kapat</value>
+  </data>
+  <data name="SettingReset" xml:space="preserve">
+    <value>Ayarları sıfırla</value>
+  </data>
+  <data name="SettingResetConfirm" xml:space="preserve">
+    <value>Her şey sıfırlansın mı?</value>
+  </data>
+  <data name="SettingHotkey" xml:space="preserve">
+    <value>Genel kısayol tuşu (Açık/Kapalı)</value>
+  </data>
+  <data name="SettingHotkeyConflict" xml:space="preserve">
+    <value>Bu tuş birleşimi zaten kullanılıyor.</value>
+  </data>
+  <data name="PresetShortcutHint" xml:space="preserve">
+    <value>Yeniden adlandırmak için F2, silmek için Del</value>
+  </data>
+  <data name="HotkeyRecordPrompt" xml:space="preserve">
+    <value>Bir tuşa basın...</value>
+  </data>
+  <data name="HotkeyModifierControl" xml:space="preserve">
+    <value>Ctrl</value>
+  </data>
+  <data name="HotkeyModifierAlt" xml:space="preserve">
+    <value>Alt</value>
+  </data>
+  <data name="HotkeyModifierShift" xml:space="preserve">
+    <value>Shift</value>
+  </data>
+  <data name="HotkeyModifierWin" xml:space="preserve">
+    <value>Win</value>
+  </data>
+</root>

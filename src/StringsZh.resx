@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="WindowTitle" xml:space="preserve">
+    <value>Aura Toggle</value>
+  </data>
+  <data name="ButtonStateOn" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="ButtonStateOff" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="ButtonAccessibleName" xml:space="preserve">
+    <value>打开或关闭主板灯光</value>
+  </data>
+  <data name="UsageLine" xml:space="preserve">
+    <value>用法：AuraToggle [-on | -off | -preset &lt;名称&gt; [颜色] | -brightness &lt;10-100&gt; | -custom &lt;名称|编号&gt; | -list | -status | --version] [-device &lt;编号&gt;] [-channel &lt;目标&gt;]   （不带参数时打开切换窗口）</value>
+  </data>
+  <data name="UsagePresets" xml:space="preserve">
+    <value>预设：{0}</value>
+  </data>
+  <data name="StatusControllerMissing" xml:space="preserve">
+    <value>未找到控制器</value>
+  </data>
+  <data name="PresetAccessibleName" xml:space="preserve">
+    <value>灯光效果</value>
+  </data>
+  <data name="PresetStatic" xml:space="preserve">
+    <value>静态</value>
+  </data>
+  <data name="PresetBreathing" xml:space="preserve">
+    <value>呼吸</value>
+  </data>
+  <data name="PresetFlashing" xml:space="preserve">
+    <value>闪烁</value>
+  </data>
+  <data name="PresetSpectrumCycle" xml:space="preserve">
+    <value>光谱循环</value>
+  </data>
+  <data name="PresetRainbow" xml:space="preserve">
+    <value>彩虹</value>
+  </data>
+  <data name="PresetRainbowBreathing" xml:space="preserve">
+    <value>彩虹呼吸</value>
+  </data>
+  <data name="PresetChaseFade" xml:space="preserve">
+    <value>追逐渐隐</value>
+  </data>
+  <data name="PresetChase" xml:space="preserve">
+    <value>追逐</value>
+  </data>
+  <data name="PresetWave" xml:space="preserve">
+    <value>波浪</value>
+  </data>
+  <data name="EffectHintStatic" xml:space="preserve">
+    <value>单一固定颜色，无动态效果。</value>
+  </data>
+  <data name="EffectHintBreathing" xml:space="preserve">
+    <value>颜色缓慢渐亮渐暗。</value>
+  </data>
+  <data name="EffectHintFlashing" xml:space="preserve">
+    <value>颜色快速开关闪烁。</value>
+  </data>
+  <data name="EffectHintSpectrumCycle" xml:space="preserve">
+    <value>循环显示完整色谱。不可调暗。</value>
+  </data>
+  <data name="EffectHintRainbow" xml:space="preserve">
+    <value>彩虹渐变沿通道移动。不可调暗。</value>
+  </data>
+  <data name="EffectHintRainbowBreathing" xml:space="preserve">
+    <value>彩虹渐变渐亮渐暗。不可调暗。</value>
+  </data>
+  <data name="EffectHintChaseFade" xml:space="preserve">
+    <value>光点沿通道移动，并带有渐隐尾迹。</value>
+  </data>
+  <data name="EffectHintChase" xml:space="preserve">
+    <value>光点沿通道移动，不带尾迹。</value>
+  </data>
+  <data name="EffectHintWave" xml:space="preserve">
+    <value>颜色像波浪一样沿通道流动。不可调暗。</value>
+  </data>
+  <data name="ErrorControllerNotFound" xml:space="preserve">
+    <value>未找到 AURA LED 控制器（USB VID 0B05）。此工具仅适用于配备 Aura USB 灯光的 ASUS 主板。</value>
+  </data>
+  <data name="ErrorControllerBusy" xml:space="preserve">
+    <value>AURA LED 控制器正被其他程序占用（Armoury Crate、OpenRGB、SignalRGB）。请关闭后重试。</value>
+  </data>
+  <data name="ErrorWriteFailed" xml:space="preserve">
+    <value>写入 AURA 控制器失败（命令 0x{0}）：{1}</value>
+  </data>
+  <data name="ErrorWriteBusy" xml:space="preserve">
+    <value>AURA 控制器尚未响应上一条命令。</value>
+  </data>
+  <data name="ErrorWriteTimeout" xml:space="preserve">
+    <value>AURA 控制器未及时接受该命令。</value>
+  </data>
+  <data name="ErrorWriteGeneric" xml:space="preserve">
+    <value>写入 AURA 控制器失败。</value>
+  </data>
+  <data name="ErrorDeviceNotFound" xml:space="preserve">
+    <value>未知的控制器编号。运行 -list 查看有效编号。</value>
+  </data>
+  <data name="ErrorChannelNotFound" xml:space="preserve">
+    <value>未知或不明确的通道。可用目标：</value>
+  </data>
+  <data name="SettingsAccessibleName" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="SettingAutoStart" xml:space="preserve">
+    <value>随 Windows 启动</value>
+  </data>
+  <data name="SettingMinimiseOnClose" xml:space="preserve">
+    <value>关闭时最小化</value>
+  </data>
+  <data name="SettingStartAction" xml:space="preserve">
+    <value>启动时的灯光状态</value>
+  </data>
+  <data name="StartActionNone" xml:space="preserve">
+    <value>保持不变</value>
+  </data>
+  <data name="StartActionOff" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="TrayOpen" xml:space="preserve">
+    <value>打开</value>
+  </data>
+  <data name="TrayExit" xml:space="preserve">
+    <value>退出</value>
+  </data>
+  <data name="SettingAnimate" xml:space="preserve">
+    <value>按钮动画</value>
+  </data>
+  <data name="SettingAlwaysOnTop" xml:space="preserve">
+    <value>始终置顶</value>
+  </data>
+  <data name="TrayUpdateInstall" xml:space="preserve">
+    <value>安装版本 {0}</value>
+  </data>
+  <data name="TrayUpdateOpenPage" xml:space="preserve">
+    <value>版本 {0} 可用 - 打开发布页面</value>
+  </data>
+  <data name="TrayUpdateAvailable" xml:space="preserve">
+    <value>版本 {0} 可用。点击托盘菜单安装。</value>
+  </data>
+  <data name="TrayUpdateFailed" xml:space="preserve">
+    <value>无法下载或验证更新。</value>
+  </data>
+  <data name="UpdateNoticeTitle" xml:space="preserve">
+    <value>有可用更新</value>
+  </data>
+  <data name="UpdateNoticeBody" xml:space="preserve">
+    <value>版本 {0} 已发布 - 当前运行的是 {1}。</value>
+  </data>
+  <data name="UpdateNoticeInstall" xml:space="preserve">
+    <value>立即安装</value>
+  </data>
+  <data name="UpdateNoticeOpenPage" xml:space="preserve">
+    <value>打开发布页面</value>
+  </data>
+  <data name="UpdateNoticeLater" xml:space="preserve">
+    <value>稍后</value>
+  </data>
+  <data name="SettingLanguage" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="LanguageAuto" xml:space="preserve">
+    <value>系统</value>
+  </data>
+  <data name="LanguageName" xml:space="preserve">
+    <value>简体中文</value>
+  </data>
+  <data name="DeviceFallbackName" xml:space="preserve">
+    <value>Aura 控制器 #{0}</value>
+  </data>
+  <data name="ChannelAll" xml:space="preserve">
+    <value>所有通道</value>
+  </data>
+  <data name="ChannelAccessibleName" xml:space="preserve">
+    <value>要切换的通道</value>
+  </data>
+  <data name="ChannelOnboard" xml:space="preserve">
+    <value>板载</value>
+  </data>
+  <data name="ChannelHeader" xml:space="preserve">
+    <value>ARGB {0}</value>
+  </data>
+  <data name="ChannelQualified" xml:space="preserve">
+    <value>{0} - {1}</value>
+  </data>
+  <data name="ChannelEffectHint" xml:space="preserve">
+    <value>每个控制器只能使用一个动态效果</value>
+  </data>
+  <data name="ChannelRenameSave" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="ChannelRenameReset" xml:space="preserve">
+    <value>重置</value>
+  </data>
+  <data name="ChannelRenameResetConfirm" xml:space="preserve">
+    <value>重置名称？</value>
+  </data>
+  <data name="ChannelRenameAccessibleName" xml:space="preserve">
+    <value>通道名称</value>
+  </data>
+  <data name="SettingBrightness" xml:space="preserve">
+    <value>亮度</value>
+  </data>
+  <data name="ColourAccessibleName" xml:space="preserve">
+    <value>效果颜色</value>
+  </data>
+  <data name="ColourHexAccessibleName" xml:space="preserve">
+    <value>十六进制颜色值</value>
+  </data>
+  <data name="BrightnessValue" xml:space="preserve">
+    <value>{0}%</value>
+  </data>
+  <data name="ButtonNewCustomPreset" xml:space="preserve">
+    <value>新建预设</value>
+  </data>
+  <data name="CustomPresetNamePlaceholder" xml:space="preserve">
+    <value>预设名称</value>
+  </data>
+  <data name="CustomPresetSave" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="CustomPresetCreate" xml:space="preserve">
+    <value>创建</value>
+  </data>
+  <data name="CustomPresetReplace" xml:space="preserve">
+    <value>替换</value>
+  </data>
+  <data name="CustomPresetDelete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="CustomPresetConfirmDelete" xml:space="preserve">
+    <value>确定永久删除？</value>
+  </data>
+  <data name="CustomPresetDiscard" xml:space="preserve">
+    <value>放弃</value>
+  </data>
+  <data name="CustomPresetNew" xml:space="preserve">
+    <value>新建预设</value>
+  </data>
+  <data name="CustomPresetEdit" xml:space="preserve">
+    <value>编辑预设</value>
+  </data>
+  <data name="CustomPresetNoDevices" xml:space="preserve">
+    <value>未找到控制器。</value>
+  </data>
+  <data name="CustomPresetAccessibleName" xml:space="preserve">
+    <value>自定义预设编辑器</value>
+  </data>
+  <data name="CustomPresetExport" xml:space="preserve">
+    <value>导出</value>
+  </data>
+  <data name="CustomPresetImport" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="CustomPresetExportError" xml:space="preserve">
+    <value>无法保存文件。</value>
+  </data>
+  <data name="CustomPresetImportError" xml:space="preserve">
+    <value>不是预设文件，或文件已损坏。</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>出现问题</value>
+  </data>
+  <data name="ErrorUnexpected" xml:space="preserve">
+    <value>不该发生这种情况。关闭并重新打开 Aura Toggle 通常可以解决。</value>
+  </data>
+  <data name="ErrorDetails" xml:space="preserve">
+    <value>详细信息</value>
+  </data>
+  <data name="ErrorCopyDetails" xml:space="preserve">
+    <value>复制详细信息</value>
+  </data>
+  <data name="ErrorOpenLog" xml:space="preserve">
+    <value>打开日志文件夹</value>
+  </data>
+  <data name="ErrorClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="SettingReset" xml:space="preserve">
+    <value>重置设置</value>
+  </data>
+  <data name="SettingResetConfirm" xml:space="preserve">
+    <value>重置所有内容？</value>
+  </data>
+  <data name="SettingHotkey" xml:space="preserve">
+    <value>全局热键（开/关）</value>
+  </data>
+  <data name="SettingHotkeyConflict" xml:space="preserve">
+    <value>该组合键已被占用。</value>
+  </data>
+  <data name="PresetShortcutHint" xml:space="preserve">
+    <value>按 F2 重命名，按 Del 删除</value>
+  </data>
+  <data name="HotkeyRecordPrompt" xml:space="preserve">
+    <value>请按键...</value>
+  </data>
+  <data name="HotkeyModifierControl" xml:space="preserve">
+    <value>Ctrl</value>
+  </data>
+  <data name="HotkeyModifierAlt" xml:space="preserve">
+    <value>Alt</value>
+  </data>
+  <data name="HotkeyModifierShift" xml:space="preserve">
+    <value>Shift</value>
+  </data>
+  <data name="HotkeyModifierWin" xml:space="preserve">
+    <value>Win</value>
+  </data>
+</root>

@@ -6,8 +6,24 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Eight more interface languages: Spanish, Brazilian Portuguese, Italian, Dutch, Polish, Turkish,
+  Japanese and Simplified Chinese, alongside the English and German that were already there. The
+  setup speaks the same ten and follows the Windows display language; `/LANG=<code>` overrides it.
+  The settings list names every language in itself, so it can be found from any of them, and
+  `-preset` and `-channel` accept a name in any of the ten, not just the language in use.
+
 ### Changed
 
+- The setup no longer opens its own "Select Setup Language" dialog. That window is put on screen
+  before the setup can run a line of its own code, which is why it could end up behind whatever
+  the user was looking at, making the setup look like it never started. The language now comes
+  from Windows, and the first window is the wizard - which the setup does raise to the front.
+- The licence page no longer claims the application makes no network connections of its own. It
+  says what actually happens instead: a daily update check against the project's release page that
+  can be switched off, nothing downloaded without being asked for, and everything the tool
+  remembers kept in the user's own profile.
 - The executable and the setup now name `BGCoding` as their publisher in the Windows file
   properties.
 - Importing a preset refuses a file larger than 256 KB, and shortens a name longer than the 40

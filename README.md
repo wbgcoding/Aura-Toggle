@@ -114,8 +114,13 @@ controller, it works.
 AuraToggle-Setup-<version>.exe /VERYSILENT /NORESTART        :: for everyone, no prompts
 AuraToggle-Setup-<version>.exe /VERYSILENT /CURRENTUSER      :: just the current user
 AuraToggle-Setup-<version>.exe /VERYSILENT /LOG="install.log" :: with a log file
+AuraToggle-Setup-<version>.exe /LANG=ja                      :: force the setup language
 unins000.exe /VERYSILENT                                     :: silent uninstall
 ```
+
+The setup speaks the same ten languages as the program and picks the one Windows is set to, so it
+never opens with a language question in front of the wizard. `/LANG=` overrides that with any of
+`en de es pt it nl pl tr ja zh`.
 
 ## 🚀 Using it
 
@@ -197,9 +202,9 @@ AuraToggle.exe -toggle -channel 2                  :: only that channel's own on
 ```
 
 `-channel` accepts a flat number from `-list`, the `<controller>.<channel>` form, the default
-name in either language, or a name given in the window - matched the same forgiving way as preset
-names (casing, spaces and hyphens ignored). Unknown or ambiguous exits `2` and lists the possible
-targets on stderr. `-list` and `-status` are always in English, regardless of the window's
+name in any of the ten interface languages, or a name given in the window - matched the same
+forgiving way as preset names (casing, spaces and hyphens ignored). Unknown or ambiguous exits
+`2` and lists the possible targets on stderr. `-list` and `-status` are always in English, regardless of the window's
 language, so a script reading them does not break when someone switches it; error messages stay
 translated.
 
@@ -330,8 +335,8 @@ powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 ```
 
 Static checks — no controller needed, they only read the source tree. Resource keys in step across
-both languages, no hardcoded interface text, no fixed pixel sizes that skip the display scaling, one
-version across project, installer and changelog:
+all ten languages, placeholders included, no hardcoded interface text, no fixed pixel sizes that
+skip the display scaling, one version across project, installer and changelog:
 
 ```bat
 powershell -ExecutionPolicy Bypass -File tests\static-checks.ps1
