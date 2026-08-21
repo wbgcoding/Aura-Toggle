@@ -1989,6 +1989,13 @@ internal sealed class ToggleForm : Form
         string effectKey;
         bool usesColour;
 
+        // What the button paints. The same as what the rest of the window shows, except for a
+        // custom preset, where the board-wide mode is only whatever was last picked before the
+        // preset took over and would animate the button as something the board is not running.
+        byte painted = mode;
+        Color paintedColour = colour;
+        byte paintedBrightness = brightness;
+
         // A custom preset is a bundle across channels, so it only names itself while the
         // selector is on "all channels"; with one channel picked, that channel's effect is
         // the honest thing to show.
@@ -1996,6 +2003,14 @@ internal sealed class ToggleForm : Form
         {
             effectKey = CustomKey(_state.CustomPreset);
             usesColour = false;
+
+            if (FindCustomPreset(_state.CustomPreset) is CustomPreset active &&
+                MostUsed(active) is CustomPresetEntry common)
+            {
+                painted = common.Mode;
+                paintedColour = Color.FromArgb(common.Red, common.Green, common.Blue);
+                paintedBrightness = common.Brightness > 0 ? common.Brightness : brightness;
+            }
         }
         else
         {
@@ -2004,14 +2019,15 @@ internal sealed class ToggleForm : Form
             usesColour = preset.UsesColour;
         }
 
-        (byte red, byte green, byte blue) = AuraState.Dim(colour.R, colour.G, colour.B, brightness);
+        (byte red, byte green, byte blue) =
+            AuraState.Dim(paintedColour.R, paintedColour.G, paintedColour.B, paintedBrightness);
 
         _toggle.Text = on ? Strings.ButtonStateOn : Strings.ButtonStateOff;
         _toggle.Animate = _settings.Animate;
 
         // The button previews what the lighting actually looks like, brightness included; the
         // chips and the list icons keep showing the pure colour, because that is the choice.
-        _toggle.Show(on, mode, Color.FromArgb(red, green, blue));
+        _toggle.Show(on, painted, Color.FromArgb(red, green, blue));
 
         _effects.Colour = colour;
         _effects.ShowSelection(effectKey);
@@ -2043,6 +2059,38 @@ internal sealed class ToggleForm : Form
         _tray.Icon = _state.On ? (_iconOnTray ?? Icon) : (_iconOff ?? Icon);
 
         ResizeToContent(usesColour, showBrightness);
+    }
+
+    /// <summary>
+    /// The entry a custom preset repeats most across its channels - the effect the board is mostly
+    /// running while that preset is on, which is what the button animates instead of the
+    /// board-wide mode the preset replaced. The entry itself is returned rather than just the
+    /// mode, so the button can take its colour and brightness from the same channel rather than
+    /// pairing an effect with a colour no channel actually has. A tie goes to whichever comes
+    /// first, which is the order the editor lists the channels in.
+    /// </summary>
+    private static CustomPresetEntry? MostUsed(CustomPreset preset)
+    {
+        var counted = new Dictionary<byte, int>();
+        CustomPresetEntry? best = null;
+        int most = 0;
+
+        foreach (CustomPresetEntry entry in preset.Entries)
+        {
+            counted.TryGetValue(entry.Mode, out int seen);
+            counted[entry.Mode] = ++seen;
+
+            if (seen > most)
+            {
+                most = seen;
+                best = entry;
+            }
+        }
+
+        // The winning mode's first entry, not the one that happened to push the count over: with
+        // three channels breathing and the third one a different colour, the button should show
+        // the colour the run of them starts with.
+        return best == null ? null : preset.Entries.Find(entry => entry.Mode == best.Mode);
     }
 
     /// <summary>
@@ -2219,6 +2267,9 @@ internal sealed class ToggleForm : Form
                 + $"toprow w={_topRow.Width} margin={_topRow.Margin.Horizontal} "
                 + $"window w={Width} display w={DisplayRectangle.Width}",
             $"  columns     effects x={_effects.Left} channel x={_channel.Left} gear x={_gear.Left}",
+            $"button        effect={AuraPresets.ByMode(_toggle.Showing.Mode)?.Key ?? "?"} "
+                + $"colour=#{_toggle.Showing.Colour.R:X2}{_toggle.Showing.Colour.G:X2}{_toggle.Showing.Colour.B:X2}"
+                + (_state.CustomPreset.Length > 0 ? $"  (custom preset \"{_state.CustomPreset}\")" : ""),
             $"  child dpi   effects={_effects.DeviceDpi} channel={_channel.DeviceDpi}"
                 + (_effects.DeviceDpi == DeviceDpi && _channel.DeviceDpi == DeviceDpi
                     ? ""

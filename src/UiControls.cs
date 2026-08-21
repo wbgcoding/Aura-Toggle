@@ -106,6 +106,13 @@ internal sealed class EffectButton : FlatControl
         }
     }
 
+    /// <summary>
+    /// What the button is animating right now, for the layout review to report. A custom preset
+    /// has no single effect of its own, so this is the one place the choice it makes - the effect
+    /// most of its channels run - can be read back instead of judged from a moving picture.
+    /// </summary>
+    internal (byte Mode, Color Colour) Showing => (_mode, _colour);
+
     public void Show(bool on, byte mode, Color colour)
     {
         _on = on;
