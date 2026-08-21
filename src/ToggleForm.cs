@@ -165,17 +165,6 @@ internal sealed class ToggleForm : Form
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
 
-        // A first guess at the real width, so the window does not visibly grow the moment
-        // DiscoverDevices() finds out how wide the channel selector actually needs it to be.
-        // Never trusted outright - clamped the same as WantedWidth, in case a hand-edited file
-        // carries something absurd - and Render()/ResizeToContent still correct it afterwards if
-        // this guess turns out wrong (different monitor, renamed channel, new preset).
-        if (_settings.WindowWidth is int savedWidth)
-        {
-            int clamped = Math.Clamp(this.Scaled(savedWidth), this.Scaled(MinWidth), this.Scaled(MaxWidth));
-            ClientSize = new Size(clamped, ClientSize.Height);
-        }
-
         // Invisible until Reveal() decides there is something worth showing - see OnShown.
         Opacity = 0;
 
@@ -338,6 +327,21 @@ internal sealed class ToggleForm : Form
         RefreshEffectItems();
         SetUpTray();
         Render();
+
+        // A first guess at the real width, so the window does not visibly grow the moment
+        // DiscoverDevices() finds out how wide the channel selector actually needs it to be -
+        // the reveal backstop shows the window after half a second whether discovery has answered
+        // or not, and on a board that takes longer than that the growth happened in plain sight.
+        // Applied after Render(), not before: the selector is still hidden this early, so the
+        // width Render() works out is the one for a row without it and would overwrite the guess.
+        // Never trusted outright - clamped the same as WantedWidth, in case a hand-edited file
+        // carries something absurd - and the Render() after discovery still corrects it if this
+        // guess turns out wrong (different monitor, renamed channel, new preset).
+        if (_settings.WindowWidth is int savedWidth)
+        {
+            int clamped = Math.Clamp(this.Scaled(savedWidth), this.Scaled(MinWidth), this.Scaled(MaxWidth));
+            ClientSize = new Size(clamped, ClientSize.Height);
+        }
 
         // The big button owns the focus, so the window does not open with a ringed drop down.
         ActiveControl = _toggle;

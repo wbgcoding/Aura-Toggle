@@ -27,6 +27,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The window no longer widens in front of the user a moment after it opens. It comes up at the
+  width it was last closed at, which is what the reveal shows while the controller is still being
+  looked for; before, the size worked out during startup replaced that remembered width with one
+  measured for a top row that has no channel selector in it yet.
 - A newer version is downloaded only when the host at the *end* of the redirect chain is still
   GitHub's. The published checksum cannot catch this on its own: a setup and a checksum file
   served by the same foreign host agree with each other perfectly.

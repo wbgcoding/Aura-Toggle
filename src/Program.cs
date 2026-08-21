@@ -402,6 +402,13 @@ internal static class Program
 
         void Report(string heading) => WriteReport(reports, heading, form.DescribeLayout());
 
+        // The size the window will first become visible at. Discovery may take longer than the
+        // reveal backstop waits, so anything that changes between here and "as opened" is growth
+        // the user gets to watch. Only the client size is read - measuring the controls would
+        // force the handle open before Show() and change the very thing under review.
+        WriteReport(reports, "before shown",
+            $"clientsize    {form.ClientSize.Width}x{form.ClientSize.Height}");
+
         form.Shown += async (_, _) =>
         {
             // The window measures itself after discovery, which OnShown runs asynchronously -
