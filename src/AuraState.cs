@@ -70,7 +70,7 @@ internal sealed record AuraState(
                 Red: AuraFiles.JsonByte(root, "red", Default.Red),
                 Green: AuraFiles.JsonByte(root, "green", Default.Green),
                 Blue: AuraFiles.JsonByte(root, "blue", Default.Blue),
-                CustomPreset: AuraFiles.JsonText(root, "customPreset"),
+                CustomPreset: AuraFiles.Caption(AuraFiles.JsonText(root, "customPreset"), AuraFiles.MaxPresetName),
                 Brightness: Math.Clamp(AuraFiles.JsonByte(root, "brightness", Default.Brightness), MinBrightness,
                     MaxBrightness));
         }

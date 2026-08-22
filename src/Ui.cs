@@ -641,6 +641,14 @@ internal static class EffectPainter
         return new ColorBlend { Colors = colours, Positions = positions };
     }
 
+    // Shared like _spectrumBrush above: the comet's gradient only ever needs its own size and the
+    // two colours it fades between, both cheap to compare, so a changed channel colour or a
+    // resized control still replaces it - only an identical repaint reuses it.
+    private static LinearGradientBrush? _chaseBrush;
+    private static SizeF _chaseBrushSize;
+    private static Color _chaseBrushDim;
+    private static Color _chaseBrushColour;
+
     /// <summary>
     /// A lit segment travelling along the strip, with a tail that fades out behind it. The
     /// tail is drawn as a gradient into the dim base colour, so nothing smears past it.
@@ -652,21 +660,36 @@ internal static class EffectPainter
 
         float tailWidth = Math.Max(bounds.Width * tail, 10f);
         float head = (float)(((seconds / 3.8) % 1.0) * (bounds.Width + tailWidth)) - tailWidth;
+        var size = new SizeF(tailWidth + 2, bounds.Height);
 
-        // Drawn twice so the comet re-enters on the left exactly as it leaves on the right.
-        foreach (float offset in new[] { head, head - bounds.Width - tailWidth })
+        if (_chaseBrush == null || _chaseBrushSize != size || _chaseBrushDim != dim ||
+            _chaseBrushColour != colour)
         {
-            var band = new RectangleF(bounds.X + offset, bounds.Y, tailWidth, bounds.Height);
-            if (band.Right < bounds.X || band.X > bounds.Right)
-            {
-                continue;
-            }
-
-            using var comet = new LinearGradientBrush(
-                new RectangleF(band.X - 1, band.Y, band.Width + 2, band.Height), dim, colour,
+            _chaseBrush?.Dispose();
+            _chaseBrush = new LinearGradientBrush(new RectangleF(PointF.Empty, size), dim, colour,
                 LinearGradientMode.Horizontal);
-            g.FillRectangle(comet, band);
+            _chaseBrushSize = size;
+            _chaseBrushDim = dim;
+            _chaseBrushColour = colour;
         }
+
+        // Drawn twice so the comet re-enters on the left exactly as it leaves on the right; both
+        // bands share the one brush above, repositioned through the transform like _spectrumBrush.
+        DrawComet(g, bounds, head, tailWidth);
+        DrawComet(g, bounds, head - bounds.Width - tailWidth, tailWidth);
+    }
+
+    private static void DrawComet(Graphics g, RectangleF bounds, float offset, float tailWidth)
+    {
+        var band = new RectangleF(bounds.X + offset, bounds.Y, tailWidth, bounds.Height);
+        if (band.Right < bounds.X || band.X > bounds.Right)
+        {
+            return;
+        }
+
+        _chaseBrush!.ResetTransform();
+        _chaseBrush.TranslateTransform(band.X - 1, band.Y);
+        g.FillRectangle(_chaseBrush, band);
     }
 
     /// <summary>

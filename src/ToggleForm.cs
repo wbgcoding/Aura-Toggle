@@ -538,7 +538,12 @@ internal sealed class ToggleForm : Form
             int suffix = 2;
             do
             {
-                copyName = $"{name} ({suffix})";
+                // A name already at AuraFiles.MaxPresetName leaves no room for the suffix -
+                // AuraCustomPresets.Load re-caps every name to that length on the next read, which
+                // silently dropped the suffix back off and left two presets sharing one name.
+                string suffixText = $" ({suffix})";
+                string baseName = name[..Math.Min(name.Length, AuraFiles.MaxPresetName - suffixText.Length)];
+                copyName = $"{baseName}{suffixText}";
                 suffix++;
             }
             while (existingNames.Contains(copyName));
@@ -1958,7 +1963,13 @@ internal sealed class ToggleForm : Form
 
         _trayLighting.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
         _trayLighting.Checked = _state.On;
-        _tray.Text = $"{Strings.WindowTitle} - {(_state.On ? boardEffect : Strings.ButtonStateOff)}";
+
+        // NotifyIcon.Text throws past 128 characters - AuraFiles.Caption already keeps a stored
+        // preset name well under that, but a translated WindowTitle or preset name pushed right up
+        // to that edge could still tip it over combined. Capped again here, hard, so no combination
+        // of the two ever can.
+        _tray.Text = AuraFiles.Caption(
+            $"{Strings.WindowTitle} - {(_state.On ? boardEffect : Strings.ButtonStateOff)}", 63);
         _tray.Icon = _state.On ? (_iconOnTray ?? Icon) : (_iconOff ?? Icon);
 
         ResizeToContent(usesColour, showBrightness);

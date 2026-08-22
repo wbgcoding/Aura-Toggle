@@ -138,7 +138,30 @@ internal sealed record AuraSettings(
             try
             {
                 using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKey);
-                return key?.GetValue(RunValue) != null;
+
+                // A portable copy moved or deleted after the Run entry was written leaves the
+                // entry itself behind - Windows starts nothing from it, but the old check read
+                // "on" from its mere presence anyway. Compared against the path actually running
+                // now instead: only a value this copy itself could have written counts as "on".
+                if (key?.GetValue(RunValue) is not string value || Environment.ProcessPath is not string exe)
+                {
+                    return false;
+                }
+
+                // Hand-edited values do not start with a quote the way this type's own setter
+                // below always writes one - treated as belonging to someone else, not matched.
+                if (value.Length == 0 || value[0] != '"')
+                {
+                    return false;
+                }
+
+                int closingQuote = value.IndexOf('"', 1);
+                if (closingQuote < 0)
+                {
+                    return false;
+                }
+
+                return string.Equals(value[1..closingQuote], exe, StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex) when (AuraFiles.IsExpected(ex))
             {

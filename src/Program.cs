@@ -632,7 +632,18 @@ internal static class Program
         {
             try
             {
-                form.BeginInvoke(() => ErrorDialog.Report(ex, context, owner: null, onClosed: Application.Exit));
+                // BeginInvoke only queues the dialog - it does not wait for it, and this method
+                // returning is exactly what AppDomain.UnhandledException treats as "handled",
+                // after which the runtime tears the process down right away. Undoing that requires
+                // actually blocking this (crashing) thread until the dialog closes, or the queued
+                // Report() would never get a turn to run before the process is already gone.
+                using var closed = new ManualResetEventSlim(false);
+                form.BeginInvoke(() => ErrorDialog.Report(ex, context, owner: null, onClosed: () =>
+                {
+                    Application.Exit();
+                    closed.Set();
+                }));
+                closed.Wait(TimeSpan.FromSeconds(30));
                 return;
             }
             catch (InvalidOperationException)
