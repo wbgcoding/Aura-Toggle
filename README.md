@@ -64,7 +64,9 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
   header lights up white and the rest of the board goes dark, so there is nothing to guess
 - 🌍 **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
   Italian, Dutch, Polish, Turkish, Japanese and Chinese
-- 🔒 No admin rights, no driver, no telemetry, no network connection at all
+- 🔒 No admin rights, no driver, no telemetry. The program opens no network connection of its
+  own; the only thing that ever does is the setup, and only to fetch the .NET runtime from
+  Microsoft if your PC has none
 
 ## 🚫 What it can't do
 
@@ -142,9 +144,11 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
 4. **Colour chips** — appear for effects that use a colour, including a custom colour picker.
 5. **Brightness** — appears with the chips, 10 to 100%, and follows the channel selector: dim
    one header on its own, or set the whole board at once, which hands every channel back to the
-   board-wide value.
-6. **⚙️ Gear** — autostart, minimise instead of close, lighting at start, a global hotkey,
-   animation on/off, always on top, language, reset everything back to first-run defaults -
+   board-wide value. The big button dims along while you drag, so the setting can be judged
+   before it is committed. Effects the controller generates itself cannot be dimmed, so the
+   slider is not shown for those rather than sitting there doing nothing.
+6. **⚙️ Gear** — minimise instead of close, always on top, animate switch, a global hotkey,
+   autostart, lighting at start, language, reset everything back to first-run defaults -
    including your own custom presets - after first zipping every file it is about to delete into
    `reset-backup.zip`, right next to them.
 
@@ -260,7 +264,8 @@ names work too. An unknown name prints the list.
 
 > **Brightness** works by scaling the colour that is sent, so it applies to the five effects
 > marked ✅ above. The other four are generated inside the controller's own firmware, which
-> takes no colour and no brightness — nothing can dim those short of switching them off.
+> takes no colour and no brightness — nothing can dim those short of switching them off, and
+> the window hides the slider while one of them is running.
 >
 > Effects can be **mixed** across channels — one header steady red while the next one breathes —
 > but only for the five colour effects. The other four are one effect engine inside the
@@ -318,8 +323,10 @@ build.bat portable       REM only the portable x64 exe and its two shortcuts
 build.bat installer      REM only the setup
 ```
 
-It empties `dist\` first, so what is left there afterwards is exactly the release: `AuraToggle.exe`,
-the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe` and `SHA256SUMS.txt`. The
+A full build empties `dist\` first, so what is left there afterwards is exactly the release:
+`AuraToggle.exe`, the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe` and
+`SHA256SUMS.txt`. A single-target run adds to `dist\` instead of clearing it, so a portable build
+does not throw away the setup a full build made. The
 version comes from the project file, not from anything typed twice. Set `NOPAUSE=1` to run it
 from a script without the closing keypress.
 
@@ -371,6 +378,9 @@ State lives in `%LOCALAPPDATA%\aura-toggle`:
 - `channel-state.json` — what each channel was last set to, including its own brightness
 - `channel-names.json` — channels you renamed
 - `log.txt` (rotated to `log.old.txt` past 200 KB) — start-up, version and error entries
+- `reset-backup.zip` — written only when you reset everything in the gear, holding copies of the
+  files that reset is about to delete, so nothing is lost by accident. Delete it whenever you
+  like; nothing reads it
 
 The per-channel files are keyed by the controller's device path, so the entries
 survive a reboot. Portable and installed builds share the folder, every write goes through a

@@ -1125,8 +1125,8 @@ internal sealed class ToggleForm : Form
     /// Live-dims the switch while the slider is being dragged, before the value is committed to
     /// the controller - <see cref="Render"/> already does the same dimming after every real
     /// change, this just previews it a knob-drag early. Skipped for a firmware effect
-    /// (<see cref="AuraPreset.UsesColour"/> false): those four cannot be dimmed at all
-    /// (docs/INVARIANTS.md, brightness model), and a preview that ignored that would lie. Reads
+    /// (<see cref="AuraPreset.UsesColour"/> false): those four cannot be dimmed at all, because
+    /// the controller generates their colours itself, and a preview that ignored that would lie. Reads
     /// only fields <see cref="Render"/> already set - no store, no measurement, so the call
     /// <see cref="Render"/> itself makes when it assigns <see cref="_brightness"/>.Value below
     /// stays harmless: it previews with the very values Render just painted.
@@ -1959,7 +1959,7 @@ internal sealed class ToggleForm : Form
         _colours.Visible = usesColour;
         _colours.Invalidate();
 
-        // Brightness scales the colour before it is sent (docs/INVARIANTS.md), so the four
+        // Brightness scales the colour before it is sent, so the four
         // firmware-generated effects cannot be dimmed at all and the slider would be a control
         // that visibly does nothing. It follows the effect the button is actually animating,
         // which under a custom preset is that preset's most-used channel rather than the

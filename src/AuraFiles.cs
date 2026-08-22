@@ -281,7 +281,11 @@ internal static class AuraFiles
 
     private static void WriteRaw(string name, Action<FileStream> body)
     {
-        string temp = PathTo(name) + ".tmp";
+        // The process id is part of the name because the cross-process lock has a timeout: a
+        // caller that waited two seconds for it carries on without it, and two writers sharing
+        // one temp file would then each fail on the other's open handle and lose the write.
+        // With one temp file per process the move stays atomic and the later write simply wins.
+        string temp = PathTo(name) + "." + Environment.ProcessId + ".tmp";
 
         try
         {

@@ -48,7 +48,7 @@ REM A running copy locks its own exe, which makes the publish step fail after te
 REM that failure aborts "all" before it ever reaches the installer, so the installer silently
 REM never appears. Closing it first is safe - but only this project's own build output: a plain
 REM "taskkill /IM" used to close every AuraToggle.exe on the machine, including an installed copy
-REM Ben happened to be running at the time. Filtered here to processes whose own path sits under
+REM that happened to be running at the time. Filtered here to processes whose own path sits under
 REM this checkout.
 REM %ROOT% keeps its trailing backslash everywhere else in this file, but a quoted argument
 REM ending in "\"" is read by the C-runtime argv parser as an escaped quote, not a closing one -

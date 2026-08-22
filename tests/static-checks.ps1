@@ -230,6 +230,18 @@ foreach ($line in Get-SourceLines $textFiles) {
     if ($line.Text -match "[A-Za-z]:\\Users\\(?!(<|&lt;|%|\$))") {
         Add-Finding "$($line.File):$($line.Number)" "user profile path in a shipped file"
     }
+    # The internal planning and design notes stay out of the repository, so a comment pointing at
+    # one sends every reader of a clone to a file that is not there.
+    if ($line.Text -match "\b(WORK|FUTUREUPDATES|SUGGESTIONS|CLAUDE|AGENTS|GEMINI|INVARIANTS|DESIGN|BUILD)\.md\b") {
+        Add-Finding "$($line.File):$($line.Number)" "reference to a file this repository does not ship"
+    }
+    # Whose machine this was written on is nobody's business downstream. The account name comes
+    # from the environment rather than a list, so this catches whoever is building without
+    # writing anybody's name into a file that ships.
+    if ($line.Text -match "\b(Claude|Anthropic|Codex|ChatGPT|Copilot)\b" -or
+        ($env:USERNAME -and $line.Text -match "\b$([regex]::Escape($env:USERNAME))\b")) {
+        Add-Finding "$($line.File):$($line.Number)" "author or tooling trace in a shipped file"
+    }
     # Pascal's "external 'Name@user32.dll'" reads like a mail address to any simple pattern.
     if ($line.Text -match "[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" -and
         $line.Text -notmatch "users\.noreply\.github\.com" -and

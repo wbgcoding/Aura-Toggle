@@ -184,8 +184,8 @@ internal static class AuraChannelStates
                 // outdated file, otherwise the window would name an effect the board never runs.
                 // Falls back to static, not AuraState.Default.Mode (rainbow): this is one channel's
                 // own entry, and rainbow is one of the four firmware-generated modes that pulls
-                // every channel on the controller into it the moment one channel gets it
-                // (docs/INVARIANTS.md) - exactly what this validation exists to prevent.
+                // every channel on the controller into it the moment one channel gets it -
+                // exactly what this validation exists to prevent.
                 byte rawMode = AuraFiles.JsonByte(property.Value, "mode");
                 byte mode = rawMode == AuraState.ModeOff || AuraPresets.ByMode(rawMode) != null
                     ? rawMode

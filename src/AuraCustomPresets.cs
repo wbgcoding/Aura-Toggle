@@ -73,9 +73,9 @@ internal static class AuraCustomPresets
                     // while sending the board something else entirely. Falls back to static, not
                     // AuraState.Default.Mode (rainbow): a per-channel entry is sent to one channel
                     // alone, and rainbow is one of the four firmware-generated modes that pulls
-                    // every channel on the controller into it the moment one channel gets it
-                    // (docs/INVARIANTS.md) - exactly the kind of surprise this validation exists
-                    // to prevent, not reintroduce through its own fallback.
+                    // every channel on the controller into it the moment one channel gets it -
+                    // exactly the kind of surprise this validation exists to prevent, not
+                    // reintroduce through its own fallback.
                     byte rawMode = AuraFiles.JsonByte(entry, "mode");
                     byte mode = rawMode == AuraState.ModeOff || AuraPresets.ByMode(rawMode) != null
                         ? rawMode

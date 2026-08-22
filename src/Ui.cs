@@ -920,8 +920,8 @@ internal sealed class Layout : TableLayoutPanel
 /// <see cref="Theme.Surface"/> background, double buffering, a native drop shadow
 /// (<c>CS_DROPSHADOW</c>) instead of a drawn one, and DWM-rounded corners once the handle
 /// exists. Each popup still owns its own <c>AutoScaleMode</c>, <c>OnDeactivate</c> and
-/// <c>OnKeyDown</c> - see DESIGN.md for why those differ (a caller-sized popup would double-
-/// scale under Dpi mode; a couple of popups hold content that must survive an outside click).
+/// <c>OnKeyDown</c>, and those differ for a reason: a caller-sized popup would double-scale
+/// under Dpi mode, and a couple of popups hold content that must survive an outside click.
 /// </summary>
 internal abstract class PopupForm : Form
 {

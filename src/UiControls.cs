@@ -868,7 +868,7 @@ internal sealed class SelectPopup : PopupForm
     /// Review mode only: shows the tooltip on the first row that has one, the same way hovering it
     /// would - so the dark-tooltip fix can be screenshotted directly instead of trusted by reading
     /// the code, and the effect list itself does not need a mouse hover the review harness cannot
-    /// send reliably (see <c>WORK.md</c> notes on UI Automation and this app's controls).
+    /// send reliably against these controls.
     /// </summary>
     internal void ShowTipForReview()
     {

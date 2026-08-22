@@ -1606,7 +1606,7 @@ internal static class Program
 
             // A preset only has to name the channels its own look applies to - the controller
             // still applies an effect across every channel of a controller in one burst unless
-            // the whole mix arrives together (see INVARIANTS.md), so anything left out on a
+            // the whole mix arrives together, so anything left out on a
             // controller the preset touches is re-asserted from its own record here, the same
             // rule ApplyMix enforces for the plain switch path. This held only by convention
             // before, because the preset editor always names every channel it finds.
