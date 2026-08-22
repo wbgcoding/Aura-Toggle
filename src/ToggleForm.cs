@@ -108,6 +108,9 @@ internal sealed class ToggleForm : Form
     // if DoubleClick fires first.
     private readonly System.Windows.Forms.Timer _trayClickTimer = new();
 
+    /// <summary>Delays the visible half of <see cref="SetBusy"/> - see <see cref="BusyFlashDelayMs"/>.</summary>
+    private readonly System.Windows.Forms.Timer _busyTimer = new() { Interval = BusyFlashDelayMs };
+
     private AuraState _state;
     private AuraSettings _settings;
     private SettingsPopup? _settingsPopup;
@@ -240,7 +243,11 @@ internal sealed class ToggleForm : Form
         _brightness.Maximum = AuraState.MaxBrightness;
         _brightness.AccessibleName = Strings.SettingBrightness;
         _brightness.Margin = new Padding(0);
-        _brightness.ValueChanged += (_, _) => ShowBrightnessValue();
+        _brightness.ValueChanged += (_, _) =>
+        {
+            ShowBrightnessValue();
+            PreviewBrightness();
+        };
         _brightness.ValueCommitted += OnBrightnessCommitted;
 
         _brightnessRow = new Layout
@@ -331,6 +338,8 @@ internal sealed class ToggleForm : Form
 
         // The big button owns the focus, so the window does not open with a ringed drop down.
         ActiveControl = _toggle;
+
+        _busyTimer.Tick += OnBusyTimerTick;
 
         Shown += OnShown;
         FormClosing += OnFormClosing;
@@ -1031,6 +1040,17 @@ internal sealed class ToggleForm : Form
     /// </summary>
     private (byte Mode, Color Colour, bool On, byte Brightness) _displayed;
 
+    /// <summary>
+    /// The mode and colour <see cref="Render"/> actually painted the switch with, which for a
+    /// custom preset is the most-used channel's effect, not <see cref="_displayed"/>'s own mode
+    /// and colour - see the custom-preset branch there. <see cref="PreviewBrightness"/> reads
+    /// these instead of recomputing them, so dragging the slider previews the same thing Render
+    /// last drew rather than a different, wrong answer for a custom preset.
+    /// </summary>
+    private byte _paintedMode;
+
+    private Color _paintedColour;
+
     private void OnToggleClick(object? sender, EventArgs e)
     {
         // Switches whatever the button is showing, which for a single channel is that channel
@@ -1080,6 +1100,28 @@ internal sealed class ToggleForm : Form
 
     private void ShowBrightnessValue() => _brightnessValue.Text =
         string.Format(CultureInfo.CurrentCulture, Strings.BrightnessValue, _brightness.Value);
+
+    /// <summary>
+    /// Live-dims the switch while the slider is being dragged, before the value is committed to
+    /// the controller - <see cref="Render"/> already does the same dimming after every real
+    /// change, this just previews it a knob-drag early. Skipped for a firmware effect
+    /// (<see cref="AuraPreset.UsesColour"/> false): those four cannot be dimmed at all
+    /// (docs/INVARIANTS.md, brightness model), and a preview that ignored that would lie. Reads
+    /// only fields <see cref="Render"/> already set - no store, no measurement, so the call
+    /// <see cref="Render"/> itself makes when it assigns <see cref="_brightness"/>.Value below
+    /// stays harmless: it previews with the very values Render just painted.
+    /// </summary>
+    private void PreviewBrightness()
+    {
+        if (AuraPresets.ByMode(_paintedMode)?.UsesColour != true)
+        {
+            return;
+        }
+
+        (byte red, byte green, byte blue) =
+            AuraState.Dim(_paintedColour.R, _paintedColour.G, _paintedColour.B, (byte)_brightness.Value);
+        _toggle.Show(_displayed.On, _paintedMode, Color.FromArgb(red, green, blue));
+    }
 
     /// <summary>
     /// Sent once the knob is released, for whatever the selector points at - one channel, one
@@ -1410,6 +1452,8 @@ internal sealed class ToggleForm : Form
         _tray.ContextMenuStrip?.Dispose();
         _tray.Dispose();
         _trayClickTimer.Dispose();
+        _busyTimer.Stop();
+        _busyTimer.Dispose();
         _revealTimer?.Stop();
         _revealTimer?.Dispose();
         Icon?.Dispose();
@@ -1712,15 +1756,58 @@ internal sealed class ToggleForm : Form
         }
     }
 
+    /// <summary>
+    /// Measured on the VM (no controller, so the fastest hardware call there is the one that
+    /// fails outright): a brightness commit held <see cref="_busy"/> for about 188 ms end to end.
+    /// Greying every control out and back in for that long reads as a flash, not feedback - so the
+    /// visible part of being busy waits <see cref="BusyFlashDelayMs"/> before it shows at all, and
+    /// never shows for anything that finishes inside that delay.
+    /// </summary>
+    private const int BusyFlashDelayMs = 180;
+
     private void SetBusy(bool busy)
     {
-        // Nothing that talks to the controller comes back on while there is no controller to talk
-        // to. Releasing the flag used to re-enable all of it unconditionally, so a global hotkey
-        // press on a machine with no board left the effect list, chips and slider live behind a
-        // greyed-out button, each click raising another error.
+        // Dropping a request that arrives while one is already in flight must not wait for the
+        // delay below - only the *visible* grey-out does.
+        _busy = busy;
+
+        if (busy)
+        {
+            _busyTimer.Stop();
+            _busyTimer.Start();
+            return;
+        }
+
+        _busyTimer.Stop();
+        ApplyBusyVisuals(busy: false);
+    }
+
+    /// <summary>
+    /// Fires <see cref="BusyFlashDelayMs"/> after a busy operation starts. A <see cref="SetBusy"/>
+    /// call with <c>false</c> stops this timer before it ever ticks for anything that finished
+    /// inside the delay, so nothing here runs for those - <see cref="_busy"/> is the source of
+    /// truth this checks, not the timer having been started.
+    /// </summary>
+    private void OnBusyTimerTick(object? sender, EventArgs e)
+    {
+        _busyTimer.Stop();
+
+        if (_busy)
+        {
+            ApplyBusyVisuals(busy: true);
+        }
+    }
+
+    /// <summary>
+    /// Nothing that talks to the controller comes back on while there is no controller to talk
+    /// to. Releasing it used to re-enable all of it unconditionally, so a global hotkey press on a
+    /// machine with no board left the effect list, chips and slider live behind a greyed-out
+    /// button, each click raising another error.
+    /// </summary>
+    private void ApplyBusyVisuals(bool busy)
+    {
         bool ready = !busy && _devices.Count > 0;
 
-        _busy = busy;
         _toggle.Busy = busy;
         _toggle.Enabled = ready;
         _effects.Enabled = ready;
@@ -1831,6 +1918,9 @@ internal sealed class ToggleForm : Form
             effectKey = preset.Key;
             usesColour = preset.UsesColour;
         }
+
+        _paintedMode = painted;
+        _paintedColour = paintedColour;
 
         (byte red, byte green, byte blue) =
             AuraState.Dim(paintedColour.R, paintedColour.G, paintedColour.B, paintedBrightness);
