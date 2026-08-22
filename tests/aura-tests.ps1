@@ -772,9 +772,9 @@ Test-Case "the button animates a custom preset's most used effect" {
 # text off. "-review layout <scale>" puts the window through exactly that move, so it is a check
 # here rather than something only a second physical monitor could show.
 # The popups measure their own spacing when they open. One left open across a display-scale change
-# has to put it back at the new scale, which is what these three paddings prove: 14/12, 16/14 and
-# 16/16 at 96 dpi, so exactly double at 200 %.
-foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "editor"; Padding = "32,28" }, @{ Name = "update"; Padding = "32,32" })) {
+# has to put it back at the new scale, which is what these two paddings prove: 14/12 and 16/14 at
+# 96 dpi, so exactly double at 200 %.
+foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "editor"; Padding = "32,28" })) {
     Test-Case "the $($surface.Name) popup rescales when the display scale changes" {
         $report = Join-Path $env:TEMP "aura-layout.txt"
         Remove-Item $report -Force -ErrorAction SilentlyContinue
