@@ -12,24 +12,24 @@ namespace AuraToggle;
 /// </summary>
 internal sealed class SettingsPopup : PopupForm
 {
-    private readonly ToggleSwitch _autoStart = new();
     private readonly ToggleSwitch _minimiseOnClose = new();
-    private readonly ToggleSwitch _animate = new();
     private readonly ToggleSwitch _alwaysOnTop = new();
-    private readonly Select _startAction = new();
-    private readonly Select _language = new();
+    private readonly ToggleSwitch _animate = new();
     private readonly ToggleSwitch _hotkeyEnabled = new();
     private readonly PillButton _hotkeyRecord = new();
     private readonly Label _hotkeyHint;
+    private readonly ToggleSwitch _autoStart = new();
+    private readonly Select _startAction = new();
+    private readonly Select _language = new();
     private readonly PillButton _reset = new();
     private readonly ArmedButton _resetArm;
+    private readonly Label _minimiseOnCloseLabel;
+    private readonly Label _alwaysOnTopLabel;
+    private readonly Label _animateLabel;
+    private readonly Label _hotkeyLabel;
+    private readonly Label _autoStartLabel;
     private readonly Label _startActionLabel;
     private readonly Label _languageLabel;
-    private readonly Label _autoStartLabel;
-    private readonly Label _minimiseOnCloseLabel;
-    private readonly Label _animateLabel;
-    private readonly Label _alwaysOnTopLabel;
-    private readonly Label _hotkeyLabel;
     private readonly Layout _layout;
 
     private bool _childOpen;
@@ -95,24 +95,24 @@ internal sealed class SettingsPopup : PopupForm
             _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
-        _autoStartLabel = AddSwitch(0, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
-        _minimiseOnCloseLabel = AddSwitch(1, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
+        _minimiseOnCloseLabel = AddSwitch(0, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
+        _alwaysOnTopLabel = AddSwitch(1, Strings.SettingAlwaysOnTop, _alwaysOnTop, settings.AlwaysOnTop);
         _animateLabel = AddSwitch(2, Strings.SettingAnimate, _animate, settings.Animate);
-        _alwaysOnTopLabel = AddSwitch(3, Strings.SettingAlwaysOnTop, _alwaysOnTop, settings.AlwaysOnTop);
 
-        _startActionLabel = AddLabel(4, Strings.SettingStartAction);
-        AddSelect(5, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
-        UpdateStartActionVisibility();
-
-        _languageLabel = AddLabel(6, Strings.SettingLanguage);
-        AddSelect(7, _language, Strings.SettingLanguage, Languages(), settings.Language);
-
-        _hotkeyLabel = AddSwitch(8, Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
-        AddButton(9, _hotkeyRecord, HotkeyText(_pendingHotkey), Theme.NeutralSoft, Theme.Text);
+        _hotkeyLabel = AddSwitch(3, Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
+        AddButton(4, _hotkeyRecord, HotkeyText(_pendingHotkey), Theme.NeutralSoft, Theme.Text);
         _hotkeyRecord.Visible = settings.HotkeyEnabled;
-        _hotkeyHint = AddLabel(10, Strings.SettingHotkeyConflict);
+        _hotkeyHint = AddLabel(5, Strings.SettingHotkeyConflict);
         _hotkeyHint.ForeColor = Theme.Danger;
         _hotkeyHint.Visible = false;
+
+        _autoStartLabel = AddSwitch(6, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
+        _startActionLabel = AddLabel(7, Strings.SettingStartAction);
+        AddSelect(8, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
+        UpdateStartActionVisibility();
+
+        _languageLabel = AddLabel(9, Strings.SettingLanguage);
+        AddSelect(10, _language, Strings.SettingLanguage, Languages(), settings.Language);
 
         AddButton(11, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
@@ -121,6 +121,11 @@ internal sealed class SettingsPopup : PopupForm
         _layout.DpiChangedAfterParent += (_, _) => Resettle();
         _layout.FontChanged += (_, _) => Resettle();
 
+        _minimiseOnClose.CheckedChanged += (_, _) => Apply();
+        _alwaysOnTop.CheckedChanged += (_, _) => Apply();
+        _animate.CheckedChanged += (_, _) => Apply();
+        _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
+        _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
         _autoStart.CheckedChanged += (_, _) =>
         {
             _appliedAt = Environment.TickCount64;
@@ -128,11 +133,6 @@ internal sealed class SettingsPopup : PopupForm
             UpdateStartActionVisibility();
             FitToContent();
         };
-        _minimiseOnClose.CheckedChanged += (_, _) => Apply();
-        _animate.CheckedChanged += (_, _) => Apply();
-        _alwaysOnTop.CheckedChanged += (_, _) => Apply();
-        _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
-        _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
 
         _resetArm = new ArmedButton(_reset, Strings.SettingReset, Strings.SettingResetConfirm);
         _resetArm.Confirmed += (_, _) => OnResetConfirmed();
@@ -389,10 +389,10 @@ internal sealed class SettingsPopup : PopupForm
         FitToContent();
 
         // Reloaded and merged under the same lock every other settings writer uses, rather than
-        // building on this popup's own possibly-stale Settings snapshot - the background update
-        // check and a window-position save both write independently while this popup is open,
-        // and either landing between two Apply() calls would otherwise be overwritten right back
-        // out (the field it just wrote reverted to whatever this popup had in memory).
+        // building on this popup's own possibly-stale Settings snapshot - a window-position save
+        // can write independently while this popup is open, and landing between two Apply() calls
+        // would otherwise be overwritten right back out (the field it just wrote reverted to
+        // whatever this popup had in memory).
         using (AuraFiles.Lock())
         {
             Settings = AuraSettings.Load() with
