@@ -173,33 +173,6 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>常に手前に表示</value>
   </data>
-  <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>バージョン {0} をインストール</value>
-  </data>
-  <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>バージョン {0} が利用可能です - リリースページを開く</value>
-  </data>
-  <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>バージョン {0} が利用可能です。トレイメニューをクリックしてインストールしてください。</value>
-  </data>
-  <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>更新プログラムをダウンロードまたは検証できませんでした。</value>
-  </data>
-  <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>更新があります</value>
-  </data>
-  <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>バージョン {0} が公開されました - 現在のバージョンは {1} です。</value>
-  </data>
-  <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>今すぐインストール</value>
-  </data>
-  <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>リリースページを開く</value>
-  </data>
-  <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>後で</value>
-  </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>言語</value>
   </data>

@@ -64,8 +64,7 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
   header lights up white and the rest of the board goes dark, so there is nothing to guess
 - 🌍 **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
   Italian, Dutch, Polish, Turkish, Japanese and Chinese
-- 🔒 No admin rights, no driver, no telemetry — the only network connection this tool ever makes
-  is a check for a newer release, at most once a day, and nothing downloads without a click
+- 🔒 No admin rights, no driver, no telemetry, no network connection at all
 
 ## 🚫 What it can't do
 
@@ -373,17 +372,6 @@ survive a reboot. Portable and installed builds share the folder, every write go
 temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete it.
 Nothing in there is ever sent anywhere, and your user name is replaced with `%USERPROFILE%` in
 anything the log or the error dialog writes out.
-
-At most once every 24 hours the tool asks `api.github.com` for the latest release tag. Nothing else
-is sent — no machine identifier, no version history, no usage data. The check has no switch in the
-window; to turn it off, set `"checkUpdates": false` in `settings.json` in the folder above.
-
-Finding a newer version adds a tray notice and an "Install version …" entry to the tray menu, and,
-the first time the window is open to see it, a small popup with the same choice that closes itself
-after 30 seconds. Either one is offered once per version, not on every start. Nothing downloads or
-runs until "Install" is clicked, and the setup it fetches is checksummed against that release's own
-`SHA256SUMS.txt` before it is allowed to run at all. The portable build has no self-update: it gets
-the same notices, with a link to the release page instead of an install entry.
 
 ## 📄 Licence and trademarks
 
