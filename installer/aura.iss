@@ -481,10 +481,16 @@ begin
   RegWriteStringValue(HKEY_CURRENT_USER, RunKey, 'AuraToggle', Wanted);
 
   { Same blind spot the [Run] section works around: elevated as a different administrator, the
-    write above lands in that account's hive rather than the one the app actually starts under. }
-  ExecAsOriginalUser('reg.exe',
-    'add "HKCU\' + RunKey + '" /v AuraToggle /d "' + Wanted + '" /f',
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    write above lands in that account's hive rather than the one the app actually starts under.
+    Best-effort: ExecAsOriginalUser raises rather than just failing when this process was never
+    elevated to begin with - the common case for a per-user install - so caught here the same way
+    an ordinary failure would be, instead of crashing the rest of CurStepChanged over it. }
+  try
+    ExecAsOriginalUser('reg.exe',
+      'add "HKCU\' + RunKey + '" /v AuraToggle /d "' + Wanted + '" /f',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  except
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -543,12 +549,22 @@ var
   Lines: TArrayOfString;
   ResultCode: Integer;
   candidate: String;
+  Ran: Boolean;
 begin
   Result := ExpandConstant('{localappdata}');
   TempFile := ExpandConstant('{tmp}\aura-toggle-orig-localappdata.txt');
 
-  if ExecAsOriginalUser(ExpandConstant('{cmd}'), '/c echo %LOCALAPPDATA%>"' + TempFile + '"',
-       '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) and
+  { ExecAsOriginalUser raises instead of returning False when this uninstaller was never
+    elevated to begin with - the common case for a per-user install - so caught the same way a
+    normal exec failure already falls through to the plain-constant fallback below. }
+  Ran := False;
+  try
+    Ran := ExecAsOriginalUser(ExpandConstant('{cmd}'), '/c echo %LOCALAPPDATA%>"' + TempFile + '"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  except
+  end;
+
+  if Ran and (ResultCode = 0) and
      LoadStringsFromFile(TempFile, Lines) and (GetArrayLength(Lines) > 0) then
   begin
     candidate := Trim(Lines[0]);
@@ -603,10 +619,16 @@ begin
       elevated as a *different* administrator account than the one that actually used the app,
       the call above clears that admin's own Run key, not the real user's. [UninstallRun] has no
       runasoriginaluser flag (Run-only), so ExecAsOriginalUser is the documented way to still
-      reach the real interactive user's hive from [Code]. }
-    ExecAsOriginalUser('reg.exe',
-      'delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle /f',
-      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      reach the real interactive user's hive from [Code]. Best-effort like the install-time call:
+      raises instead of failing quietly when this uninstaller was never elevated - the common,
+      per-user case - which would otherwise abort the rest of this procedure, skipping the app
+      data prompt below entirely over a call that was never going to do anything anyway. }
+    try
+      ExecAsOriginalUser('reg.exe',
+        'delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle /f',
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    except
+    end;
 
     DataDir := OriginalUserLocalAppData + '\aura-toggle';
     if DirExists(DataDir) then
