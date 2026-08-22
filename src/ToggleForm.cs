@@ -1959,11 +1959,12 @@ internal sealed class ToggleForm : Form
         _colours.Visible = usesColour;
         _colours.Invalidate();
 
-        // The board-wide brightness is a real, stored value even while a firmware effect (which
-        // cannot be dimmed) is the one actually running - it is what the next dimmable effect
-        // picked, or a channel with none of its own, will use. Only hidden for a single channel
-        // sharing a controller-wide firmware effect, where no per-channel value applies at all.
-        bool showBrightness = usesColour || wholeBoard;
+        // Brightness scales the colour before it is sent (docs/INVARIANTS.md), so the four
+        // firmware-generated effects cannot be dimmed at all and the slider would be a control
+        // that visibly does nothing. It follows the effect the button is actually animating,
+        // which under a custom preset is that preset's most-used channel rather than the
+        // board-wide mode the preset replaced - the same test PreviewBrightness makes.
+        bool showBrightness = AuraPresets.ByMode(_paintedMode)?.UsesColour ?? false;
 
         _settingBrightnessFromRender = true;
         _brightness.Value = brightness;
@@ -2191,7 +2192,10 @@ internal sealed class ToggleForm : Form
             $"  effects     w={_effects.Width} preferred={_effects.PreferredWidthForItems(includeHints: false)}",
             $"  channel     w={_channel.Width} visible={_channel.Visible}",
             $"  gear        w={_gear.Width} (expected {this.Scaled(GearSize)})",
-            $"  colours     w={_colours.Width}",
+            $"  colours     w={_colours.Width} visible={_colours.Visible}",
+            // The slider only exists for an effect brightness can reach - the one thing about it
+            // no screenshot of a still window can tell apart from a window that is simply short.
+            $"  brightness  visible={_brightnessRow.Visible} h={_brightnessRow.Height}",
             $"  margins     effects={_effects.Margin.Right} toggle={_toggle.Margin.Top} "
                 + $"colours={_colours.Margin.Top} brightness={_brightnessRow.Margin.Top}",
             $"  panels      layout w={_layout.Width} margin={_layout.Margin.Horizontal} "

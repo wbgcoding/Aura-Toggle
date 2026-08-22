@@ -3,66 +3,38 @@ Aura Toggle - Lizenzvereinbarung
 
 ZUSAMMENFASSUNG
 
-Aura Toggle ist freie Open-Source-Software und steht unter der MIT-Lizenz. Nutzen Sie die
-Software privat oder gewerblich, geben Sie sie weiter, verändern Sie sie - unentgeltlich.
+Aura Toggle ist freie Open-Source-Software und steht unter der MIT-Lizenz. Nutzen Sie die Software privat oder gewerblich, geben Sie sie weiter, verändern Sie sie - unentgeltlich.
 
-Einzige Bedingung: Der Copyright-Hinweis und dieser Lizenztext bleiben bei einer Weitergabe
-erhalten.
+Einzige Bedingung: Der Copyright-Hinweis und dieser Lizenztext bleiben bei einer Weitergabe erhalten.
 
 
 DATENSCHUTZ UND NETZWERKZUGRIFF
 
-Die Anwendung erhebt keine Daten, benötigt kein Benutzerkonto und enthält weder Werbung noch
-Nachverfolgung. Ihre Einstellungen, Ihre Presets und der gemerkte Beleuchtungszustand liegen
-in Ihrem eigenen Benutzerprofil auf diesem PC und werden nirgendwohin übertragen. Aura Toggle
-baut selbst keinerlei Netzwerkverbindung auf.
+Die Anwendung erhebt keine Daten, benötigt kein Benutzerkonto und enthält weder Werbung noch Nachverfolgung. Ihre Einstellungen, Ihre Presets und der gemerkte Beleuchtungszustand liegen in Ihrem eigenen Benutzerprofil auf diesem PC und werden nirgendwohin übertragen. Aura Toggle baut selbst keinerlei Netzwerkverbindung auf.
 
-Fehlt auf diesem PC die Microsoft .NET 10 Desktop Runtime, die die Anwendung zum Laufen
-braucht, bietet dieses Setup an, sie von Microsoft herunterzuladen - der einzige
-Netzwerkzugriff in diesem gesamten Paket, nur mit Ihrer Zustimmung, die digitale Signatur vor
-der Installation geprüft.
+Fehlt auf diesem PC die Microsoft .NET 10 Desktop Runtime, die die Anwendung zum Laufen braucht, bietet dieses Setup an, sie von Microsoft herunterzuladen - der einzige Netzwerkzugriff in diesem gesamten Paket, nur mit Ihrer Zustimmung, die digitale Signatur vor der Installation geprüft.
 
 
 AUSWIRKUNG AUF IHR MAINBOARD
 
-Aura Toggle kommuniziert mit dem Beleuchtungscontroller Ihres Mainboards ausschließlich über
-flüchtige Befehle - es schreibt zu keinem Zeitpunkt in den Flash-Speicher des Controllers.
-Jede Änderung geht bei einem Neustart verloren, und die im BIOS/UEFI hinterlegte Beleuchtung
-wird automatisch wiederhergestellt. Für den Betrieb sind weder Administratorrechte noch
-Treiber oder Hintergrunddienste nötig; die Installation für alle Benutzer fragt einmalig nach
-Administratorrechten, allein für diesen Vorgang.
+Aura Toggle kommuniziert mit dem Beleuchtungscontroller Ihres Mainboards ausschließlich über flüchtige Befehle - es schreibt zu keinem Zeitpunkt in den Flash-Speicher des Controllers. Jede Änderung geht bei einem Neustart verloren, und die im BIOS/UEFI hinterlegte Beleuchtung wird automatisch wiederhergestellt. Für den Betrieb sind weder Administratorrechte noch Treiber oder Hintergrunddienste nötig; die Installation für alle Benutzer fragt einmalig nach Administratorrechten, allein für diesen Vorgang.
 
-Diese Software kommuniziert direkt mit der Hardware und wird ohne jegliche Gewährleistung
-bereitgestellt, wie nachstehend in der Lizenz festgelegt. Mit der Installation erkennen Sie
-diese Bedingungen an.
+Diese Software kommuniziert direkt mit der Hardware und wird ohne jegliche Gewährleistung bereitgestellt, wie nachstehend in der Lizenz festgelegt. Mit der Installation erkennen Sie diese Bedingungen an.
 
 
 MARKENRECHTLICHE HINWEISE
 
-Aura Toggle ist ein unabhängiges, nicht verbundenes Projekt. Es wird weder von der ASUSTeK
-Computer Inc. entwickelt noch von ihr unterstützt oder empfohlen. "ASUS", "ROG", "TUF" und
-"Aura" sind Marken ihrer jeweiligen Inhaber und werden hier ausschließlich zur Bezeichnung
-der Hardware verwendet, mit der diese Software kommuniziert.
+Aura Toggle ist ein unabhängiges, nicht verbundenes Projekt. Es wird weder von der ASUSTeK Computer Inc. entwickelt noch von ihr unterstützt oder empfohlen. "ASUS", "ROG", "TUF" und "Aura" sind Marken ihrer jeweiligen Inhaber und werden hier ausschließlich zur Bezeichnung der Hardware verwendet, mit der diese Software kommuniziert.
 
 
 MIT-LIZENZ
 
-Maßgeblich ist der englische Originaltext; diese Übersetzung dient ausschließlich dem
-Verständnis.
+Maßgeblich ist der englische Originaltext; diese Übersetzung dient ausschließlich dem Verständnis.
 
 Copyright (c) 2026 BGCoding
 
-Hiermit wird unentgeltlich jeder Person, die eine Kopie dieser Software und der zugehörigen
-Dokumentationsdateien (die "Software") erhält, die Erlaubnis erteilt, sie uneingeschränkt zu
-nutzen, zu kopieren, zu verändern, zusammenzuführen, zu veröffentlichen, zu verbreiten, zu
-unterlizenzieren und/oder zu verkaufen, und Personen, denen die Software überlassen wird,
-diese Rechte zu gewähren, unter den folgenden Bedingungen:
+Hiermit wird unentgeltlich jeder Person, die eine Kopie dieser Software und der zugehörigen Dokumentationsdateien (die "Software") erhält, die Erlaubnis erteilt, sie uneingeschränkt zu nutzen, zu kopieren, zu verändern, zusammenzuführen, zu veröffentlichen, zu verbreiten, zu unterlizenzieren und/oder zu verkaufen, und Personen, denen die Software überlassen wird, diese Rechte zu gewähren, unter den folgenden Bedingungen:
 
-Der obige Copyright-Hinweis und dieser Erlaubnishinweis sind in allen Kopien oder
-wesentlichen Teilen der Software beizufügen.
+Der obige Copyright-Hinweis und dieser Erlaubnishinweis sind in allen Kopien oder wesentlichen Teilen der Software beizufügen.
 
-DIE SOFTWARE WIRD OHNE JEDE AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG BEREITGESTELLT,
-EINSCHLIESSLICH DER GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT, DER EIGNUNG FÜR EINEN BESTIMMTEN ZWECK
-UND DER NICHTVERLETZUNG VON RECHTEN DRITTER. IN KEINEM FALL HAFTEN DIE AUTOREN ODER
-COPYRIGHT-INHABER FÜR ANSPRÜCHE, SCHÄDEN ODER SONSTIGE VERPFLICHTUNGEN, OB AUS VERTRAG,
-UNERLAUBTER HANDLUNG ODER ANDERWEITIG, DIE SICH AUS DER SOFTWARE ODER IHRER NUTZUNG ERGEBEN.
+DIE SOFTWARE WIRD OHNE JEDE AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG BEREITGESTELLT, EINSCHLIESSLICH DER GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT, DER EIGNUNG FÜR EINEN BESTIMMTEN ZWECK UND DER NICHTVERLETZUNG VON RECHTEN DRITTER. IN KEINEM FALL HAFTEN DIE AUTOREN ODER COPYRIGHT-INHABER FÜR ANSPRÜCHE, SCHÄDEN ODER SONSTIGE VERPFLICHTUNGEN, OB AUS VERTRAG, UNERLAUBTER HANDLUNG ODER ANDERWEITIG, DIE SICH AUS DER SOFTWARE ODER IHRER NUTZUNG ERGEBEN.
