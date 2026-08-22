@@ -25,10 +25,10 @@ REM bin\publish\<rid>\ for reading a stack trace from a crash.
 REM
 setlocal
 
-set ROOT=%~dp0
-set MODE=%~1
-set EXE=AuraToggle.exe
-set PDB=AuraToggle.pdb
+set "ROOT=%~dp0"
+set "MODE=%~1"
+set "EXE=AuraToggle.exe"
+set "PDB=AuraToggle.pdb"
 
 if "%MODE%"=="" goto :dispatch
 if /I "%MODE%"=="all" goto :dispatch
@@ -46,8 +46,17 @@ exit /b 2
 :dispatch
 REM A running copy locks its own exe, which makes the publish step fail after ten retries -
 REM that failure aborts "all" before it ever reaches the installer, so the installer silently
-REM never appears. Closing it first is safe: it is this project's own build output.
-taskkill /IM "%EXE%" /F >nul 2>nul
+REM never appears. Closing it first is safe - but only this project's own build output: a plain
+REM "taskkill /IM" used to close every AuraToggle.exe on the machine, including an installed copy
+REM Ben happened to be running at the time. Filtered here to processes whose own path sits under
+REM this checkout.
+REM %ROOT% keeps its trailing backslash everywhere else in this file, but a quoted argument
+REM ending in "\"" is read by the C-runtime argv parser as an escaped quote, not a closing one -
+REM it swallowed the rest of the command line into one broken argument and printed a PowerShell
+REM parser error above a build that otherwise still finished. Stripped for the command line only;
+REM the script below puts it back before comparing, so "Aura-Toggle2\..." still cannot match
+REM "Aura-Toggle" as a false-positive prefix.
+powershell -NoProfile -Command "& { param($root, $name) $root = $root.TrimEnd('\') + '\'; Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($name)) -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } | Stop-Process -Force -ErrorAction SilentlyContinue }" "%ROOT:~0,-1%" "%EXE%"
 
 if "%MODE%"=="" goto :all
 if /I "%MODE%"=="all" goto :all
@@ -68,9 +77,9 @@ REM DEST, not OUTDIR: MSBuild reads the environment as properties and matches na
 REM regard to case, so an OUTDIR of its own made "dotnet publish" treat it as OutDir and drop
 REM the whole intermediate build - AuraToggle.dll, deps.json, runtimeconfig.json - into dist.
 :publish
-set RID=%~1
-set DEST=%~2
-set STAGE=%ROOT%bin\publish\%RID%
+set "RID=%~1"
+set "DEST=%~2"
+set "STAGE=%ROOT%bin\publish\%RID%"
 
 echo Building "%EXE%" [%RID%]
 
@@ -115,6 +124,7 @@ exit /b 1
 call :installer noexit
 if errorlevel 1 goto :allfailed
 call :checksums
+if errorlevel 1 goto :allfailed
 echo.
 echo Everything is in %ROOT%dist
 dir /b "%ROOT%dist"
@@ -136,6 +146,22 @@ REM %ROOT% is passed as a script argument, not spliced into the PowerShell sourc
 REM path with an apostrophe (C:\Bob's Projects\...) used to close the single-quoted string early
 REM and run the rest of the path as PowerShell code.
 powershell -NoProfile -Command "& { param($root) $h = Get-ChildItem -LiteralPath $root -File -Filter *.exe | ForEach-Object { [pscustomobject]@{ H = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(); N = $_.Name } }; $h | ForEach-Object { '  {0}  {1}' -f $_.H, $_.N }; [IO.File]::WriteAllText((Join-Path $root 'SHA256SUMS.txt'), (($h | ForEach-Object { '{0}  {1}' -f $_.H, $_.N }) -join [string][char]10) + [char]10, [Text.Encoding]::ASCII) }" "%ROOT%dist"
+if errorlevel 1 (
+    echo.
+    echo BUILD FAILED: checksum step errored
+    exit /b 1
+)
+
+REM Two lines expected: the portable exe and the setup exe. "all" marching on over anything
+REM else - zero, one, a half-written file from a step that errored past PowerShell's own exit
+REM code - used to report success over a checksums file nobody could actually use.
+set "SUMLINES=0"
+if exist "%ROOT%dist\SHA256SUMS.txt" for /f %%c in ('find /c /v "" ^< "%ROOT%dist\SHA256SUMS.txt"') do set "SUMLINES=%%c"
+if not "%SUMLINES%"=="2" (
+    echo.
+    echo BUILD FAILED: SHA256SUMS.txt has %SUMLINES% line^(s^), expected 2
+    exit /b 1
+)
 exit /b 0
 
 :version
@@ -144,8 +170,8 @@ REM The line reads "    <Version>1.0.0</Version>": with < and > as the only
 REM delimiters the leading indent is token 1, the tag name token 2, the value token 3.
 REM APPVER rather than VERSION, for the same reason DEST is not OUTDIR: Version is an MSBuild
 REM property, and the environment would override the one in the project file.
-set APPVER=
-for /f "tokens=3 delims=<>" %%v in ('findstr /r /c:"<Version>[0-9]" "%ROOT%AuraToggle.csproj"') do set APPVER=%%v
+set "APPVER="
+for /f "tokens=3 delims=<>" %%v in ('findstr /r /c:"<Version>[0-9]" "%ROOT%AuraToggle.csproj"') do set "APPVER=%%v"
 
 REM A missed parse would otherwise produce "Setup Aura Toggle v.exe" and fail much later.
 if not defined APPVER (
@@ -163,7 +189,11 @@ rd /s /q "%~1" 2>nul
 if not exist "%~1" exit /b 0
 ping -n 3 127.0.0.1 >nul
 rd /s /q "%~1" 2>nul
-if exist "%~1" echo WARNING: "%~1" could not be emptied completely.
+if exist "%~1" (
+    echo.
+    echo BUILD FAILED: "%~1" could not be emptied completely.
+    exit /b 1
+)
 exit /b 0
 
 REM Builds the x64 exe, then packs the setup around it.
@@ -172,6 +202,7 @@ REM Emptied first, so what is left afterwards is exactly this build and nothing 
 REM one. Safe here because every artifact is rebuilt below - "build.bat portable" deletes
 REM nothing, which is what stopped it from removing the setup.
 call :wipe "%ROOT%dist"
+if errorlevel 1 goto :installerfailed
 
 call :publish win-x64 "%ROOT%dist"
 if errorlevel 1 goto :installerfailed
@@ -184,9 +215,9 @@ REM step reported success - which would leave the setup to be packed around a mi
 REM a stale binary.
 if not exist "%ROOT%dist\%EXE%" goto :payloadmissing
 
-set ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe
-if not exist "%ISCC%" set ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe
-if not exist "%ISCC%" set ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe
+set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+if not exist "%ISCC%" set "ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe"
+if not exist "%ISCC%" set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
 if not exist "%ISCC%" (
     echo.
     echo Inno Setup 6 not found. Install it with:  winget install JRSoftware.InnoSetup

@@ -67,6 +67,15 @@ internal static class AuraCustomPresets
                         continue;
                     }
 
+                    // Same rule AuraChannelStates and AuraState apply before a mode reaches the
+                    // hardware: only a mode this build actually knows - or "off" - is trusted from
+                    // a hand-edited or imported file, otherwise the window names an effect the
+                    // board never runs while sending the board something else entirely.
+                    byte rawMode = AuraFiles.JsonByte(entry, "mode");
+                    byte mode = rawMode == AuraState.ModeOff || AuraPresets.ByMode(rawMode) != null
+                        ? rawMode
+                        : AuraState.Default.Mode;
+
                     entries.Add(new CustomPresetEntry(
                         AuraFiles.JsonText(entry, "deviceKey"),
                         // Missing channel means an entry written before presets went
@@ -75,7 +84,7 @@ internal static class AuraCustomPresets
                             ? index
                             : -1,
                         AuraFiles.Caption(AuraFiles.JsonText(entry, "label"), AuraFiles.MaxChannelLabel),
-                        AuraFiles.JsonByte(entry, "mode"), AuraFiles.JsonByte(entry, "red"),
+                        mode, AuraFiles.JsonByte(entry, "red"),
                         AuraFiles.JsonByte(entry, "green"), AuraFiles.JsonByte(entry, "blue"),
                         // Missing brightness means an entry written before presets carried one:
                         // 0 leaves the channel at whatever brightness it already has.
