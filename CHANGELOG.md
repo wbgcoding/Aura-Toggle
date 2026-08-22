@@ -6,6 +6,24 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-22
+
+### Added
+
+- The brightness slider live-previews its effect's colour on the big button while you drag it
+- A new icon, redrawn at every size the taskbar and shortcuts use
+
+### Changed
+
+- Settings are reordered and "Animate button" is renamed to "Animate switch"
+- The big button no longer flashes on a fast round trip through the busy state
+- The setup's licence page is shorter and its privacy line is stronger
+
+### Removed
+
+- The update check, including its setting and its tray notification — the tool no longer talks to
+  the network at all
+
 ## [1.2.1] - 2026-08-22
 
 Ten interface languages instead of two, a setup that no longer starts behind the window you were
@@ -204,6 +222,7 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own — on
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
-[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.3.0
 [1.2.1]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.1
 [1.2.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.0
