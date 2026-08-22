@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Regenerates assets/aura.ico and assets/aura-off.ico from a colour ring sampled off the
-existing icon - see WORK.md Phase D. Ben's brief: transparent inside the ring, only the colour
-ring itself paints; the "off" icon is the same ring at the same colours, darkened to about 35%
-instead of the old flat grey disc; the ring is drawn thicker for 16/24/32 px so it does not thin
-out to a thread in the notification area, and keeps today's proportions from 48 px up.
+existing icon. Transparent inside the ring, only the colour ring itself paints; the "off" icon
+is the same ring at the same colours, darkened to about 35% instead of the old flat grey disc.
+One set of proportions at every size: the transparent centre keeps the source icon's own radius
+down to 16 px, because a thicker ring there closes the hole up to a few pixels and the icon reads
+as the old filled disc in the taskbar and the notification area.
 
 The ring is described analytically (an angle -> colour table, sampled off the existing 256 px
-icon) rather than resized from the source bitmap, so it can be redrawn at any thickness without
-also inheriting the dark disc filling the middle of the source image today.
+icon) rather than resized from the source bitmap, so it can be redrawn at any thickness and any
+size without carrying over whatever fills the middle of the source image.
 
 Usage: python tools/make-icons.py
 """
@@ -26,16 +27,14 @@ SIZES = (16, 24, 32, 48, 64, 128, 256)
 SUPERSAMPLE = 4
 SAMPLE_RADIUS_FRACTION = 0.68  # where the ring colour is read off the source icon
 OUTER_FRACTION = 0.875
-INNER_FRACTION_LARGE = 0.477  # 48 px and up - matches the source icon's own proportions
-INNER_FRACTION_SMALL = 0.34  # 16/24/32 px - a thicker ring so it survives downscaling
-SMALL_SIZE_CUTOFF = 48
+INNER_FRACTION = 0.477  # matches the source icon's own proportions, at every size
 OFF_DARKEN = 0.35
 
 
 def sample_ring_colours(source_path: Path) -> list[tuple[int, int, int]]:
     """One RGB colour per degree, read off the source icon's 256 px frame at
-    SAMPLE_RADIUS_FRACTION of its radius - partway through the ring, clear of both its own
-    antialiased edges and the dark disc filling the icon's centre today."""
+    SAMPLE_RADIUS_FRACTION of its radius - partway through the ring, clear of its antialiased
+    inner and outer edges and of whatever fills the centre."""
     source = Image.open(source_path)
     source.size = (256, 256)
     source.load()
@@ -67,7 +66,7 @@ def draw_ring(colours: list[tuple[int, int, int]], size: int) -> Image.Image:
     canvas = size * SUPERSAMPLE
     centre = canvas / 2.0
     outer = OUTER_FRACTION * centre
-    inner = (INNER_FRACTION_SMALL if size < SMALL_SIZE_CUTOFF else INNER_FRACTION_LARGE) * centre
+    inner = INNER_FRACTION * centre
 
     big = Image.new("RGBA", (canvas, canvas), (0, 0, 0, 0))
     pixels = big.load()
