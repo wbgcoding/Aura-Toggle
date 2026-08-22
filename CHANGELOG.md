@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-22
+
+Ten interface languages instead of two, a setup that no longer starts behind the window you were
+looking at, and a round of fixes to the window's sizing, its safety checks and its German wording.
+
 ### Added
 
 - Eight more interface languages: Spanish, Brazilian Portuguese, Italian, Dutch, Polish, Turkish,
@@ -199,4 +204,5 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own — on
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
-[1.2.0]: https://github.com/wbgcoding/aura-toggle/releases/tag/v1.2.0
+[1.2.1]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.1
+[1.2.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.0
