@@ -106,8 +106,8 @@ internal sealed class AuraDevice : IDisposable
         // configTable[0x1D], plain 12V RGB headers, is deliberately not read: the reference board
         // is ARGB only, so there is no hardware here to verify what commands a classic RGB header
         // actually takes - very possibly not 0x35/0x36, which assume per-LED addressing a
-        // non-addressable header does not have. Wiring it up without a board to test against is
-        // exactly the fuzzing INVARIANTS.md forbids.
+        // non-addressable header does not have. Wiring it up without a board to test against
+        // would be guessing at somebody else's hardware, which this project does not do.
 
         int startLed = 0;
         if (mainboardLeds > 0)

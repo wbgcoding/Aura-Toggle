@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [1.3.0] - 2026-08-22
 
+A quieter window - the brightness slider previews itself and steps aside for the effects it
+cannot reach - a new icon, a setup that no longer trips over a per-user uninstall, and no
+network code left in the tool at all.
+
 ### Added
 
 - The brightness slider live-previews its effect's colour on the big button while you drag it
@@ -23,6 +27,8 @@ All notable changes to this project are documented here. The format follows
   slider is hidden for them rather than sitting there doing nothing
 - The setup's licence page is shorter, its privacy line is stronger, and its paragraphs now wrap
   to the width of the page instead of carrying the text file's own line breaks
+- The running-light effects redraw with less work per frame, so the animated button costs less
+  while they run
 
 ### Fixed
 
@@ -35,6 +41,10 @@ All notable changes to this project are documented here. The format follows
   losing its "(2)" and colliding with the original
 - A hand-edited or imported preset with an unrecognised effect number no longer falls back to a
   whole-board effect on a single channel
+- A long custom preset name is shortened by the tool for the notification-area tooltip instead of
+  being cut off mid-word by Windows
+- An error message stays on screen long enough to be read and copied instead of disappearing
+  together with the run that raised it
 
 ### Removed
 
