@@ -168,7 +168,7 @@
     <value>終了</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>ボタンをアニメーション表示</value>
+    <value>スイッチをアニメーション表示</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>常に手前に表示</value>

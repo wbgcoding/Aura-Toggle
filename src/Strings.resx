@@ -168,7 +168,7 @@
     <value>Exit</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>Animate the button</value>
+    <value>Animate the switch</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Always on top</value>

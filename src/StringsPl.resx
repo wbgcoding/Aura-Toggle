@@ -168,7 +168,7 @@
     <value>Zakończ</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>Animuj przycisk</value>
+    <value>Animuj przełącznik</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Zawsze na wierzchu</value>

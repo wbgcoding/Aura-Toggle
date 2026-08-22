@@ -168,7 +168,7 @@
     <value>退出</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>按钮动画</value>
+    <value>开关动画</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>始终置顶</value>

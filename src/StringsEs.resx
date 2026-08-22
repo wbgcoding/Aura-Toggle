@@ -168,7 +168,7 @@
     <value>Salir</value>
   </data>
   <data name="SettingAnimate" xml:space="preserve">
-    <value>Animar el botón</value>
+    <value>Animar el interruptor</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Siempre visible</value>
