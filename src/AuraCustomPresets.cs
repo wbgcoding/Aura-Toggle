@@ -67,14 +67,19 @@ internal static class AuraCustomPresets
                         continue;
                     }
 
-                    // Same rule AuraChannelStates and AuraState apply before a mode reaches the
-                    // hardware: only a mode this build actually knows - or "off" - is trusted from
-                    // a hand-edited or imported file, otherwise the window names an effect the
-                    // board never runs while sending the board something else entirely.
+                    // Same rule AuraChannelStates applies before a mode reaches the hardware: only
+                    // a mode this build actually knows - or "off" - is trusted from a hand-edited
+                    // or imported file, otherwise the window names an effect the board never runs
+                    // while sending the board something else entirely. Falls back to static, not
+                    // AuraState.Default.Mode (rainbow): a per-channel entry is sent to one channel
+                    // alone, and rainbow is one of the four firmware-generated modes that pulls
+                    // every channel on the controller into it the moment one channel gets it
+                    // (docs/INVARIANTS.md) - exactly the kind of surprise this validation exists
+                    // to prevent, not reintroduce through its own fallback.
                     byte rawMode = AuraFiles.JsonByte(entry, "mode");
                     byte mode = rawMode == AuraState.ModeOff || AuraPresets.ByMode(rawMode) != null
                         ? rawMode
-                        : AuraState.Default.Mode;
+                        : AuraState.ModeStatic;
 
                     entries.Add(new CustomPresetEntry(
                         AuraFiles.JsonText(entry, "deviceKey"),

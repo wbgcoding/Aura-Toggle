@@ -19,6 +19,18 @@ All notable changes to this project are documented here. The format follows
 - The big button no longer flashes on a fast round trip through the busy state
 - The setup's licence page is shorter and its privacy line is stronger
 
+### Fixed
+
+- A portable copy that was moved, renamed or duplicated no longer reads "Start with Windows" as on
+  because some other copy's entry happens to still be in the registry — the switch now checks that
+  the entry actually points at the copy asking
+- Uninstalling a per-user install no longer hits an internal setup error partway through and skips
+  the prompt to delete your settings
+- A custom preset name that was already at the length limit can be duplicated without silently
+  losing its "(2)" and colliding with the original
+- A hand-edited or imported preset with an unrecognised effect number no longer falls back to a
+  whole-board effect on a single channel
+
 ### Removed
 
 - The update check, including its setting and its tray notification — the tool no longer talks to

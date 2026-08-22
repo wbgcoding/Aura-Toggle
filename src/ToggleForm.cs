@@ -246,7 +246,15 @@ internal sealed class ToggleForm : Form
         _brightness.ValueChanged += (_, _) =>
         {
             ShowBrightnessValue();
-            PreviewBrightness();
+
+            // Render() sets this Value itself, below, to whatever it just painted - reading that
+            // assignment back here as if it were a fresh knob drag would repaint the button with
+            // the board's brightness instead of the one Render() actually used (a custom preset's
+            // most-used channel can carry its own, different from the board-wide value).
+            if (!_settingBrightnessFromRender)
+            {
+                PreviewBrightness();
+            }
         };
         _brightness.ValueCommitted += OnBrightnessCommitted;
 
@@ -541,8 +549,10 @@ internal sealed class ToggleForm : Form
                 // A name already at AuraFiles.MaxPresetName leaves no room for the suffix -
                 // AuraCustomPresets.Load re-caps every name to that length on the next read, which
                 // silently dropped the suffix back off and left two presets sharing one name.
+                // AuraFiles.Caption, not a raw range - a plain cut can land inside a surrogate
+                // pair (an emoji in the name) and hand Utf8JsonWriter half of one on save.
                 string suffixText = $" ({suffix})";
-                string baseName = name[..Math.Min(name.Length, AuraFiles.MaxPresetName - suffixText.Length)];
+                string baseName = AuraFiles.Caption(name, Math.Max(0, AuraFiles.MaxPresetName - suffixText.Length));
                 copyName = $"{baseName}{suffixText}";
                 suffix++;
             }
@@ -1055,6 +1065,11 @@ internal sealed class ToggleForm : Form
     private byte _paintedMode;
 
     private Color _paintedColour;
+
+    /// <summary>True only for the span of <see cref="Render"/>'s own write to <see
+    /// cref="_brightness"/>.Value - lets the ValueChanged handler tell that assignment apart
+    /// from an actual knob drag.</summary>
+    private bool _settingBrightnessFromRender;
 
     private void OnToggleClick(object? sender, EventArgs e)
     {
@@ -1579,9 +1594,9 @@ internal sealed class ToggleForm : Form
         int width96 = ClientSize.Width * 96 / DeviceDpi;
 
         // Reloaded and merged under the same lock every other settings writer uses, rather than
-        // saving this object's own possibly-stale copy of Settings - an open settings popup or
-        // the background update check both save independently, and either landing between this
-        // method's read and write would otherwise be overwritten right back out.
+        // saving this object's own possibly-stale copy of Settings - an open settings popup saves
+        // independently, and it landing between this method's read and write would otherwise be
+        // overwritten right back out.
         using IDisposable guard = AuraFiles.Lock();
         _settings = AuraSettings.Load() with { WindowX = location.X, WindowY = location.Y, WindowWidth = width96 };
         _settings.Save();
@@ -1950,7 +1965,9 @@ internal sealed class ToggleForm : Form
         // sharing a controller-wide firmware effect, where no per-channel value applies at all.
         bool showBrightness = usesColour || wholeBoard;
 
+        _settingBrightnessFromRender = true;
         _brightness.Value = brightness;
+        _settingBrightnessFromRender = false;
         ShowBrightnessValue();
         _brightnessRow.Visible = showBrightness;
 
@@ -1965,9 +1982,9 @@ internal sealed class ToggleForm : Form
         _trayLighting.Checked = _state.On;
 
         // NotifyIcon.Text throws past 128 characters - AuraFiles.Caption already keeps a stored
-        // preset name well under that, but a translated WindowTitle or preset name pushed right up
-        // to that edge could still tip it over combined. Capped again here, hard, so no combination
-        // of the two ever can.
+        // preset name (at most 40) well under that, but a long translated WindowTitle plus a
+        // near-40-character preset name could still add up past it. Capped here at well under
+        // half of 128, hard, so no combination of the two ever can.
         _tray.Text = AuraFiles.Caption(
             $"{Strings.WindowTitle} - {(_state.On ? boardEffect : Strings.ButtonStateOff)}", 63);
         _tray.Icon = _state.On ? (_iconOnTray ?? Icon) : (_iconOff ?? Icon);
