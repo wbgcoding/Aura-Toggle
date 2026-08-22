@@ -9,13 +9,13 @@
 ; it checks for it and offers to fetch it from Microsoft, once, on the machines that lack it.
 
 #ifndef AppVersion
-  #define AppVersion "1.2.0"
+  #define AppVersion "1.2.1"
 #endif
 
 #define AppName "Aura Toggle"
 #define AppExe "AuraToggle.exe"
 #define AppPublisher "BGCoding"
-#define AppUrl "https://github.com/wbgcoding/aura-toggle"
+#define AppUrl "https://github.com/wbgcoding/Aura-Toggle"
 #define SetupName "AuraToggle-Setup-" + AppVersion
 
 [Setup]

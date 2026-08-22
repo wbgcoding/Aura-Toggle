@@ -4,11 +4,11 @@
 
 **Turn off ASUS RGB — without Armoury Crate.**
 
-[![Latest release](https://img.shields.io/github/v/release/wbgcoding/aura-toggle)](https://github.com/wbgcoding/aura-toggle/releases/latest)
-[![License](https://img.shields.io/github/license/wbgcoding/aura-toggle)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/wbgcoding/Aura-Toggle)](https://github.com/wbgcoding/Aura-Toggle/releases/latest)
+[![License](https://img.shields.io/github/license/wbgcoding/Aura-Toggle)](LICENSE)
 
 [Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) ·
-[Troubleshooting](#-troubleshooting) · [Changelog](CHANGELOG.md)
+[Troubleshooting](#-troubleshooting) · [Privacy](#-privacy) · [Changelog](CHANGELOG.md)
 
 <img src="docs/preview-dark.webp" alt="The Aura Toggle window" width="444">
 
@@ -18,7 +18,7 @@
 
 | | Aura Toggle | Armoury Crate | OpenRGB / SignalRGB |
 |---|---|---|---|
-| Size | ~630 KB | Hundreds of MB | Tens of MB and up |
+| Size | ~700 KB | Hundreds of MB | Tens of MB and up |
 | Background service | None | Always running | Usually running |
 | Device range | ASUS Aura mainboard lighting only | ASUS ecosystem | Many vendors, many device types |
 | Effects | 9 built-in, plus your own presets | ASUS's own effect set | Large effect libraries, often per-LED |
@@ -60,6 +60,10 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 - 📌 Lives in the notification area, right-click for on/off
 - ⌨️ Full command line with exit codes — **Stream Deck**, scheduled tasks, scripts, shortcuts
 - 🔥 A global hotkey, configurable, switches the whole board from anywhere
+- 🏷️ **Name your channels** — "Desk strip" rather than "ARGB 1". While you pick a name, that one
+  header lights up white and the rest of the board goes dark, so there is nothing to guess
+- 🌍 **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
+  Italian, Dutch, Polish, Turkish, Japanese and Chinese
 - 🔒 No admin rights, no driver, no telemetry — the only network connection this tool ever makes
   is a check for a newer release, at most once a day, and nothing downloads without a click
 
@@ -83,12 +87,12 @@ in the BIOS itself.
 
 ## 📥 Download
 
-**➡️ [Latest release](https://github.com/wbgcoding/aura-toggle/releases/latest)** — both files are
+**➡️ [Latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)** — both files are
 attached there, along with `SHA256SUMS.txt` to check them against.
 
 | | Size | Needs |
 |---|---|---|
-| **Portable** `AuraToggle.exe` | ~630 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| **Portable** `AuraToggle.exe` | ~700 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
 | **Installer** `AuraToggle-Setup-<version>.exe` | ~2.3 MB | Nothing — it fetches the runtime if you lack it |
 
 Portable: download, double click, done. Installer: for everyone or just for you, optional
@@ -134,7 +138,8 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    more before it does) — F2 and Delete do the edit and delete from the keyboard.
 3. **Channel selector** — all channels, or a single one: the onboard zone, one ARGB header, or
    one whole controller on boards that have several. Hover a channel for a ✏️ to give it a name
-   of your own.
+   of your own — while the name box is open that header is lit white and every other channel on
+   the board is taken dark, which is the quickest way to find out which header is which.
 4. **Colour chips** — appear for effects that use a colour, including a custom colour picker.
 5. **Brightness** — appears with the chips, 10 to 100 %, and follows the channel selector: dim
    one header on its own, or set the whole board at once, which hands every channel back to the
@@ -353,6 +358,11 @@ effect command per channel does the rest.
 Commands are paced and the sequence is sent twice: the controller silently drops commands that
 arrive while it is still busy, which otherwise left the ARGB headers running after the onboard
 zone had already switched.
+
+## 🔒 Privacy
+
+No account, no telemetry, no analytics, no advertising, nothing profiled and nothing shared. The
+tool has no server of its own to send anything to.
 
 State lives in `%LOCALAPPDATA%\aura-toggle` — `state.json` for the last effect and brightness,
 `settings.json` for your preferences, `presets.json` for custom presets, `channel-state.json`

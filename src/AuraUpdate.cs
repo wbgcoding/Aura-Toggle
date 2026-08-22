@@ -19,7 +19,7 @@ internal sealed record UpdateInfo(string Version, string InstallerUrl, string Ch
 /// </summary>
 internal static class AuraUpdate
 {
-    private const string ReleasesUrl = "https://api.github.com/repos/wbgcoding/aura-toggle/releases/latest";
+    private const string ReleasesUrl = "https://api.github.com/repos/wbgcoding/Aura-Toggle/releases/latest";
     private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(24);
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(3);
