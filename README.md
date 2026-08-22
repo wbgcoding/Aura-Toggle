@@ -24,7 +24,7 @@
 | Effects | 9 built-in, plus your own presets | ASUS's own effect set | Large effect libraries, often per-LED |
 
 OpenRGB and SignalRGB genuinely do more — more devices, more effects, per-LED control on
-hardware that supports it. Aura Toggle does one thing: it is a switch, not a control suite.
+hardware that supports it. Aura Toggle needs no service and no background process — it does its job and gets out of the way.
 
 **Quickstart:**
 
@@ -54,10 +54,10 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 - 🔌 Switches **every** channel the board reports: the onboard zone and all addressable ARGB headers
 - 🎯 Or **one channel at a time** — the onboard zone steady white while an ARGB header breathes red
 - 🎨 Nine built-in effects with a colour picker, applied instantly
-- 🔆 **Brightness** for the colour effects, 10 – 100 %, per channel or for the whole board
+- 🔆 **Brightness** for the colour effects, 10–100%, per channel or for the whole board
 - 🧩 **Custom presets** — a name, one effect and colour per channel, saved and reusable
 - 🖥️ One window: a button that animates the running effect and switches it
-- 📌 Lives in the notification area, right-click for on/off
+- 📌 Lives in the notification area, left-click for on/off
 - ⌨️ Full command line with exit codes — **Stream Deck**, scheduled tasks, scripts, shortcuts
 - 🔥 A global hotkey, configurable, switches the whole board from anywhere
 - 🏷️ **Name your channels** — "Desk strip" rather than "ARGB 1". While you pick a name, that one
@@ -94,7 +94,7 @@ attached there, along with `SHA256SUMS.txt` to check them against.
 | **Portable** `AuraToggle.exe` | ~700 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
 | **Installer** `AuraToggle-Setup-<version>.exe` | ~2.3 MB | Nothing — it fetches the runtime if you lack it |
 
-Portable: download, double click, done. Installer: for everyone or just for you, optional
+Portable: download, double-click, done. Installer: for everyone or just for you, optional
 autostart and desktop shortcut, clean uninstall. If the .NET 10 Desktop Runtime is missing it
 asks once, downloads it from Microsoft and installs it.
 
@@ -131,7 +131,7 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
 
 1. **Big button** — shows the state and switches it. While the lighting is on it animates
    whatever effect is running, brightness included.
-2. **Drop down** — pick a built-in effect or a saved custom preset, it applies immediately. Hover
+2. **Drop down** — pick a built-in effect or a saved custom preset; it applies immediately. Hover
    a built-in effect for a one-line explanation of what it does. The last row creates a preset;
    each preset of your own carries icons to duplicate it, edit it, or delete it (which asks once
    more before it does) — F2 and Delete do the edit and delete from the keyboard.
@@ -140,7 +140,7 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    of your own — while the name box is open that header is lit white and every other channel on
    the board is taken dark, which is the quickest way to find out which header is which.
 4. **Colour chips** — appear for effects that use a colour, including a custom colour picker.
-5. **Brightness** — appears with the chips, 10 to 100 %, and follows the channel selector: dim
+5. **Brightness** — appears with the chips, 10 to 100%, and follows the channel selector: dim
    one header on its own, or set the whole board at once, which hands every channel back to the
    board-wide value.
 6. **⚙️ Gear** — autostart, minimise instead of close, lighting at start, a global hotkey,
@@ -149,7 +149,7 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    `reset-backup.zip`, right next to them.
 
 Minimising sends the window to the notification area. Left click the icon there to toggle the
-lighting, double click to reopen the window, right click for the same options in a menu.
+lighting, double-click to reopen the window, right-click for the same options in a menu.
 
 The window reopens where and how wide you last left it — unless that spot belongs to a display
 that is no longer attached, in which case it centres itself rather than opening off-screen.
@@ -162,7 +162,7 @@ of the effect drop down: name it, then an effect and colour per channel, save. E
 starts out matching whatever is running right now, so a preset that should just save the
 current look needs no changes at all. It then shows up in the effect list next to a small
 person icon, told apart from the built-in effects at a glance. Each channel also carries its own
-brightness there, so a preset can hold one header at 30 % and the next at full. The editor has no
+brightness there, so a preset can hold one header at 30% and the next at full. The editor has no
 title bar of its own but can be dragged by its heading, so it never sits in the way.
 
 Export and Import in the editor move a preset as a single `.json` file — to another machine, a
@@ -207,7 +207,7 @@ AuraToggle.exe -toggle -channel 2                  :: only that channel's own on
 
 `-channel` accepts a flat number from `-list`, the `<controller>.<channel>` form, the default
 name in any of the ten interface languages, or a name given in the window - matched the same
-forgiving way as preset names (casing, spaces and hyphens ignored). Unknown or ambiguous exits
+forgiving way as preset names (casing, spaces and hyphens ignored). An unknown or ambiguous target exits
 `2` and lists the possible targets on stderr. `-list` and `-status` are always in English, regardless of the window's
 language, so a script reading them does not break when someone switches it; error messages stay
 translated.
@@ -284,7 +284,7 @@ directly, not by a model list, so it either works or reports no controller found
 No Aura USB controller on the board, or lighting is off in the BIOS.
 
 **"The AURA LED controller is in use by another program"**
-Armoury Crate, OpenRGB or SignalRGB hold it open. Close them — two programs cannot drive the
+Armoury Crate, OpenRGB or SignalRGB holds it open. Close them — two programs cannot drive the
 same controller.
 
 **The lighting comes back looking different**
@@ -363,11 +363,16 @@ zone had already switched.
 No account, no telemetry, no analytics, no advertising, nothing profiled and nothing shared. The
 tool has no server of its own to send anything to.
 
-State lives in `%LOCALAPPDATA%\aura-toggle` — `state.json` for the last effect and brightness,
-`settings.json` for your preferences, `presets.json` for custom presets, `channel-state.json`
-for what each channel was last set to including its own brightness, `channel-names.json` for
-channels you renamed, and `log.txt` (rotated to `log.old.txt` past 200 KB) for start-up, version
-and error entries. The per-channel files are keyed by the controller's device path, so the entries
+State lives in `%LOCALAPPDATA%\aura-toggle`:
+
+- `state.json` — the last effect and brightness
+- `settings.json` — your preferences
+- `presets.json` — custom presets
+- `channel-state.json` — what each channel was last set to, including its own brightness
+- `channel-names.json` — channels you renamed
+- `log.txt` (rotated to `log.old.txt` past 200 KB) — start-up, version and error entries
+
+The per-channel files are keyed by the controller's device path, so the entries
 survive a reboot. Portable and installed builds share the folder, every write goes through a
 temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete it.
 Nothing in there is ever sent anywhere, and your user name is replaced with `%USERPROFILE%` in

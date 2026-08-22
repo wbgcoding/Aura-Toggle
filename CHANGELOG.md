@@ -116,7 +116,7 @@ a single portable executable — no background service, no driver, no admin righ
 
 - A custom preset holds one effect, colour and brightness *per channel* under a name of your own:
   the onboard zone steady white while an ARGB header breathes red, say.
-- Presets are created, edited, duplicated and deleted straight from the effect drop down. A new one
+- Presets are created, edited, duplicated and deleted straight from the effect drop-down. A new one
   starts from whatever is running right now, so saving the current look needs no changes at all;
   duplicating names the copy "<name> (2)" and opens straight into its editor.
 - The editor shows what it is building on the real hardware and puts the lighting back the way it
@@ -204,5 +204,6 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own — on
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
+[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.2.1...HEAD
 [1.2.1]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.1
 [1.2.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.0
