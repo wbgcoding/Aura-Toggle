@@ -111,15 +111,6 @@ internal static class Strings
 
     public static string SettingAnimate => Get("SettingAnimate");
     public static string SettingAlwaysOnTop => Get("SettingAlwaysOnTop");
-    public static string TrayUpdateInstall => Get("TrayUpdateInstall");
-    public static string TrayUpdateOpenPage => Get("TrayUpdateOpenPage");
-    public static string TrayUpdateAvailable => Get("TrayUpdateAvailable");
-    public static string TrayUpdateFailed => Get("TrayUpdateFailed");
-    public static string UpdateNoticeTitle => Get("UpdateNoticeTitle");
-    public static string UpdateNoticeBody => Get("UpdateNoticeBody");
-    public static string UpdateNoticeInstall => Get("UpdateNoticeInstall");
-    public static string UpdateNoticeOpenPage => Get("UpdateNoticeOpenPage");
-    public static string UpdateNoticeLater => Get("UpdateNoticeLater");
 
     public static string SettingLanguage => Get("SettingLanguage");
 

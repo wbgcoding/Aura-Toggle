@@ -152,10 +152,9 @@ internal static class Program
     /// </summary>
     private static int RunReview(string surface, string argument)
     {
-        if (surface is not ("settings" or "error" or "editor" or "layout" or "update" or "gear" or "tip"
-            or "preview"))
+        if (surface is not ("settings" or "error" or "editor" or "layout" or "gear" or "tip" or "preview"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip|preview [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|layout|gear|tip|preview [scale%]");
             return 2;
         }
 
@@ -203,14 +202,6 @@ internal static class Program
             shown = ErrorDialog.Report(
                 new IOException("Sample error for review - the LED controller did not answer in time."),
                 "Review", owner: null, onClosed: Application.Exit, requireMessageLoop: false);
-        }
-        else if (surface == "update")
-        {
-            // A made-up version, no network access - this is the review surface, not a real check.
-            var popup = new UpdatePopup("9.9.9", installed: true);
-            popup.FormClosed += (_, _) => Application.Exit();
-            popup.Open(owner: null);
-            shown = popup;
         }
         else if (surface == "tip")
         {

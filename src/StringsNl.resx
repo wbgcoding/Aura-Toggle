@@ -173,33 +173,6 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Altijd op voorgrond</value>
   </data>
-  <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>Versie {0} installeren</value>
-  </data>
-  <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Versie {0} beschikbaar - releasepagina openen</value>
-  </data>
-  <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>Versie {0} is beschikbaar. Klik op het systeemvakmenu om deze te installeren.</value>
-  </data>
-  <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>De update kon niet worden gedownload of geverifieerd.</value>
-  </data>
-  <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>Update beschikbaar</value>
-  </data>
-  <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Versie {0} is uit - u gebruikt {1}.</value>
-  </data>
-  <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>Nu installeren</value>
-  </data>
-  <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Releasepagina openen</value>
-  </data>
-  <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>Later</value>
-  </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Taal</value>
   </data>

@@ -173,33 +173,6 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Siempre visible</value>
   </data>
-  <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>Instalar versión {0}</value>
-  </data>
-  <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Versión {0} disponible - abrir página de lanzamiento</value>
-  </data>
-  <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>La versión {0} está disponible. Haz clic en el menú de la bandeja para instalarla.</value>
-  </data>
-  <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>No se pudo descargar o verificar la actualización.</value>
-  </data>
-  <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>Actualización disponible</value>
-  </data>
-  <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Ya está disponible la versión {0}; estás usando la {1}.</value>
-  </data>
-  <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>Instalar ahora</value>
-  </data>
-  <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Abrir página de lanzamiento</value>
-  </data>
-  <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>Más tarde</value>
-  </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Idioma</value>
   </data>

@@ -173,33 +173,6 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>Her zaman üstte</value>
   </data>
-  <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>{0} sürümünü yükle</value>
-  </data>
-  <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>{0} sürümü mevcut - sürüm sayfasını aç</value>
-  </data>
-  <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>{0} sürümü mevcut. Yüklemek için sistem tepsisi menüsüne tıklayın.</value>
-  </data>
-  <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>Güncelleme indirilemedi veya doğrulanamadı.</value>
-  </data>
-  <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>Güncelleme mevcut</value>
-  </data>
-  <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>{0} sürümü çıktı - kullandığınız sürüm {1}.</value>
-  </data>
-  <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>Şimdi yükle</value>
-  </data>
-  <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Sürüm sayfasını aç</value>
-  </data>
-  <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>Sonra</value>
-  </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>Dil</value>
   </data>
