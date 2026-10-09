@@ -27,16 +27,9 @@ internal sealed class SettingsPopup : PopupForm
     private readonly Select _language = new();
     private readonly PillButton _reset = new();
     private readonly ArmedButton _resetArm;
-    private readonly Label _minimiseOnCloseLabel;
-    private readonly Label _alwaysOnTopLabel;
-    private readonly Label _animateLabel;
-    private readonly Label _hotkeyLabel;
-    private readonly Label _autoStartLabel;
     private readonly Label _startActionLabel;
     private readonly Label _closeAfterStartLabel;
     private readonly Label _closeNote;
-    private readonly Label _checkUpdatesLabel;
-    private readonly Label _languageLabel;
     private readonly Layout _layout;
 
     private bool _childOpen;
@@ -103,29 +96,29 @@ internal sealed class SettingsPopup : PopupForm
             _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
-        _minimiseOnCloseLabel = AddSwitch(0, Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
-        _alwaysOnTopLabel = AddSwitch(1, Strings.SettingAlwaysOnTop, _alwaysOnTop, settings.AlwaysOnTop);
-        _animateLabel = AddSwitch(2, Strings.SettingAnimate, _animate, settings.Animate);
+        AddSwitch(0, () => Strings.SettingMinimiseOnClose, _minimiseOnClose, settings.MinimiseOnClose);
+        AddSwitch(1, () => Strings.SettingAlwaysOnTop, _alwaysOnTop, settings.AlwaysOnTop);
+        AddSwitch(2, () => Strings.SettingAnimate, _animate, settings.Animate);
 
-        _hotkeyLabel = AddSwitch(3, Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
+        AddSwitch(3, () => Strings.SettingHotkey, _hotkeyEnabled, settings.HotkeyEnabled);
         AddButton(4, _hotkeyRecord, HotkeyText(_pendingHotkey), Theme.NeutralSoft, Theme.Text);
         _hotkeyRecord.Visible = settings.HotkeyEnabled;
-        _hotkeyHint = AddLabel(5, Strings.SettingHotkeyConflict);
+        _hotkeyHint = AddLabel(5, () => Strings.SettingHotkeyConflict);
         _hotkeyHint.ForeColor = Theme.Danger;
         _hotkeyHint.Visible = false;
 
-        _autoStartLabel = AddSwitch(6, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
-        _startActionLabel = AddLabel(7, Strings.SettingStartAction);
+        AddSwitch(6, () => Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
+        _startActionLabel = AddLabel(7, () => Strings.SettingStartAction);
         // The built-in effects are applied in the colour the board was last given, so that is
         // the colour their icons are drawn in - the default white vanished on the light panel.
         AuraState current = AuraState.Load();
         _startAction.Colour = Color.FromArgb(current.Red, current.Green, current.Blue);
-        AddSelect(8, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
-        _closeAfterStartLabel = AddSwitch(9, Strings.SettingCloseAfterStart, _closeAfterStart, settings.CloseAfterStart);
+        AddSelect(8, _startAction, () => Strings.SettingStartAction, StartActions(), settings.StartAction);
+        _closeAfterStartLabel = AddSwitch(9, () => Strings.SettingCloseAfterStart, _closeAfterStart, settings.CloseAfterStart);
 
         // A muted line under the switch, only while it and the hotkey are both on: a copy that
         // closes after setting the lighting is not around to receive the key.
-        _closeNote = AddLabel(10, Strings.SettingCloseAfterStartHotkeyNote);
+        _closeNote = AddLabel(10, () => Strings.SettingCloseAfterStartHotkeyNote);
         _metrics.Add(() =>
         {
             _closeNote.Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(4));
@@ -133,10 +126,10 @@ internal sealed class SettingsPopup : PopupForm
         });
         UpdateStartActionVisibility();
 
-        _checkUpdatesLabel = AddSwitch(11, Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
+        AddSwitch(11, () => Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
 
-        _languageLabel = AddLabel(12, Strings.SettingLanguage);
-        AddSelect(13, _language, Strings.SettingLanguage, Languages(), settings.Language);
+        AddLabel(12, () => Strings.SettingLanguage);
+        AddSelect(13, _language, () => Strings.SettingLanguage, Languages(), settings.Language);
 
         AddButton(14, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
@@ -288,24 +281,31 @@ internal sealed class SettingsPopup : PopupForm
         }
     }
 
-    private Label AddLabel(int row, string text)
+    /// <summary>
+    /// One re-localisation step per text a row shows, registered where the row is built so that a
+    /// row added later cannot be left out of <see cref="RefreshLanguage"/>.
+    /// </summary>
+    private readonly List<Action> _relocalise = new();
+
+    private Label AddLabel(int row, Func<string> text)
     {
         var label = new Label
         {
             AutoSize = true,
-            Text = text,
+            Text = text(),
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Surface,
         };
 
         _metrics.Add(() => label.Margin = new Padding(this.Scaled(2), this.Scaled(10), 0, this.Scaled(4)));
+        _relocalise.Add(() => label.Text = text());
 
         _layout.Controls.Add(label, 0, row);
         _layout.SetColumnSpan(label, 2);
         return label;
     }
 
-    private void AddSelect(int row, Select select, string name, IEnumerable<SelectItem> items, string selected)
+    private void AddSelect(int row, Select select, Func<string> name, IEnumerable<SelectItem> items, string selected)
     {
         select.Dock = DockStyle.Top;
         select.DesignHeight = 30;
@@ -315,7 +315,8 @@ internal sealed class SettingsPopup : PopupForm
         // Its label is a separate control on the row above, so the drop down has to carry the
         // text itself or a screen reader announces an unnamed combo box - same reasoning as
         // AddSwitch below.
-        select.AccessibleName = name;
+        select.AccessibleName = name();
+        _relocalise.Add(() => select.AccessibleName = name());
         select.SetItems(items);
         select.ShowSelection(selected);
         select.SelectionChanged += (_, _) => Apply();
@@ -330,12 +331,12 @@ internal sealed class SettingsPopup : PopupForm
         _layout.SetColumnSpan(select, 2);
     }
 
-    private Label AddSwitch(int row, string text, ToggleSwitch toggle, bool value)
+    private Label AddSwitch(int row, Func<string> text, ToggleSwitch toggle, bool value)
     {
         var label = new Label
         {
             AutoSize = true,
-            Text = text,
+            Text = text(),
             ForeColor = Theme.Text,
             BackColor = Theme.Surface,
         };
@@ -351,7 +352,12 @@ internal sealed class SettingsPopup : PopupForm
 
         // The switch and its label are separate controls, so the switch has to carry the text
         // itself or a screen reader announces an unnamed checkbox.
-        toggle.AccessibleName = text;
+        toggle.AccessibleName = text();
+        _relocalise.Add(() =>
+        {
+            label.Text = text();
+            toggle.AccessibleName = text();
+        });
 
         _layout.Controls.Add(label, 0, row);
         _layout.Controls.Add(toggle, 1, row);
@@ -532,26 +538,13 @@ internal sealed class SettingsPopup : PopupForm
 
     private void RefreshLanguage()
     {
-        _autoStartLabel.Text = Strings.SettingAutoStart;
-        _autoStart.AccessibleName = Strings.SettingAutoStart;
-        _minimiseOnCloseLabel.Text = Strings.SettingMinimiseOnClose;
-        _minimiseOnClose.AccessibleName = Strings.SettingMinimiseOnClose;
-        _animateLabel.Text = Strings.SettingAnimate;
-        _animate.AccessibleName = Strings.SettingAnimate;
-        _alwaysOnTopLabel.Text = Strings.SettingAlwaysOnTop;
-        _alwaysOnTop.AccessibleName = Strings.SettingAlwaysOnTop;
-        _hotkeyLabel.Text = Strings.SettingHotkey;
-        _hotkeyEnabled.AccessibleName = Strings.SettingHotkey;
-        _startActionLabel.Text = Strings.SettingStartAction;
-        _startAction.AccessibleName = Strings.SettingStartAction;
-        _closeAfterStartLabel.Text = Strings.SettingCloseAfterStart;
-        _closeAfterStart.AccessibleName = Strings.SettingCloseAfterStart;
-        _closeNote.Text = Strings.SettingCloseAfterStartHotkeyNote;
-        _checkUpdatesLabel.Text = Strings.SettingCheckUpdates;
-        _checkUpdates.AccessibleName = Strings.SettingCheckUpdates;
-        _languageLabel.Text = Strings.SettingLanguage;
-        _language.AccessibleName = Strings.SettingLanguage;
-        _hotkeyHint.Text = Strings.SettingHotkeyConflict;
+        foreach (Action relocalise in _relocalise)
+        {
+            relocalise();
+        }
+
+        // What is not a plain label or switch: the key being recorded, the arm/confirm button and
+        // the drop downs, whose item names are translated too.
         _hotkeyRecord.Text = _recordingHotkey ? Strings.HotkeyRecordPrompt : HotkeyText(_pendingHotkey);
         _resetArm.Relabel(Strings.SettingReset, Strings.SettingResetConfirm);
 
