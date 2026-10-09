@@ -955,7 +955,30 @@ internal sealed class SelectPopup : PopupForm
 
             case Keys.Enter:
             case Keys.Space:
-                Choose(_highlighted);
+                if (_confirming >= 0 && _confirming == _highlighted && _highlighted < _items.Count)
+                {
+                    // The armed row's tick, from the keyboard: applying the preset here would do
+                    // the opposite of what the red row is asking.
+                    SelectItem armed = _items[_highlighted];
+                    _confirming = -1;
+                    DeleteRequested?.Invoke(this, armed);
+                    Invalidate();
+                }
+                else
+                {
+                    Choose(_highlighted);
+                }
+
+                break;
+
+            case Keys.D when e.Control:
+                // Same as the copy button, closing the list the same way.
+                if (_highlighted >= 0 && _highlighted < _items.Count && _items[_highlighted].Editable)
+                {
+                    DuplicateRequested?.Invoke(this, _items[_highlighted]);
+                    Close();
+                }
+
                 break;
 
             case Keys.F2:
@@ -992,8 +1015,8 @@ internal sealed class SelectPopup : PopupForm
         index >= 0 && index < _items.Count && (_items[index].Editable || _items[index].Renamable);
 
     /// <summary>
-    /// Moves the highlight, stepping over the command row: it is an action, not one of the
-    /// choices, so arrowing onto it would be a dead stop.
+    /// Moves the highlight. Hint rows are stepped over - they cannot be picked - but the command
+    /// row can be reached, so "New preset" is not a mouse-only entry.
     /// </summary>
     private void MoveHighlight(Keys key)
     {
@@ -1005,7 +1028,7 @@ internal sealed class SelectPopup : PopupForm
             _ => _highlighted + step,
         };
 
-        while (next >= 0 && next < _items.Count && (_items[next].IsAction || _items[next].IsHint))
+        while (next >= 0 && next < _items.Count && _items[next].IsHint)
         {
             next += key is Keys.Home ? 1 : key is Keys.End ? -1 : step;
         }
