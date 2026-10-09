@@ -229,6 +229,9 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 ; so the next normal start would find none of it.
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; \
     Flags: nowait postinstall skipifsilent runasoriginaluser
+; The in-app update runs the setup with /SILENT /update=1 after closing the app; the entry above
+; skips a silent run, so this one brings the app back, de-elevated for the same reason.
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: IsInAppUpdate
 ; Same reasoning as above, aimed at the [Registry] entry's blind spot: reg.exe run as the
 ; original user writes the value into the profile that will actually start the app.
 Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v AuraToggle /d ""\""{app}\{#AppExe}\"" -autostart"" /f"; \
@@ -388,6 +391,12 @@ end;
   it ships on every supported version of Windows, so this shells out to it instead of adding a
   third-party Inno Setup plugin DLL for one boolean answer.
   --------------------------------------------------------------------------------------------- }
+{ True for the silent run the in-app update starts (/update=1). }
+function IsInAppUpdate: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:update|0}') = '1');
+end;
+
 function IsAuthenticodeSigned(const FileName: String): Boolean;
 var
   ScriptPath: String;

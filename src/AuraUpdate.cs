@@ -277,9 +277,11 @@ internal static class AuraUpdate
     /// <summary>
     /// Writes the verified setup to a fresh folder under the temp directory and runs it silently;
     /// the caller then lets this process close - the installer replaces the running exe, which
-    /// cannot happen while it is still open. The setup is <c>PrivilegesRequired=admin</c>, so this
-    /// still raises a UAC prompt under <c>/SILENT</c> - declining it throws (Win32Exception 1223,
-    /// "cancelled by the user"), which is a normal choice here, not a failure worth a crash dialog.
+    /// cannot happen while it is still open. The setup's own manifest is asInvoker and it raises
+    /// its UAC prompt itself, after this call has returned, so declining that prompt cannot be seen
+    /// from here: the app is closed by then and the user starts it again by hand, where the update
+    /// is offered once more. <c>/update=1</c> tells the setup to start the app again after a silent
+    /// install, which its ordinary finish-page launch skips.
     /// </summary>
     public static bool InstallVerified(UpdateDownload verified)
     {
@@ -298,8 +300,9 @@ internal static class AuraUpdate
             // The folder is under the user's temp directory, so another process of this user could
             // swap the file between the write and the elevated run. Reopened for reading with no
             // write or delete sharing, what is on disk is hashed through that very handle and the
-            // handle is kept until the process has started: from the hash to the run nothing can
-            // change the file, and Process.Start still opens it for execution with the handle held.
+            // handle is kept until the process has started, and Process.Start still opens it for
+            // execution with the handle held. The setup reopens itself from here when it elevates,
+            // after this handle is gone; that last step stays open to the same user.
             using var hold = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             if (!CryptographicOperations.FixedTimeEquals(SHA256.HashData(hold), SHA256.HashData(verified.Data)))
             {
@@ -307,7 +310,7 @@ internal static class AuraUpdate
                 return false;
             }
 
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path, "/SILENT")
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path, "/SILENT /update=1")
             {
                 UseShellExecute = true,
             });

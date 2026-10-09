@@ -135,6 +135,9 @@ internal sealed class ToggleForm : Form
     /// minimised to it.</summary>
     private bool _updatePending;
 
+    /// <summary>Set while an update downloads and starts; a second click meanwhile does nothing.</summary>
+    private bool _installingUpdate;
+
     // A single left click on the tray icon toggles the lighting, but the first click of a
     // double-click looks identical until the second one either arrives or does not - so it is
     // held here until SystemInformation.DoubleClickTime passes with no second click, and dropped
@@ -967,6 +970,25 @@ internal sealed class ToggleForm : Form
     /// that fails on disk.
     /// </summary>
     private async Task InstallUpdate(UpdateInfo info)
+    {
+        // The notice's button and the tray entry both lead here; one download at a time.
+        if (_installingUpdate)
+        {
+            return;
+        }
+
+        _installingUpdate = true;
+        try
+        {
+            await DownloadAndInstall(info);
+        }
+        finally
+        {
+            _installingUpdate = false;
+        }
+    }
+
+    private async Task DownloadAndInstall(UpdateInfo info)
     {
         _trayUpdate.Enabled = false;
         UpdateDownload download = await AuraUpdate.DownloadAndVerifyAsync(info);
