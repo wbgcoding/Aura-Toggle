@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -92,7 +93,7 @@ internal sealed record AuraSettings(
             // by nobody any more - an old file with the key just falls through to Default here.
             return new AuraSettings(
                 MinimiseOnClose: AuraFiles.JsonFlag(root, "minimiseOnClose", Default.MinimiseOnClose),
-                StartAction: AuraFiles.JsonText(root, "startAction", StartActionNone),
+                StartAction: ValidStartAction(AuraFiles.JsonText(root, "startAction", StartActionNone)),
                 CloseAfterStart: AuraFiles.JsonFlag(root, "closeAfterStart", Default.CloseAfterStart),
                 Animate: AuraFiles.JsonFlag(root, "animate", Default.Animate),
                 AlwaysOnTop: AuraFiles.JsonFlag(root, "alwaysOnTop", Default.AlwaysOnTop),
@@ -111,6 +112,19 @@ internal sealed record AuraSettings(
             return Default;
         }
     }
+
+    /// <summary>
+    /// The start action is applied at logon without anyone looking, so only what the settings
+    /// panel could have stored counts: nothing, off, the exact key of a built-in effect, or a
+    /// custom preset by name. Anything else (a typo, an old or hand-edited value) reads as
+    /// "leave the lighting alone" instead of quietly matching a nearby effect by forgiving name.
+    /// </summary>
+    private static string ValidStartAction(string action) =>
+        action == StartActionNone || action == StartActionOff ||
+        action.StartsWith(StartActionCustomPrefix, StringComparison.Ordinal) ||
+        AuraPresets.All.Any(preset => preset.Key == action)
+            ? action
+            : StartActionNone;
 
     /// <summary>
     /// A hand-edited or corrupted <c>settings.json</c> could carry a packed hotkey the recorder

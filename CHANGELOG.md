@@ -34,6 +34,7 @@ All notable changes to this project are documented here. The format follows
 - A hand-edited or imported preset with a brightness outside the slider range is brought back into it
 - A channel of a controller that is attached keeps its remembered look however long ago it was last switched
 - Resetting everything keeps the lighting the board is running, so the window and the board stay in step
+- A hand-edited start lighting that names nothing known is read as "leave the lighting alone"
 
 ## [1.3.0] - 2026-08-22
 
