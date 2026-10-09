@@ -63,6 +63,13 @@ internal static class AuraPresets
 
     public static AuraPreset? ByMode(byte mode) => All.FirstOrDefault(preset => preset.Mode == mode);
 
+    /// <summary>
+    /// Whether the controller generates this mode's colours itself (spectrum cycle, rainbow,
+    /// rainbow breathing, wave). Those share one effect engine per controller, so two of them with
+    /// different modes cannot run side by side.
+    /// </summary>
+    public static bool IsFirmwareMode(byte mode) => ByMode(mode) is { UsesColour: false };
+
     public static string Normalise(string value)
     {
         var builder = new StringBuilder(value.Length);

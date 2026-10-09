@@ -905,6 +905,7 @@ internal static partial class Program
         {
             var looks = new List<ChannelLook>();
             var deviceNamed = new List<(string, int)>();
+            var chosenChannels = new HashSet<int>();
 
             foreach (AuraChannel affected in device.Channels)
             {
@@ -931,6 +932,33 @@ internal static partial class Program
                 if (chosen)
                 {
                     deviceNamed.Add((device.Key, affected.Index));
+                    chosenChannels.Add(affected.Index);
+                }
+            }
+
+            // The controller has one engine for the firmware-generated modes: a second channel of
+            // the same burst in a different one would be sent after the chosen channel and win,
+            // so the choice would silently be lost. Any chosen channel on one of those modes
+            // therefore takes every other channel that is on a firmware mode of its own along,
+            // and their records say so too.
+            var unified = new List<(string DeviceKey, int Channel, ChannelLighting Look)>();
+            int engine = looks.FindIndex(l => chosenChannels.Contains(l.Channel) && AuraPresets.IsFirmwareMode(l.Mode));
+
+            if (engine >= 0)
+            {
+                byte engineMode = looks[engine].Mode;
+
+                for (int i = 0; i < looks.Count; i++)
+                {
+                    if (looks[i].Mode == engineMode || !AuraPresets.IsFirmwareMode(looks[i].Mode))
+                    {
+                        continue;
+                    }
+
+                    int index = looks[i].Channel;
+                    looks[i] = looks[i] with { Mode = engineMode };
+                    unified.Add((device.Key, index,
+                        (AuraChannelStates.Get(remembered, device.Key, index) ?? BoardWide(state)) with { Mode = engineMode }));
                 }
             }
 
@@ -952,6 +980,11 @@ internal static partial class Program
                 AuraLog.Error($"Apply: {device.Name} ({looks.Count} channel(s))", ex);
                 failure = ex;
                 named.AddRange(deviceNamed);
+            }
+
+            if (unified.Count > 0)
+            {
+                AuraChannelStates.Remember(unified);
             }
         }
 
@@ -1260,6 +1293,45 @@ internal static partial class Program
                 if (!perDevice.TryGetValue(device.Key, out List<ChannelLook>? looks))
                 {
                     continue;
+                }
+
+                // One engine for the firmware-generated modes per controller, same rule as
+                // ApplyMix: the first entry on this controller that carries one of those modes
+                // decides, and every other channel of the burst that is on a firmware mode of its
+                // own takes it - the later of two such entries would otherwise win on the board
+                // while the first one's record claims otherwise. The records follow what is sent.
+                int engine = looks.FindIndex(l => named.Contains((device.Key, l.Channel)) &&
+                    AuraPresets.IsFirmwareMode(l.Mode));
+
+                if (engine >= 0)
+                {
+                    byte engineMode = looks[engine].Mode;
+
+                    for (int i = 0; i < looks.Count; i++)
+                    {
+                        if (looks[i].Mode == engineMode || !AuraPresets.IsFirmwareMode(looks[i].Mode))
+                        {
+                            continue;
+                        }
+
+                        int index = looks[i].Channel;
+                        looks[i] = looks[i] with { Mode = engineMode };
+
+                        bool recorded = false;
+                        for (int r = 0; r < applied.Count; r++)
+                        {
+                            if (applied[r].DeviceKey == device.Key && applied[r].Channel == index)
+                            {
+                                applied[r] = (device.Key, index, applied[r].Look with { Mode = engineMode });
+                                recorded = true;
+                            }
+                        }
+
+                        if (!recorded && AuraChannelStates.Get(remembered, device.Key, index) is ChannelLighting own)
+                        {
+                            applied.Add((device.Key, index, own with { Mode = engineMode }));
+                        }
+                    }
                 }
 
                 try
