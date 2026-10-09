@@ -84,8 +84,15 @@ internal static class Hid
     private static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security,
         uint creation, uint flags, IntPtr template);
 
-    /// <summary>All present HID interfaces whose vendor/product id passes <paramref name="match"/>.</summary>
-    public static List<HidInfo> Enumerate(Func<ushort, ushort, bool> match)
+    /// <summary>
+    /// All present HID interfaces whose vendor/product id passes <paramref name="match"/>.
+    /// </summary>
+    /// <param name="pathContains">
+    /// When given, a device path without it (ignoring case) is skipped before the device is opened.
+    /// The path of a USB HID interface carries its ids (<c>vid_0b05&amp;pid_...</c>), so every
+    /// keyboard, mouse and headset on the machine is passed over without a CreateFile each.
+    /// </param>
+    public static List<HidInfo> Enumerate(Func<ushort, ushort, bool> match, string? pathContains = null)
     {
         var result = new List<HidInfo>();
         HidD_GetHidGuid(out Guid hidGuid);
@@ -120,6 +127,11 @@ internal static class Hid
                     }
 
                     string path = Marshal.PtrToStringUni(detail + 4) ?? "";
+                    if (pathContains != null && !path.Contains(pathContains, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     HidInfo? info = Describe(path, match);
                     if (info != null)
                     {

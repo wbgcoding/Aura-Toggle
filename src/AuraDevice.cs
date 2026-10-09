@@ -167,7 +167,7 @@ internal sealed class AuraDevice : IDisposable
         // One sweep, not two: enumerating opens and queries every HID interface on the machine,
         // which is the slow part of discovery, and the known and unknown ids were each doing a
         // full pass of their own.
-        List<HidInfo> present = Hid.Enumerate((vid, _) => vid == VendorId);
+        List<HidInfo> present = Hid.Enumerate((vid, _) => vid == VendorId, "vid_0b05");
 
         var candidates = new List<HidInfo>();
         candidates.AddRange(present.Where(info => KnownProductIds.Contains(info.Pid)));

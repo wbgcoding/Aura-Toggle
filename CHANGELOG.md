@@ -19,6 +19,7 @@ All notable changes to this project are documented here. The format follows
 - Interface texts tightened in all ten languages: effect state and reset labels, the close switch ("Apply and close the app"), the close-to-tray switch, usage line with every command, a separate keyboard hint for channel rows, and "Aura" instead of "AURA"
 - The big button no longer repaints 30 times a second while a static colour is showing
 - The big button and the effect icons no longer take turns rebuilding the same gradient brush
+- Looking for the controller no longer opens every keyboard, mouse and headset on the machine
 
 ### Fixed
 
