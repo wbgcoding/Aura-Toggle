@@ -62,6 +62,9 @@
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Denetleyici bulunamadı</value>
   </data>
+  <data name="ButtonRetry" xml:space="preserve">
+    <value>Yeniden dene</value>
+  </data>
   <data name="PresetAccessibleName" xml:space="preserve">
     <value>Aydınlatma efekti</value>
   </data>

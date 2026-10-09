@@ -62,6 +62,9 @@
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>No controller found</value>
   </data>
+  <data name="ButtonRetry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
   <data name="PresetAccessibleName" xml:space="preserve">
     <value>Lighting effect</value>
   </data>

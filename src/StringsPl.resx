@@ -62,6 +62,9 @@
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Nie znaleziono kontrolera</value>
   </data>
+  <data name="ButtonRetry" xml:space="preserve">
+    <value>Spróbuj ponownie</value>
+  </data>
   <data name="PresetAccessibleName" xml:space="preserve">
     <value>Efekt oświetlenia</value>
   </data>

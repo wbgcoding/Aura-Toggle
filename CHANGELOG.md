@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows
 - "Apply and close the app": autostart only sets the start lighting and quits again, with no
   window and no notification area icon; a controller still coming up at logon is waited for
 - A note under "Apply and close the app" says the hotkey only works while the app is open, shown when both are on
+- With no controller the window now says why (not found, in use by another program, or not answering) and offers a "Try again" button
 
 ### Changed
 

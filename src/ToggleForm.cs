@@ -63,6 +63,8 @@ internal sealed class ToggleForm : Form
     private const int ToggleGap = 14;
     private const int ColourGap = 14;
     private const int BrightnessGap = 12;
+    private const int NoticeGap = 12;
+    private const int RetryGap = 8;
     private const int LabelInset = 2;
 
     /// <summary>How far the settings panel's right edge sits inside the window's own - see
@@ -95,6 +97,17 @@ internal sealed class ToggleForm : Form
     private readonly Label _brightnessValue = new();
     private readonly Label _brightnessLabel = new();
     private readonly Layout _brightnessRow;
+
+    /// <summary>
+    /// Why there is no controller, and the way to look again. Part of the layout only while
+    /// discovery has come back empty (<see cref="_noController"/>).
+    /// </summary>
+    private readonly Layout _noticeRow;
+    private readonly Label _noticeText = new();
+    private readonly PillButton _retry = new();
+    private bool _noController;
+    private int _noControllerCode;
+    private bool _retrying;
     private readonly Layout _topRow;
     private RowStyle _topRowHeight = null!;
     private readonly GlyphButton _gear = new();
@@ -309,6 +322,34 @@ internal sealed class ToggleForm : Form
         _brightnessRow.Controls.Add(_brightness, 0, 1);
         _brightnessRow.SetColumnSpan(_brightness, 2);
 
+        _noticeText.AutoSize = true;
+        _noticeText.ForeColor = Theme.TextMuted;
+        _noticeText.TextAlign = ContentAlignment.TopCenter;
+        _noticeText.Anchor = AnchorStyles.None;
+
+        _retry.Fill = Theme.NeutralSoft;
+        _retry.ForeColor = Theme.Text;
+        _retry.DesignHeight = 30;
+        _retry.Anchor = AnchorStyles.None;
+        _retry.Text = Strings.ButtonRetry;
+        _retry.FitToText(16);
+        _retry.Click += async (_, _) => await RetryDiscovery();
+
+        _noticeRow = new Layout
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            RowCount = 2,
+            Visible = false,
+        };
+        _noticeRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        _noticeRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _noticeRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _noticeRow.Controls.Add(_noticeText, 0, 0);
+        _noticeRow.Controls.Add(_retry, 0, 1);
+
         _topRow = new Layout
         {
             // Not AutoSize: that would make the row's own preferred width - swayed by whatever
@@ -342,7 +383,7 @@ internal sealed class ToggleForm : Form
         // below. After a move to a display at another scale that floor still belonged to the old
         // one, and the row it forced open pushed the gear past the right-hand edge.
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        _layout.RowCount = 4;
+        _layout.RowCount = 5;
         // Absolute, not AutoSize: a RowStyle.AutoSize row asks its cell's control for a preferred
         // height, but _topRow is a Dock=Fill child of this row and that combination makes the row
         // engine guess rather than measure - the row reports 34 px and is handed 100, starving the
@@ -352,10 +393,12 @@ internal sealed class ToggleForm : Form
         _layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // toggle
         _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // colours
         _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // brightness
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // no controller: reason and retry
         _layout.Controls.Add(_topRow, 0, 0);
         _layout.Controls.Add(_toggle, 0, 1);
         _layout.Controls.Add(_colours, 0, 2);
         _layout.Controls.Add(_brightnessRow, 0, 3);
+        _layout.Controls.Add(_noticeRow, 0, 4);
         Controls.Add(_layout);
 
         ApplyScaledMetrics();
@@ -959,7 +1002,19 @@ internal sealed class ToggleForm : Form
         SetBusy(true);
         try
         {
-            _devices = ReviewDevices ?? await Task.Run(AuraDevice.ListDevices);
+            if (ReviewDevices != null)
+            {
+                _devices = ReviewDevices;
+                _noControllerCode = 0;
+            }
+            else
+            {
+                (_devices, _noControllerCode) = await Task.Run(() =>
+                {
+                    List<AuraDeviceSummary> listed = AuraDevice.ListDevices(out int code);
+                    return (listed, code);
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -1009,9 +1064,15 @@ internal sealed class ToggleForm : Form
         // the same balloon about there being no controller.
         _trayLighting.Enabled = found;
 
+        _noController = !found;
+        UpdateNotice();
+
         if (!found)
         {
             Text = $"{Strings.WindowTitle} - {Strings.StatusControllerMissing}";
+
+            // Measured again so the reason and the retry button get their room.
+            Render();
             return;
         }
 
@@ -1023,6 +1084,44 @@ internal sealed class ToggleForm : Form
         // Every other caller of SetUpChannelSelector already renders afterwards; this one did not,
         // which left the window at its 380 px minimum with the gear pushed off the right edge.
         Render();
+    }
+
+    /// <summary>Shows or hides the "no controller" reason and retry button, with the current text.</summary>
+    private void UpdateNotice()
+    {
+        _noticeRow.Visible = _noController;
+        if (!_noController)
+        {
+            return;
+        }
+
+        _noticeText.Text = Program.ListErrorText(_noControllerCode);
+        _retry.Text = Strings.ButtonRetry;
+        _retry.FitToText(16);
+    }
+
+    /// <summary>Looks for the controller again, from the button under the reason.</summary>
+    private async Task RetryDiscovery()
+    {
+        if (_retrying || IsDisposed)
+        {
+            return;
+        }
+
+        _retrying = true;
+        _retry.Enabled = false;
+        try
+        {
+            await DiscoverDevices();
+        }
+        finally
+        {
+            _retrying = false;
+            if (!IsDisposed)
+            {
+                _retry.Enabled = true;
+            }
+        }
     }
 
     /// <summary>
@@ -2284,6 +2383,7 @@ internal sealed class ToggleForm : Form
         _channel.Enabled = ready;
         _colours.Enabled = ready;
         _brightness.Enabled = ready;
+        _retry.Enabled = !busy && !_retrying;
 
         // Requests that arrive while a switch is in flight are dropped, so the tray entry says
         // so instead of looking like it did nothing.
@@ -2301,6 +2401,7 @@ internal sealed class ToggleForm : Form
         _colours.AccessibleName = Strings.ColourAccessibleName;
         _brightnessLabel.Text = Strings.SettingBrightness;
         _brightness.AccessibleName = Strings.SettingBrightness;
+        UpdateNotice();
 
         RefreshEffectItems();
         if (_devices.Count > 0)
@@ -2515,6 +2616,14 @@ internal sealed class ToggleForm : Form
 
         // Measured once: the property behind it walks every entry in the effect list.
         int width = WantedWidth;
+
+        if (_noticeRow.Visible)
+        {
+            // The reason wraps to the room the window has; it never decides the width itself.
+            _noticeText.MaximumSize = new Size(Math.Max(0, width - Padding.Horizontal), 0);
+            wanted += _noticeRow.PreferredSize.Height + _noticeRow.Margin.Vertical;
+        }
+
         if (ClientSize.Height != wanted || ClientSize.Width != width)
         {
             ClientSize = new Size(width, wanted);
@@ -2619,6 +2728,8 @@ internal sealed class ToggleForm : Form
         _toggle.Margin = new Padding(0, this.Scaled(ToggleGap), 0, 0);
         _colours.Margin = new Padding(0, this.Scaled(ColourGap), 0, 0);
         _brightnessRow.Margin = new Padding(0, this.Scaled(BrightnessGap), 0, 0);
+        _noticeRow.Margin = new Padding(0, this.Scaled(NoticeGap), 0, 0);
+        _retry.Margin = new Padding(0, this.Scaled(RetryGap), 0, 0);
 
         int inset = this.Scaled(LabelInset);
         _brightnessLabel.Margin = new Padding(inset, 0, 0, inset);
@@ -2656,6 +2767,9 @@ internal sealed class ToggleForm : Form
             // The slider only exists for an effect brightness can reach - the one thing about it
             // no screenshot of a still window can tell apart from a window that is simply short.
             $"  brightness  visible={_brightnessRow.Visible} h={_brightnessRow.Height}",
+            // The reason and the retry button: shown only while discovery has come back empty.
+            $"  notice      visible={_noticeRow.Visible} h={_noticeRow.Height}"
+                + (_noticeRow.Visible ? $" text w={_noticeText.Width}" : ""),
             $"  margins     effects={_effects.Margin.Right} toggle={_toggle.Margin.Top} "
                 + $"colours={_colours.Margin.Top} brightness={_brightnessRow.Margin.Top}",
             $"  panels      layout w={_layout.Width} margin={_layout.Margin.Horizontal} "

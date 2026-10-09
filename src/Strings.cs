@@ -97,6 +97,8 @@ internal static class Strings
 
     public static string StatusControllerMissing => Get("StatusControllerMissing");
 
+    public static string ButtonRetry => Get("ButtonRetry");
+
     public static string SettingsAccessibleName => Get("SettingsAccessibleName");
 
     public static string SettingAutoStart => Get("SettingAutoStart");

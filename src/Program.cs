@@ -686,7 +686,7 @@ internal static partial class Program
     }
 
     /// <summary>The message that goes with the exit code <see cref="AuraDevice.ListDevices(out int)"/> reports.</summary>
-    private static string ListErrorText(int exitCode) => exitCode switch
+    internal static string ListErrorText(int exitCode) => exitCode switch
     {
         4 => Strings.ErrorControllerBusy,
         5 => Strings.ErrorWriteGeneric,
