@@ -36,6 +36,13 @@ internal static partial class Program
     public static bool LaunchedAtStartup { get; private set; }
 
     /// <summary>
+    /// Set by a portable self-update to the exe that just took its place; <see cref="Main"/> starts
+    /// it once the window has closed and the single-instance lock is gone, so the new copy does
+    /// not find the old one still holding it.
+    /// </summary>
+    internal static string? RestartPath { get; set; }
+
+    /// <summary>
     /// Set once the main window exists, so a fatal exception on a worker thread - where
     /// <see cref="Application.MessageLoop"/> reads false, that property being per-thread rather
     /// than per-process - still has somewhere to marshal the error dialog to instead of falling
@@ -90,24 +97,16 @@ internal static partial class Program
 
         if (args.Length == 0 || LaunchedAtStartup)
         {
-            // A second start hands over to the instance already running, which may be sitting
-            // in the notification area with no window to click.
-            using var single = CreateSingleInstanceMutex(out bool first);
-            if (!first)
+            int exitCode = RunWindow();
+
+            // After the single-instance lock above is gone: the copy a self-update put in place
+            // must be able to take it.
+            if (RestartPath is string restart)
             {
-                PostMessage(Broadcast, ShowWindowMessage, IntPtr.Zero, IntPtr.Zero);
-                return 0;
+                StartReplacement(restart);
             }
 
-            ApplicationConfiguration.Initialize();
-#pragma warning disable WFO5001 // colour mode support is still marked experimental
-            Application.SetColorMode(SystemColorMode.System);
-#pragma warning restore WFO5001
-            var form = new ToggleForm();
-            _mainForm = form;
-            Application.Run(form);
-            GC.KeepAlive(single);
-            return 0;
+            return exitCode;
         }
 
         try
@@ -125,6 +124,44 @@ internal static partial class Program
             AuraLog.Error("CLI", ex);
             WriteError(ex.Message);
             return 5;
+        }
+    }
+
+    /// <summary>The window path: one instance at a time, until the window closes.</summary>
+    private static int RunWindow()
+    {
+        // A second start hands over to the instance already running, which may be sitting
+        // in the notification area with no window to click.
+        using var single = CreateSingleInstanceMutex(out bool first);
+        if (!first)
+        {
+            PostMessage(Broadcast, ShowWindowMessage, IntPtr.Zero, IntPtr.Zero);
+            return 0;
+        }
+
+        // What a portable self-update left behind; only the instance that holds the lock touches it.
+        AuraUpdate.DeleteLeftovers();
+
+        ApplicationConfiguration.Initialize();
+#pragma warning disable WFO5001 // colour mode support is still marked experimental
+        Application.SetColorMode(SystemColorMode.System);
+#pragma warning restore WFO5001
+        var form = new ToggleForm();
+        _mainForm = form;
+        Application.Run(form);
+        GC.KeepAlive(single);
+        return 0;
+    }
+
+    private static void StartReplacement(string path)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            AuraLog.Warn($"UpdateRestart: {ex.GetType().Name}: {ex.Message}");
         }
     }
 

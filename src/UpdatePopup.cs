@@ -27,13 +27,18 @@ internal sealed class UpdatePopup : PopupForm
     private readonly PillButton _later = new();
     private readonly System.Windows.Forms.Timer _autoClose = new() { Interval = AutoCloseMs };
 
-    /// <param name="installed">
-    /// True for an installed copy, which can replace itself - the main button then reads "Install
-    /// now" and <see cref="InstallRequested"/> is what fires. A portable copy cannot replace the
-    /// file it is currently running as, so it gets "Open release page" and
-    /// <see cref="OpenPageRequested"/> instead.
+    /// <param name="newVersion">The version the notice is about.</param>
+    /// <param name="notVerified">
+    /// False for the ordinary notice: the main button reads "Install now" and
+    /// <see cref="InstallRequested"/> is what fires. True once a download could not be shown to be
+    /// an official release: the text says so and the main button becomes "Open release page"
+    /// (<see cref="OpenPageRequested"/>), because nothing is installed from there.
     /// </param>
-    public UpdatePopup(string newVersion, bool installed)
+    /// <param name="canOpenPage">
+    /// Whether the release has a page worth linking to; without one the not-verified notice is
+    /// just text and "Later".
+    /// </param>
+    public UpdatePopup(string newVersion, bool notVerified = false, bool canOpenPage = true)
     {
         AutoScaleMode = AutoScaleMode.Dpi;
         ForeColor = Theme.Text;
@@ -46,21 +51,24 @@ internal sealed class UpdatePopup : PopupForm
         Controls.Add(_heading);
 
         _body.AutoSize = true;
-        _body.Text = string.Format(CultureInfo.CurrentCulture, Strings.UpdateNoticeBody, newVersion, Program.VersionText);
+        _body.Text = notVerified
+            ? string.Format(CultureInfo.CurrentCulture, Strings.UpdateNotVerified, newVersion)
+            : string.Format(CultureInfo.CurrentCulture, Strings.UpdateNoticeBody, newVersion, Program.VersionText);
         _body.ForeColor = Theme.TextMuted;
         Controls.Add(_body);
 
-        _primary.Text = installed ? Strings.UpdateNoticeInstall : Strings.UpdateNoticeOpenPage;
+        _primary.Text = notVerified ? Strings.UpdateNoticeOpenPage : Strings.UpdateNoticeInstall;
         _primary.Primary = true;
+        _primary.Visible = !notVerified || canOpenPage;
         _primary.Click += (_, _) =>
         {
-            if (installed)
+            if (notVerified)
             {
-                InstallRequested?.Invoke(this, EventArgs.Empty);
+                OpenPageRequested?.Invoke(this, EventArgs.Empty);
             }
             else
             {
-                OpenPageRequested?.Invoke(this, EventArgs.Empty);
+                InstallRequested?.Invoke(this, EventArgs.Empty);
             }
 
             Close();
@@ -83,11 +91,11 @@ internal sealed class UpdatePopup : PopupForm
         WindowDrag.Enable(this, this, _heading);
     }
 
-    /// <summary>Fired by the main button on an installed copy; <see cref="ToggleForm"/> runs the
+    /// <summary>Fired by the main button of the ordinary notice; <see cref="ToggleForm"/> runs the
     /// same install path the tray entry does, not a second copy of it.</summary>
     public event EventHandler? InstallRequested;
 
-    /// <summary>Fired by the main button on a portable copy.</summary>
+    /// <summary>Fired by the main button of the not-verified notice.</summary>
     public event EventHandler? OpenPageRequested;
 
     protected override void OnDpiChanged(DpiChangedEventArgs e)
@@ -143,11 +151,12 @@ internal sealed class UpdatePopup : PopupForm
         _later.FitToText(14);
 
         int gap = this.Scaled(8);
-        int width = Math.Max(Pad + BodyWidth + Pad, Pad + _primary.Width + gap + _later.Width + Pad);
+        int primaryWidth = _primary.Visible ? _primary.Width + gap : 0;
+        int width = Math.Max(Pad + BodyWidth + Pad, Pad + primaryWidth + _later.Width + Pad);
         width = Math.Max(width, Pad + _heading.PreferredSize.Width + Pad);
 
         int buttonsTop = _body.Bottom + this.Scaled(14);
-        _primary.Location = new Point(width - Pad - _later.Width - gap - _primary.Width, buttonsTop);
+        _primary.Location = new Point(width - Pad - _later.Width - primaryWidth, buttonsTop);
         _later.Location = new Point(width - Pad - _later.Width, buttonsTop);
 
         ClientSize = new Size(width, _primary.Bottom + Pad);

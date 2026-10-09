@@ -105,6 +105,9 @@ internal sealed class ToggleForm : Form
     /// <summary>Hidden until <see cref="CheckForUpdatesIfDue"/> actually finds a newer release.</summary>
     private readonly ToolStripMenuItem _trayUpdate = new() { Visible = false };
 
+    /// <summary>What a click on <see cref="_trayUpdate"/> does right now - see <see cref="SetTrayUpdate"/>.</summary>
+    private Action? _trayUpdateAction;
+
     /// <summary>A one-time notice that came due while there was no window to show it on
     /// (autostart, or manually minimised to tray) - shown by <see cref="RestoreFromTray"/> the
     /// moment there is one again, instead of waiting for the next check up to 24 hours later.</summary>
@@ -408,6 +411,7 @@ internal sealed class ToggleForm : Form
         _trayLighting.Click += (_, _) => _ = Run(() => Program.Switch(!_state.On));
         menu.Items.Add(_trayLighting);
         menu.Items.Add(new ToolStripSeparator());
+        _trayUpdate.Click += (_, _) => _trayUpdateAction?.Invoke();
         menu.Items.Add(_trayUpdate);
 
         var open =new ToolStripMenuItem(Strings.TrayOpen) { Tag = "open" };
@@ -727,16 +731,12 @@ internal sealed class ToggleForm : Form
             return;
         }
 
-        // Nothing usable to offer for a portable copy without a release page link - the same
-        // exclusion the tray branch below applies, needed here too so it does not count as a
-        // notice the popup should ever claim it showed.
-        bool actionable = found != null && (AuraUpdate.IsInstalled || found.HtmlUrl.Length > 0);
         bool due;
 
         using (AuraFiles.Lock())
         {
             AuraSettings fresh = AuraSettings.Load();
-            due = actionable && found!.Version != fresh.UpdateNoticeVersion;
+            due = found != null && found.Version != fresh.UpdateNoticeVersion;
 
             _settings = fresh with
             {
@@ -750,30 +750,14 @@ internal sealed class ToggleForm : Form
             return;
         }
 
-        if (AuraUpdate.IsInstalled)
-        {
-            _trayUpdate.Text = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateInstall, found.Version);
-            _trayUpdate.Click += async (_, _) => await InstallUpdate(found);
-        }
-        else if (found.HtmlUrl.Length > 0)
-        {
-            // A portable copy cannot replace the file it is currently running as, so the click
-            // goes to the release page instead of a silent self-install.
-            _trayUpdate.Text = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateOpenPage, found.Version);
-            _trayUpdate.Click += (_, _) => OpenReleasePage(found.HtmlUrl);
-        }
-        else
-        {
-            // Nothing usable to offer - GitHub's response carried no page link at all.
-            return;
-        }
+        SetTrayUpdate(string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateInstall, found.Version),
+            async () => await InstallUpdate(found));
 
         // Kept reachable through the tray icon even after the window is reopened and closed
         // again - RestoreFromTray would otherwise hide the icon (and this entry with it) the
         // moment the window is next shown, the same way it always hides the icon once nothing
         // is minimised to it.
         _updatePending = true;
-        _trayUpdate.Visible = true;
         _tray.Visible = true;
         _tray.BalloonTipTitle = Strings.WindowTitle;
         _tray.BalloonTipText = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateAvailable, found.Version);
@@ -788,7 +772,7 @@ internal sealed class ToggleForm : Form
         // tray or minimised, which is exactly when Program.LaunchedAtStartup - or a manual
         // minimise - routes here without ever un-hiding it. Remembered rather than dropped, so
         // RestoreFromTray can show it the moment there is a window again.
-        if (Visible && WindowState != FormWindowState.Minimized)
+        if (WindowIsVisible)
         {
             ShowUpdateNotice(found);
         }
@@ -796,6 +780,21 @@ internal sealed class ToggleForm : Form
         {
             _pendingNotice = found;
         }
+    }
+
+    private bool WindowIsVisible => Visible && WindowState != FormWindowState.Minimized;
+
+    /// <summary>
+    /// Points the tray's update entry at one action. The entry exists once and its click handler
+    /// is wired once, so what a click does can change - from "install" to "open the release page"
+    /// after a download that could not be verified - without handlers piling up.
+    /// </summary>
+    private void SetTrayUpdate(string text, Action action)
+    {
+        _trayUpdate.Text = text;
+        _trayUpdateAction = action;
+        _trayUpdate.Enabled = true;
+        _trayUpdate.Visible = true;
     }
 
     /// <summary>
@@ -812,17 +811,10 @@ internal sealed class ToggleForm : Form
             _settings.Save();
         }
 
-        var popup = new UpdatePopup(found.Version, AuraUpdate.IsInstalled);
+        var popup = new UpdatePopup(found.Version);
 
-        // Same paths as the tray entry above - not a second copy of the install/open logic.
-        if (AuraUpdate.IsInstalled)
-        {
-            popup.InstallRequested += async (_, _) => await InstallUpdate(found);
-        }
-        else
-        {
-            popup.OpenPageRequested += (_, _) => OpenReleasePage(found.HtmlUrl);
-        }
+        // Same path as the tray entry above - not a second copy of the install logic.
+        popup.InstallRequested += async (_, _) => await InstallUpdate(found);
 
         popup.FormClosed += (_, _) => popup.Dispose();
         popup.Open(this);
@@ -841,33 +833,90 @@ internal sealed class ToggleForm : Form
     }
 
     /// <summary>
-    /// Downloads and checksum-verifies the setup, then runs it silently and closes this process -
-    /// the installer cannot replace a running exe. A failed download, a checksum that does not
-    /// match, or a declined UAC prompt all end here with a balloon instead of a crash, and the
-    /// tray entry stays clickable to try again.
+    /// Downloads the file, verifies checksum and signature, then installs it and closes this
+    /// process: an installed copy runs the new setup (which cannot replace a running exe), a
+    /// portable copy swaps its own exe and is started again once it has closed. A failed download
+    /// or a declined UAC prompt ends with a balloon instead of a crash, and the tray entry stays
+    /// clickable to try again. A file that cannot be shown to be an official release is never
+    /// installed: the user is told so and pointed to the release page, and so is a portable swap
+    /// that fails on disk.
     /// </summary>
     private async Task InstallUpdate(UpdateInfo info)
     {
         _trayUpdate.Enabled = false;
-        string? path = await AuraUpdate.DownloadAndVerifyAsync(info);
+        UpdateDownload download = await AuraUpdate.DownloadAndVerifyAsync(info);
 
         if (IsDisposed)
         {
             return;
         }
 
-        if (path != null && AuraUpdate.LaunchInstaller(path))
+        if (download.Result == UpdateResult.NotVerified)
         {
-            _exiting = true;
-            Close();
+            ShowNotVerified(info);
             return;
         }
 
+        if (download.Result == UpdateResult.Verified)
+        {
+            if (AuraUpdate.IsInstalled ? AuraUpdate.InstallVerified(download) : AuraUpdate.SwapPortable(download))
+            {
+                _exiting = true;
+                Close();
+                return;
+            }
+
+            // The portable swap failed on disk (a read-only or protected folder): the release page
+            // is the way left. An installer that did not start (UAC declined) can simply be retried.
+            if (!AuraUpdate.IsInstalled && info.HtmlUrl.Length > 0)
+            {
+                SetTrayUpdate(string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateOpenPage, info.Version),
+                    () => OpenReleasePage(info.HtmlUrl));
+            }
+        }
+
         _trayUpdate.Enabled = true;
+        ShowBalloon(Strings.TrayUpdateFailed, ToolTipIcon.Warning);
+    }
+
+    /// <summary>
+    /// The download could not be shown to be an official release, so nothing was installed. Says
+    /// so where the user can see it, and turns the tray entry into a link to the release page when
+    /// the release has one.
+    /// </summary>
+    private void ShowNotVerified(UpdateInfo info)
+    {
+        bool hasPage = info.HtmlUrl.Length > 0;
+
+        if (hasPage)
+        {
+            SetTrayUpdate(string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateOpenPage, info.Version),
+                () => OpenReleasePage(info.HtmlUrl));
+        }
+        else
+        {
+            _trayUpdate.Visible = false;
+        }
+
+        if (!WindowIsVisible)
+        {
+            ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.UpdateNotVerified, info.Version),
+                ToolTipIcon.Warning);
+            return;
+        }
+
+        var popup = new UpdatePopup(info.Version, notVerified: true, canOpenPage: hasPage);
+        popup.OpenPageRequested += (_, _) => OpenReleasePage(info.HtmlUrl);
+        popup.FormClosed += (_, _) => popup.Dispose();
+        popup.Open(this);
+    }
+
+    private void ShowBalloon(string text, ToolTipIcon icon)
+    {
         _tray.Visible = true;
         _tray.BalloonTipTitle = Strings.WindowTitle;
-        _tray.BalloonTipText = Strings.TrayUpdateFailed;
-        _tray.BalloonTipIcon = ToolTipIcon.Warning;
+        _tray.BalloonTipText = text;
+        _tray.BalloonTipIcon = icon;
         _tray.ShowBalloonTip(10000);
     }
 

@@ -87,7 +87,7 @@ internal static partial class Program
         else if (surface == "update")
         {
             // A made-up version, no network access - this is the review surface, not a real check.
-            var popup = new UpdatePopup("9.9.9", installed: true);
+            var popup = new UpdatePopup("9.9.9");
             popup.FormClosed += (_, _) => Application.Exit();
             popup.Open(owner: null);
             shown = popup;
@@ -852,7 +852,7 @@ internal static partial class Program
         if (id == "update")
         {
             // A made-up version, no network access - the popup alone, the way the error dialog is.
-            var notice = new UpdatePopup("9.9.9", installed: true);
+            var notice = new UpdatePopup("9.9.9");
             notice.Shown += async (_, _) =>
             {
                 await Settle(notice);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -8,24 +9,50 @@ using System.Threading.Tasks;
 
 namespace AuraToggle;
 
-/// <summary>A newer release found on GitHub, with what is needed to fetch and verify it.</summary>
-internal sealed record UpdateInfo(string Version, string InstallerUrl, string ChecksumUrl, string HtmlUrl);
+/// <summary>
+/// A newer release found on GitHub, with what is needed to fetch and verify it:
+/// the file to install (the setup for an installed copy, the portable exe otherwise), its detached
+/// signature (empty when the release carries none) and the release's checksum file.
+/// </summary>
+internal sealed record UpdateInfo(string Version, string FileUrl, string SignatureUrl, string ChecksumUrl, string HtmlUrl);
+
+/// <summary>How a download ended: only <see cref="Verified"/> hands out any bytes.</summary>
+internal enum UpdateResult
+{
+    /// <summary>The file matched the release's checksum and carries a valid signature.</summary>
+    Verified,
+
+    /// <summary>Something answered, but it cannot be shown to be an official release.</summary>
+    NotVerified,
+
+    /// <summary>The connection or the disk failed before anything could be judged.</summary>
+    Failed,
+}
+
+/// <summary>The outcome of <see cref="AuraUpdate.DownloadAndVerifyAsync"/>; <see cref="Data"/> is set
+/// only for <see cref="UpdateResult.Verified"/>.</summary>
+internal sealed record UpdateDownload(UpdateResult Result, byte[]? Data, string FileName);
 
 /// <summary>
 /// The only network code in this tool: checks GitHub for a newer release, and - only once the
-/// user clicks to install it - downloads the setup and verifies it against the release's own
-/// checksum file before ever running it. Nothing here writes to the controller; this is purely
-/// "is there a newer version, and is the file that claims to be it the one GitHub actually built."
+/// user clicks to install it - downloads the file and lets it through only when it matches the
+/// release's own checksum file and carries a valid signature made with the project's key.
+/// Nothing here writes to the controller; this is purely "is there a newer version, and is the
+/// file that claims to be it the one the project actually published."
 /// </summary>
 internal static class AuraUpdate
 {
     private const string ReleasesUrl = "https://api.github.com/repos/wbgcoding/Aura-Toggle/releases/latest";
+    private const string PortableAssetName = "AuraToggle.exe";
     private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(24);
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(3);
 
     /// <summary>Ceiling for anything this downloads. The setup is around 2.3 MB.</summary>
     private const int MaxDownloadBytes = 64 * 1024 * 1024;
+
+    /// <summary>A Base64 ECDSA P-256 signature is 88 characters; anything near this is not one.</summary>
+    private const int MaxSignatureBytes = 4 * 1024;
 
     /// <summary>
     /// Ceiling for the release metadata response. A release's JSON is a few tens of kilobytes -
@@ -36,9 +63,8 @@ internal static class AuraUpdate
     /// <summary>
     /// Whether this process runs from an installed copy rather than a portable one - the
     /// installer always drops its uninstaller, <c>unins000.exe</c>, next to the exe; a portable
-    /// copy someone extracted or copied by hand never has one. Self-replacing only makes sense
-    /// for an installed copy: a portable exe cannot delete the file it is currently running as,
-    /// so a newer version there is offered as a link to the release page instead.
+    /// copy someone extracted or copied by hand never has one. An installed copy updates by
+    /// running the new setup; a portable one swaps its own exe, see <see cref="SwapPortable"/>.
     /// </summary>
     public static bool IsInstalled =>
         Environment.ProcessPath is string exe &&
@@ -68,9 +94,11 @@ internal static class AuraUpdate
 
     /// <summary>
     /// Asks GitHub for the latest release and compares it against this build's own version.
-    /// Returns null on anything short of "a newer version exists and both files this needs are
+    /// Returns null on anything short of "a newer version exists and the files this needs are
     /// there" - a network hiccup, a malformed response and "already on the latest" all look the
-    /// same to the caller: nothing to offer right now.
+    /// same to the caller: nothing to offer right now. A release without a signature file still
+    /// counts as found (with an empty signature URL): it is offered, and installing it ends in
+    /// "not verified" instead of silently vanishing.
     /// </summary>
     public static async Task<UpdateInfo?> CheckForUpdateAsync()
     {
@@ -98,42 +126,45 @@ internal static class AuraUpdate
                 return null;
             }
 
-            string? installerUrl = null;
-            string? checksumUrl = null;
+            var assetUrls = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             if (root.TryGetProperty("assets", out JsonElement assets) && assets.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement asset in assets.EnumerateArray())
                 {
                     string name = AuraFiles.JsonText(asset, "name");
-                    string url = AuraFiles.JsonText(asset, "browser_download_url");
-
-                    if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
-                        name.Contains("Setup", StringComparison.OrdinalIgnoreCase))
+                    if (name.Length > 0)
                     {
-                        installerUrl = url;
-                    }
-                    else if (name.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
-                    {
-                        checksumUrl = url;
+                        assetUrls[name] = AuraFiles.JsonText(asset, "browser_download_url");
                     }
                 }
             }
 
-            // The checksum only proves the download matches what GitHub published - it says
-            // nothing about which server actually answered. Both URLs have to be plain https to
-            // GitHub's own asset hosts, or a hostile redirect/proxy could hand back a setup and a
-            // matching checksum file for it that never came from the real release.
-            if (installerUrl == null || checksumUrl == null ||
-                !IsTrustedDownloadUrl(installerUrl) || !IsTrustedDownloadUrl(checksumUrl))
+            string? fileName = IsInstalled ? FindSetupName(assetUrls.Keys) : PortableAssetName;
+            if (fileName == null || !assetUrls.TryGetValue(fileName, out string? fileUrl) ||
+                !assetUrls.TryGetValue("SHA256SUMS.txt", out string? checksumUrl))
             {
                 return null;
             }
 
-            // The two download URLs above are checked before anything trusts them; html_url ends up
+            // The checksum only proves the download matches what GitHub published - it says
+            // nothing about which server actually answered. Both URLs have to be plain https to
+            // GitHub's own asset hosts, or a hostile redirect/proxy could hand back a file and a
+            // matching checksum for it that never came from the real release.
+            if (!IsTrustedDownloadUrl(fileUrl) || !IsTrustedDownloadUrl(checksumUrl))
+            {
+                return null;
+            }
+
+            string signatureUrl = assetUrls.TryGetValue(fileName + ".sig", out string? sigUrl) &&
+                IsTrustedDownloadUrl(sigUrl)
+                ? sigUrl
+                : "";
+
+            // The download URLs above are checked before anything trusts them; html_url ends up
             // in a shell-executed Process.Start (ToggleForm.OpenReleasePage), so it gets the same gate.
             string htmlUrl = AuraFiles.JsonText(root, "html_url");
-            return new UpdateInfo(remoteVersion, installerUrl, checksumUrl,
+            return new UpdateInfo(remoteVersion, fileUrl, signatureUrl, checksumUrl,
                 IsTrustedDownloadUrl(htmlUrl) ? htmlUrl : "");
         }
         catch (Exception ex) when (IsExpected(ex))
@@ -144,87 +175,264 @@ internal static class AuraUpdate
     }
 
     /// <summary>
-    /// Downloads the setup and the release's checksum file, and only returns a path at all when
-    /// the downloaded bytes hash to exactly the entry the release itself published for that file
-    /// name - the one and only gate <see cref="LaunchInstaller"/> trusts.
+    /// Downloads the file, its signature and the release's checksum file, and only hands out bytes
+    /// when all of it holds together: the bytes hash to exactly the entry the release published for
+    /// that file name, and the detached signature verifies against the key built into this program
+    /// - the gate the install paths trust. Nothing is written to disk here. Every reason to doubt
+    /// the file (no signature published, a redirect off GitHub, a mismatching hash, a bad
+    /// signature) ends as <see cref="UpdateResult.NotVerified"/>; only a connection or disk problem
+    /// is <see cref="UpdateResult.Failed"/>.
     /// </summary>
-    public static async Task<string?> DownloadAndVerifyAsync(UpdateInfo info)
+    public static async Task<UpdateDownload> DownloadAndVerifyAsync(UpdateInfo info)
     {
+        string fileName = "";
+
         try
         {
+            fileName = Path.GetFileName(new Uri(info.FileUrl).LocalPath);
+
+            if (info.SignatureUrl.Length == 0)
+            {
+                AuraLog.Warn($"UpdateDownload: the release has no signature for {fileName}, not installed");
+                return Rejected(fileName);
+            }
+
             using var client = new HttpClient
             {
                 Timeout = DownloadTimeout,
-                // The setup is a couple of megabytes. Reading a response into memory without a
+                // The file is a couple of megabytes. Reading a response into memory without a
                 // ceiling would let whatever answers decide how much this process allocates.
                 MaxResponseContentBufferSize = MaxDownloadBytes,
             };
             client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("AuraToggle", Program.VersionText));
 
             using HttpResponseMessage checksumResponse = await client.GetAsync(info.ChecksumUrl);
-            if (!checksumResponse.IsSuccessStatusCode || !EndedOnTrustedHost(checksumResponse))
+            if (!checksumResponse.IsSuccessStatusCode)
             {
-                return null;
+                return new UpdateDownload(UpdateResult.Failed, null, fileName);
+            }
+
+            if (!EndedOnTrustedHost(checksumResponse))
+            {
+                return Rejected(fileName);
             }
 
             string checksums = await checksumResponse.Content.ReadAsStringAsync();
-            string fileName = Path.GetFileName(new Uri(info.InstallerUrl).LocalPath);
 
             string? expected = FindChecksum(checksums, fileName);
             if (expected == null)
             {
                 AuraLog.Warn($"UpdateDownload: no checksum entry for {fileName}");
-                return null;
+                return Rejected(fileName);
             }
 
-            using HttpResponseMessage installerResponse = await client.GetAsync(info.InstallerUrl);
-            if (!installerResponse.IsSuccessStatusCode || !EndedOnTrustedHost(installerResponse))
+            using HttpResponseMessage fileResponse = await client.GetAsync(info.FileUrl);
+            if (!fileResponse.IsSuccessStatusCode)
             {
-                return null;
+                return new UpdateDownload(UpdateResult.Failed, null, fileName);
             }
 
-            byte[] data = await installerResponse.Content.ReadAsByteArrayAsync();
+            if (!EndedOnTrustedHost(fileResponse))
+            {
+                return Rejected(fileName);
+            }
+
+            byte[] data = await fileResponse.Content.ReadAsByteArrayAsync();
             string actual = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
 
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
             {
                 AuraLog.Warn("UpdateDownload: checksum did not match, download rejected");
-                return null;
+                return Rejected(fileName);
             }
 
-            string path = Path.Combine(Path.GetTempPath(), fileName);
-            await File.WriteAllBytesAsync(path, data);
-            return path;
+            using HttpResponseMessage sigResponse =
+                await client.GetAsync(info.SignatureUrl, HttpCompletionOption.ResponseHeadersRead);
+            if (!sigResponse.IsSuccessStatusCode)
+            {
+                return new UpdateDownload(UpdateResult.Failed, null, fileName);
+            }
+
+            if (!EndedOnTrustedHost(sigResponse))
+            {
+                return Rejected(fileName);
+            }
+
+            string? signature = await ReadSignatureAsync(sigResponse.Content);
+            if (signature == null || !UpdateSignature.Verify(data, signature, UpdatePublicKey.Value))
+            {
+                AuraLog.Warn("UpdateDownload: signature did not verify, download rejected");
+                return Rejected(fileName);
+            }
+
+            return new UpdateDownload(UpdateResult.Verified, data, fileName);
         }
         catch (Exception ex) when (IsExpected(ex) || ex is UnauthorizedAccessException)
         {
             AuraLog.Error("UpdateDownload", ex);
-            return null;
+            return new UpdateDownload(UpdateResult.Failed, null, fileName);
         }
     }
 
     /// <summary>
-    /// Runs the downloaded, already-verified setup silently and lets the caller close this
-    /// process - the installer replaces the running exe, which cannot happen while it is still
-    /// open. The setup is <c>PrivilegesRequired=admin</c>, so this still raises a UAC prompt
-    /// under <c>/SILENT</c> - declining it throws (Win32Exception 1223, "cancelled by the
-    /// user"), which is a normal choice here, not a failure worth a crash dialog for.
+    /// Writes the verified setup to a fresh folder under the temp directory and runs it silently;
+    /// the caller then lets this process close - the installer replaces the running exe, which
+    /// cannot happen while it is still open. The setup is <c>PrivilegesRequired=admin</c>, so this
+    /// still raises a UAC prompt under <c>/SILENT</c> - declining it throws (Win32Exception 1223,
+    /// "cancelled by the user"), which is a normal choice here, not a failure worth a crash dialog.
     /// </summary>
-    public static bool LaunchInstaller(string path)
+    public static bool InstallVerified(UpdateDownload verified)
     {
+        if (verified.Result != UpdateResult.Verified || verified.Data == null || verified.FileName.Length == 0)
+        {
+            return false;
+        }
+
         try
         {
+            string folder = Path.Combine(Path.GetTempPath(), "AuraToggle-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            string path = Path.Combine(folder, verified.FileName);
+            File.WriteAllBytes(path, verified.Data);
+
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path, "/SILENT")
             {
                 UseShellExecute = true,
             });
             return true;
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException
+            or IOException or UnauthorizedAccessException)
         {
             AuraLog.Warn($"UpdateInstall: {ex.GetType().Name}: {ex.Message}");
             return false;
         }
+    }
+
+    /// <summary>
+    /// Replaces the running portable exe with the verified one: the new bytes go to
+    /// <c>&lt;exe&gt;.new</c> next to it, the running exe is renamed to <c>&lt;exe&gt;.old</c> (a
+    /// running exe can be renamed, just not deleted or overwritten) and the new one takes its name.
+    /// Any IO failure puts the original back and returns false, so the caller can fall back to the
+    /// release page. On success <see cref="Program.RestartPath"/> is set; the caller closes the
+    /// window and the new copy is started once this process has let go of the single-instance lock.
+    /// </summary>
+    public static bool SwapPortable(UpdateDownload verified)
+    {
+        if (verified.Result != UpdateResult.Verified || verified.Data == null ||
+            Environment.ProcessPath is not string exe)
+        {
+            return false;
+        }
+
+        string fresh = exe + ".new";
+        string old = exe + ".old";
+        bool renamed = false;
+
+        try
+        {
+            File.WriteAllBytes(fresh, verified.Data);
+
+            if (File.Exists(old))
+            {
+                File.Delete(old);
+            }
+
+            File.Move(exe, old);
+            renamed = true;
+            File.Move(fresh, exe);
+
+            Program.RestartPath = exe;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AuraLog.Warn($"UpdateSwap: {ex.GetType().Name}: {ex.Message}");
+
+            if (renamed && !File.Exists(exe))
+            {
+                TryMove(old, exe);
+            }
+
+            TryDelete(fresh);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Removes what a portable swap left next to the exe. Silent on purpose: right after a restart
+    /// the previous copy may still be shutting down and hold its file, in which case the next start
+    /// gets it.
+    /// </summary>
+    public static void DeleteLeftovers()
+    {
+        if (Environment.ProcessPath is string exe)
+        {
+            TryDelete(exe + ".old");
+            TryDelete(exe + ".new");
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Left for the next start.
+        }
+    }
+
+    private static void TryMove(string from, string to)
+    {
+        try
+        {
+            File.Move(from, to);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AuraLog.Warn($"UpdateSwap: could not put the original back: {ex.Message}");
+        }
+    }
+
+    private static UpdateDownload Rejected(string fileName) => new(UpdateResult.NotVerified, null, fileName);
+
+    /// <summary>The setup's asset name: an <c>.exe</c> with "Setup" in it, the one the installer build publishes.</summary>
+    private static string? FindSetupName(IEnumerable<string> names)
+    {
+        foreach (string name in names)
+        {
+            if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                name.Contains("Setup", StringComparison.OrdinalIgnoreCase))
+            {
+                return name;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The signature text, or null when the response is larger than any real signature.</summary>
+    private static async Task<string?> ReadSignatureAsync(HttpContent content)
+    {
+        await using Stream stream = await content.ReadAsStreamAsync();
+        var buffer = new byte[MaxSignatureBytes + 1];
+        int length = 0;
+
+        while (length < buffer.Length)
+        {
+            int read = await stream.ReadAsync(buffer.AsMemory(length));
+            if (read == 0)
+            {
+                break;
+            }
+
+            length += read;
+        }
+
+        return length > MaxSignatureBytes ? null : System.Text.Encoding.ASCII.GetString(buffer, 0, length);
     }
 
     /// <summary>Matches <c>build.bat</c>'s own "&lt;hash&gt;  &lt;filename&gt;" format, two spaces
@@ -262,8 +470,8 @@ internal static class AuraUpdate
     /// Where the request actually ended up. A release asset answers with a redirect to GitHub's
     /// own object storage, so redirects have to be followed - but then the URL the release named
     /// is no longer the host the bytes came from, and checking only that URL would miss a redirect
-    /// off to somewhere else entirely. That matters more here than anywhere: a setup and a
-    /// checksum file handed over by the same foreign server verify against each other perfectly.
+    /// off to somewhere else entirely. That matters more here than anywhere: a file and a
+    /// checksum handed over by the same foreign server verify against each other perfectly.
     /// </summary>
     private static bool EndedOnTrustedHost(HttpResponseMessage response) =>
         response.RequestMessage?.RequestUri is Uri final && IsTrustedHost(final);
