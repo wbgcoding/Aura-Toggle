@@ -2338,7 +2338,17 @@ internal sealed class ToggleForm : Form
     private void ResetToDefaults()
     {
         _settings = AuraSettings.Load();
-        _state = AuraState.Load();
+
+        // The lighting on the board is not touched by a reset, so what the window knows about it
+        // is written back: loading the freshly deleted file would show first-run defaults while
+        // the controller keeps running something else. The custom presets are gone, so the name
+        // of the running one goes with them - the effect itself carries on.
+        using (AuraFiles.Lock())
+        {
+            _state = _state with { CustomPreset = "" };
+            _state.Save();
+        }
+
         _toggle.Animate = _settings.Animate;
         TopMost = _settings.AlwaysOnTop;
 
