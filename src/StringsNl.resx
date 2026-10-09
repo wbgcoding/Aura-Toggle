@@ -284,6 +284,9 @@
   <data name="ErrorUnexpected" xml:space="preserve">
     <value>Dit had niet mogen gebeuren. Aura Toggle sluiten en opnieuw openen helpt meestal.</value>
   </data>
+  <data name="ErrorSaveFailed" xml:space="preserve">
+    <value>De voorinstelling kon niet worden opgeslagen. Misschien is de schijf vol, of een ander programma gebruikt het bestand. Sluit dat programma en sla opnieuw op.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Details</value>
   </data>

@@ -191,6 +191,8 @@ internal static class Strings
 
     public static string ErrorUnexpected => Get("ErrorUnexpected");
 
+    public static string ErrorSaveFailed => Get("ErrorSaveFailed");
+
     public static string ErrorDetails => Get("ErrorDetails");
 
     public static string ErrorCopyDetails => Get("ErrorCopyDetails");

@@ -284,6 +284,9 @@
   <data name="ErrorUnexpected" xml:space="preserve">
     <value>Das h&#228;tte nicht passieren sollen. Aura Toggle schlie&#223;en und neu &#246;ffnen hilft meistens.</value>
   </data>
+  <data name="ErrorSaveFailed" xml:space="preserve">
+    <value>Das Preset konnte nicht gespeichert werden. Die Festplatte ist vielleicht voll, oder ein anderes Programm h&#228;lt die Datei. Schlie&#223;e es und speichere erneut.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Details</value>
   </data>

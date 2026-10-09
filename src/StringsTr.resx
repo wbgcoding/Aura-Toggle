@@ -284,6 +284,9 @@
   <data name="ErrorUnexpected" xml:space="preserve">
     <value>Bu olmamalıydı. Aura Toggle'ı kapatıp yeniden açmak genellikle sorunu çözer.</value>
   </data>
+  <data name="ErrorSaveFailed" xml:space="preserve">
+    <value>Ön ayar kaydedilemedi. Disk dolu olabilir ya da dosyayı başka bir program kullanıyor olabilir. O programı kapat ve yeniden kaydet.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Ayrıntılar</value>
   </data>

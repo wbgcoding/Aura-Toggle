@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format follows
 - Closing the channel rename popup after the controller went away no longer closes the whole app
 - Renaming a channel, or reopening the window from the notification area, no longer leaves the window out of step with the channel selector
 - In the effect list, Enter on a preset marked for deletion now deletes it instead of applying it; the arrow keys reach "New preset", and Ctrl+D duplicates the highlighted preset
+- Saving a custom preset that cannot be written (disk full, file locked) now says so and keeps the editor open instead of pretending it worked
 
 ## [1.3.0] - 2026-08-22
 

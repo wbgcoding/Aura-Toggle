@@ -284,6 +284,9 @@
   <data name="ErrorUnexpected" xml:space="preserve">
     <value>不该发生这种情况。关闭并重新打开 Aura Toggle 通常可以解决。</value>
   </data>
+  <data name="ErrorSaveFailed" xml:space="preserve">
+    <value>无法保存预设。磁盘可能已满，或有其他程序正占用该文件。请关闭该程序后再保存一次。</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>详细信息</value>
   </data>

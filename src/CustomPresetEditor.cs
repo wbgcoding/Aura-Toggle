@@ -637,6 +637,7 @@ internal sealed class CustomPresetEditor : PopupForm
         }
 
         CustomPreset saved;
+        bool written;
         using (IDisposable guard = AuraFiles.Lock())
         {
             List<CustomPreset> presets = AuraCustomPresets.Load();
@@ -646,12 +647,20 @@ internal sealed class CustomPresetEditor : PopupForm
             // which is the expected meaning of Save here.
             presets.RemoveAll(p => p.Name == name || p.Name == _editing);
             presets.Add(saved);
-            AuraCustomPresets.Save(presets);
+            written = AuraCustomPresets.Save(presets);
 
-            if (_editing != null)
+            if (written && _editing != null)
             {
                 AuraSettings.FollowPresetRename(_editing, name);
             }
+        }
+
+        if (!written)
+        {
+            // Nothing reached the disk: staying open keeps the user's rows, and neither the list
+            // nor the controller is told about a preset that does not exist.
+            ErrorDialog.Report(new IOException(Strings.ErrorSaveFailed), "Save preset", this);
+            return;
         }
 
         _saved = true;

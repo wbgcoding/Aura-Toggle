@@ -284,6 +284,9 @@
   <data name="ErrorUnexpected" xml:space="preserve">
     <value>これは想定外の動作です。Aura Toggle を閉じて再度開くと、通常は解決します。</value>
   </data>
+  <data name="ErrorSaveFailed" xml:space="preserve">
+    <value>プリセットを保存できませんでした。ディスクがいっぱいか、別のプログラムがファイルを使用している可能性があります。そのプログラムを閉じてから、もう一度保存してください。</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>詳細</value>
   </data>

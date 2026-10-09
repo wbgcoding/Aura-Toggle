@@ -284,16 +284,21 @@ internal static class AuraFiles
     /// Writes JSON through a temporary file and moves it into place, so a crash or a full disk
     /// mid-write leaves the previous file intact instead of an empty or half-written one.
     /// </summary>
-    public static void Write(string name, Action<Utf8JsonWriter> body)
+    /// <returns>
+    /// False when nothing was written (the failure is already in the log). Most callers may ignore
+    /// it - a preference that did not stick is not worth aborting a switch - but one that is about
+    /// to tell the user "saved" must not.
+    /// </returns>
+    public static bool Write(string name, Action<Utf8JsonWriter> body)
     {
-        WriteRaw(name, stream =>
+        return WriteRaw(name, stream =>
         {
             using var writer = new Utf8JsonWriter(stream);
             body(writer);
         });
     }
 
-    private static void WriteRaw(string name, Action<FileStream> body)
+    private static bool WriteRaw(string name, Action<FileStream> body)
     {
         // The process id is part of the name because the cross-process lock has a timeout: a
         // caller that waited two seconds for it carries on without it, and two writers sharing
@@ -311,11 +316,14 @@ internal static class AuraFiles
             }
 
             File.Move(temp, PathTo(name), overwrite: true);
+            return true;
         }
         catch (Exception ex) when (IsExpected(ex))
         {
             // Failing to store a preference is not worth aborting a switch that already reached
             // the hardware - but the half-written temp file must not linger forever either.
+            AuraLog.Error("Write " + name, ex);
+
             try
             {
                 File.Delete(temp);
@@ -323,6 +331,8 @@ internal static class AuraFiles
             catch (Exception cleanupEx) when (IsExpected(cleanupEx))
             {
             }
+
+            return false;
         }
     }
 

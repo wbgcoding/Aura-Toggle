@@ -110,7 +110,7 @@ internal static class AuraCustomPresets
         }
     }
 
-    public static void Save(List<CustomPreset> presets) => AuraFiles.Write(FileName, writer =>
+    public static bool Save(List<CustomPreset> presets) => AuraFiles.Write(FileName, writer =>
     {
         writer.WriteStartArray();
         foreach (CustomPreset preset in presets)

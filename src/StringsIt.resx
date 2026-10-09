@@ -284,6 +284,9 @@
   <data name="ErrorUnexpected" xml:space="preserve">
     <value>Non sarebbe dovuto accadere. Di solito chiudere e riaprire Aura Toggle risolve il problema.</value>
   </data>
+  <data name="ErrorSaveFailed" xml:space="preserve">
+    <value>Impossibile salvare la preimpostazione. Il disco potrebbe essere pieno oppure un altro programma sta usando il file. Chiudilo e salva di nuovo.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Dettagli</value>
   </data>
