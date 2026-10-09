@@ -31,6 +31,7 @@ All notable changes to this project are documented here. The format follows
 - The "Start with Windows" switch shows what was really stored when the Run key refuses the change
 - Resetting everything now says so when a file could not be deleted because another program holds it
 - A hand-edited or imported preset with a brightness outside the slider range is brought back into it
+- A channel of a controller that is attached keeps its remembered look however long ago it was last switched
 
 ## [1.3.0] - 2026-08-22
 

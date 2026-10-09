@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
 namespace AuraToggle;
@@ -35,14 +36,22 @@ internal static class AuraChannelStates
     /// How long a channel's record outlives the last time anything wrote to it. The point of the
     /// file is that a controller unplugged for a while still comes back to its own look, so this
     /// has to be generous - but without it the file keeps a row for every header of every
-    /// controller ever plugged into the machine, for good. Any channel still attached is written
-    /// again by any whole-board switch, so only genuinely departed hardware ages out.
+    /// controller ever plugged into the machine, for good. Only a record whose controller is not
+    /// among the attached ones ages out: an attached channel nobody touched for a month (a header
+    /// never switched on its own) keeps its look however old it is.
     /// </summary>
     private const int KeepDays = 30;
 
     private static int Today => (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 86400);
 
     private static string Key(string deviceKey, int channel) => AuraFiles.ChannelKey(deviceKey, channel);
+
+    /// <summary>The device half of a <see cref="Key"/>: everything before the last separator.</summary>
+    private static string DeviceOf(string key)
+    {
+        int cut = key.LastIndexOf('|');
+        return cut < 0 ? key : key[..cut];
+    }
 
     /// <summary>
     /// Every channel's remembered look, read once. Callers that need more than a single channel
@@ -58,9 +67,11 @@ internal static class AuraChannelStates
     /// Records one look against every channel it was applied to, in a single write - a switch
     /// covering every channel of every controller would otherwise rewrite the file per channel.
     /// </summary>
-    public static void Remember(IEnumerable<(string DeviceKey, int Channel)> targets, ChannelLighting lighting)
+    /// <param name="attached">The keys of the controllers present right now; see <see cref="KeepDays"/>.</param>
+    public static void Remember(IEnumerable<(string DeviceKey, int Channel)> targets, ChannelLighting lighting,
+        IReadOnlyCollection<string> attached)
     {
-        Update(targets, (states, key) => Keep(states, key, lighting));
+        Update(targets, (states, key) => Keep(states, key, lighting), attached);
     }
 
     /// <summary>
@@ -85,25 +96,17 @@ internal static class AuraChannelStates
     /// what makes an effect or colour change leave a channel's own brightness alone.
     /// </param>
     public static void Remember(IEnumerable<(string DeviceKey, int Channel, ChannelLighting Look)> looks,
-        bool keepBrightness = true)
+        IReadOnlyCollection<string> attached, bool keepBrightness = true)
     {
-        using IDisposable guard = AuraFiles.Lock();
-
-        Dictionary<string, ChannelLighting> states = Load();
-        int today = Today;
-        var changed = false;
-
-        foreach ((string deviceKey, int channel, ChannelLighting look) in looks)
+        var byKey = new Dictionary<string, ChannelLighting>();
+        var all = looks.ToList();
+        foreach ((string deviceKey, int channel, ChannelLighting look) in all)
         {
-            string key = Key(deviceKey, channel);
-            states[key] = (keepBrightness ? Keep(states, key, look) : look) with { Seen = today };
-            changed = true;
+            byKey[Key(deviceKey, channel)] = look;
         }
 
-        if (changed)
-        {
-            Save(states);
-        }
+        Update(all.Select(l => (l.DeviceKey, l.Channel)),
+            (states, key) => keepBrightness ? Keep(states, key, byKey[key]) : byKey[key], attached);
     }
 
     /// <summary>
@@ -115,11 +118,11 @@ internal static class AuraChannelStates
     /// is running, so a channel switched off and on again does not come back as something else.
     /// </param>
     public static void SetPower(IEnumerable<(string DeviceKey, int Channel)> targets, bool on,
-        ChannelLighting fallback)
+        ChannelLighting fallback, IReadOnlyCollection<string> attached)
     {
         Update(targets, (states, key) => states.TryGetValue(key, out ChannelLighting? existing)
             ? existing with { On = on }
-            : fallback with { On = on });
+            : fallback with { On = on }, attached);
     }
 
     /// <summary>
@@ -127,15 +130,16 @@ internal static class AuraChannelStates
     /// power. A percentage of 0 hands them back to the board-wide brightness.
     /// </summary>
     public static void SetBrightness(IEnumerable<(string DeviceKey, int Channel)> targets, byte percent,
-        ChannelLighting fallback)
+        ChannelLighting fallback, IReadOnlyCollection<string> attached)
     {
         Update(targets, (states, key) => states.TryGetValue(key, out ChannelLighting? existing)
             ? existing with { Brightness = percent }
-            : fallback with { Brightness = percent });
+            : fallback with { Brightness = percent }, attached);
     }
 
     private static void Update(IEnumerable<(string DeviceKey, int Channel)> targets,
-        Func<Dictionary<string, ChannelLighting>, string, ChannelLighting> next)
+        Func<Dictionary<string, ChannelLighting>, string, ChannelLighting> next,
+        IReadOnlyCollection<string> attached)
     {
         // Locked: a switch from the command line and one from the window would otherwise each
         // read, change and save their own copy, and one of the two changes would vanish.
@@ -154,7 +158,7 @@ internal static class AuraChannelStates
 
         if (changed)
         {
-            Save(states);
+            Save(states, attached);
         }
     }
 
@@ -209,7 +213,8 @@ internal static class AuraChannelStates
         }
     }
 
-    private static void Save(Dictionary<string, ChannelLighting> states) => AuraFiles.Write(FileName, writer =>
+    private static void Save(Dictionary<string, ChannelLighting> states, IReadOnlyCollection<string> attached) =>
+        AuraFiles.Write(FileName, writer =>
     {
         int today = Today;
         int oldest = today - KeepDays;
@@ -220,7 +225,7 @@ internal static class AuraChannelStates
             // A record from a version that did not stamp its writes starts ageing from now rather
             // than counting as ancient, so upgrading never throws away what was remembered.
             int seen = lighting.Seen == 0 ? today : lighting.Seen;
-            if (seen < oldest)
+            if (seen < oldest && !attached.Contains(DeviceOf(key)))
             {
                 continue;
             }

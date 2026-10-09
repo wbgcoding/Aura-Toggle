@@ -902,7 +902,7 @@ internal static partial class Program
         try
         {
             List<(string, int)> switched = ApplyMix(devices, deviceKey, channel, state, look: null);
-            AuraChannelStates.SetPower(switched, on: true, BoardWide(state));
+            AuraChannelStates.SetPower(switched, on: true, BoardWide(state), Attached(devices));
 
             // Something was just switched on, so the board is lit without having to re-read.
             return switched.Count > 0;
@@ -1029,7 +1029,7 @@ internal static partial class Program
 
             if (unified.Count > 0)
             {
-                AuraChannelStates.Remember(unified);
+                AuraChannelStates.Remember(unified, Attached(devices));
             }
         }
 
@@ -1061,6 +1061,12 @@ internal static partial class Program
 
         return targets;
     }
+
+    /// <summary>
+    /// The keys of the controllers found this run, handed to the channel records so an attached
+    /// controller's look is never aged out.
+    /// </summary>
+    private static string[] Attached(List<AuraDevice> devices) => devices.Select(d => d.Key).ToArray();
 
     private static void Close(List<AuraDevice> devices)
     {
@@ -1177,7 +1183,7 @@ internal static partial class Program
             }
 
             AuraChannelStates.SetBrightness(Channels(devices, deviceKey, channel), wholeBoard ? (byte)0 : percent,
-                BoardWide(state));
+                BoardWide(state), Attached(devices));
         }
         finally
         {
@@ -1420,7 +1426,7 @@ internal static partial class Program
         // board" and has to land as written, not be read back as "unset" and swapped for the
         // channel's previous value - which was the whole-board slider's own "did it even do
         // anything" bug re-entering one layer down.
-        AuraChannelStates.Remember(applied, keepBrightness: !brightnessOverride.HasValue);
+        AuraChannelStates.Remember(applied, Attached(devices), keepBrightness: !brightnessOverride.HasValue);
 
         CustomPresetEntry first = preset.Entries[0];
         AuraState next = state with
@@ -1454,11 +1460,11 @@ internal static partial class Program
                 // Switching off only clears the power flag: the effect and colour stay on record
                 // so that switching back on has its own look to return to. A channel with no
                 // record yet keeps the board's current look rather than a made-up one.
-                AuraChannelStates.SetPower(switched, on: false, BoardWide(state));
+                AuraChannelStates.SetPower(switched, on: false, BoardWide(state), Attached(devices));
             }
             else
             {
-                AuraChannelStates.Remember(switched, look);
+                AuraChannelStates.Remember(switched, look, Attached(devices));
             }
 
             return AnyChannelOn(devices);
