@@ -25,6 +25,10 @@ internal sealed class UpdatePopup : PopupForm
     private readonly Label _body = new();
     private readonly PillButton _primary = new();
     private readonly PillButton _later = new();
+
+    // Read back from _primary.Visible this would be false until the form itself is shown, which
+    // laid the first pass out as if there were no main button and put it over "Later".
+    private readonly bool _showPrimary;
     private readonly System.Windows.Forms.Timer _autoClose = new() { Interval = AutoCloseMs };
 
     /// <param name="newVersion">The version the notice is about.</param>
@@ -59,7 +63,8 @@ internal sealed class UpdatePopup : PopupForm
 
         _primary.Text = notVerified ? Strings.UpdateNoticeOpenPage : Strings.UpdateNoticeInstall;
         _primary.Primary = true;
-        _primary.Visible = !notVerified || canOpenPage;
+        _showPrimary = !notVerified || canOpenPage;
+        _primary.Visible = _showPrimary;
         _primary.Click += (_, _) =>
         {
             if (notVerified)
@@ -151,7 +156,7 @@ internal sealed class UpdatePopup : PopupForm
         _later.FitToText(14);
 
         int gap = this.Scaled(8);
-        int primaryWidth = _primary.Visible ? _primary.Width + gap : 0;
+        int primaryWidth = _showPrimary ? _primary.Width + gap : 0;
         int width = Math.Max(Pad + BodyWidth + Pad, Pad + primaryWidth + _later.Width + Pad);
         width = Math.Max(width, Pad + _heading.PreferredSize.Width + Pad);
 
