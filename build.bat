@@ -2,7 +2,7 @@
 REM Builds "AuraToggle.exe" into dist\.
 REM
 REM   build.bat                      EVERYTHING: portable, installer, dist\release with checksums
-REM   build.bat portable             only the portable x64 exe (~630 KB), its signature and its two shortcuts
+REM   build.bat portable             only the portable x64 exe (~700 KB), its signature and its two shortcuts
 REM   build.bat installer            only the x64 setup (needs Inno Setup), both exes signed
 REM   build.bat all                  same as no argument at all
 REM   build.bat review               the review build with the surface tool, into bin\review-build\

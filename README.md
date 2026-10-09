@@ -29,7 +29,9 @@ hardware that supports it. Aura Toggle needs no service and no background proces
 **Quickstart:**
 
 1. Download `AuraToggle.exe` below (or the installer)
-2. Run it: no setup, no admin rights
+2. Run it: no admin rights needed. The portable exe needs the
+   [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0); the installer
+   fetches it for you
 3. Click the button
 
 ---
@@ -311,8 +313,8 @@ Start-up, version and every error land in a plain text file:
 
 Paste that path into the Explorer address bar or into Win+R. It rolls over to `log.old.txt` past
 200 KB, holds no personal data (your user name is replaced with `%USERPROFILE%`) and the last
-few lines are usually enough to say why a controller could not be reached. Attach them to a bug
-report.
+few lines are usually enough to say why a controller could not be reached. Attach them to a
+[bug report](https://github.com/wbgcoding/Aura-Toggle/issues).
 
 ## 🔨 Building
 
