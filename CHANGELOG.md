@@ -27,6 +27,7 @@ All notable changes to this project are documented here. The format follows
 - Picking a rainbow, spectrum or wave effect for one channel is no longer overridden by a different one of those left on another channel of the same controller
 - Uninstalling removes your settings folder with your own account's rights, leaves it alone if it is a link, and the setup no longer counts a preview .NET runtime as installed
 - Autostart with a controller that is not up yet at logon keeps looking for it for a minute and then applies the start lighting
+- A hotkey combination another program already holds is refused and the previous one stays in place; at startup a taken hotkey is no longer saved as switched off
 
 ## [1.3.0] - 2026-08-22
 

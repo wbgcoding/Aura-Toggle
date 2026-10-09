@@ -422,12 +422,19 @@ internal sealed class SettingsPopup : PopupForm
 
     /// <summary>
     /// Called by <see cref="ToggleForm"/> when registering the new combination failed - already
-    /// in use elsewhere. Switches the panel itself back off rather than pretending it took.
+    /// in use elsewhere. Puts the panel back on the switch and combination that still work
+    /// rather than pretending the new one took.
     /// </summary>
-    public void ShowHotkeyConflict()
+    public void ShowHotkeyConflict(bool enabled, int hotkey)
     {
-        _hotkeyEnabled.Checked = false;
-        _hotkeyRecord.Visible = false;
+        _pendingHotkey = hotkey;
+        _hotkeyRecord.Text = HotkeyText(hotkey);
+        if (_hotkeyEnabled.Checked != enabled)
+        {
+            _hotkeyEnabled.Checked = enabled;
+        }
+
+        _hotkeyRecord.Visible = enabled;
         _hotkeyHint.Visible = true;
         FitToContent();
     }

@@ -1566,6 +1566,7 @@ internal sealed class ToggleForm : Form
         {
             bool languageChanged = settings.Language != _settings.Language;
             bool hotkeyChanged = settings.HotkeyEnabled != _settings.HotkeyEnabled || settings.Hotkey != _settings.Hotkey;
+            AuraSettings previous = _settings;
             _settings = settings;
             _toggle.Animate = settings.Animate;
 
@@ -1587,7 +1588,7 @@ internal sealed class ToggleForm : Form
 
             if (hotkeyChanged)
             {
-                ApplyHotkeySetting(popup);
+                ApplyHotkeySetting(popup, previous);
             }
         };
         popup.Reset += (_, _) => ResetToDefaults();
@@ -1712,28 +1713,41 @@ internal sealed class ToggleForm : Form
     /// (Re-)registers the hotkey to match <see cref="_settings"/>, called on startup and every
     /// time the settings panel reports a change to either the switch or the combination. A
     /// combination already claimed by another application fails the registration silently at the
-    /// Win32 level, so it is <see cref="_settings"/> itself that is switched back off here -
-    /// otherwise the switch would show "on" for a hotkey that does nothing.
+    /// Win32 level. A change made in the panel is then rolled back to <paramref name="previous"/>
+    /// (and that one registered again), so the panel never shows a combination that does nothing.
+    /// At startup, or after a reset, there is no panel and no previous setting: the failure is
+    /// only logged, and the stored switch and combination stay as they are - the other program may
+    /// simply not be up yet, and a saved "off" would silently throw the user's choice away.
     /// </summary>
-    private void ApplyHotkeySetting(SettingsPopup? popup)
+    private void ApplyHotkeySetting(SettingsPopup? popup, AuraSettings? previous = null)
     {
         HotKey.Unregister(Handle);
 
-        if (_settings.HotkeyEnabled && !HotKey.Register(Handle, _settings.Hotkey))
+        if (!_settings.HotkeyEnabled || HotKey.Register(Handle, _settings.Hotkey))
         {
-            // At startup there is no popup open to show this in - logged so it leaves a trace
-            // beyond the setting silently flipping back off.
-            AuraLog.Info("Hotkey already in use elsewhere, disabled.");
-            // Re-read under the lock rather than saving the cached copy: that one can predate a
-            // preset rename or a window-position save and would write them back out.
-            using (AuraFiles.Lock())
-            {
-                _settings = AuraSettings.Load() with { HotkeyEnabled = false };
-                _settings.Save();
-            }
-
-            popup?.ShowHotkeyConflict();
+            return;
         }
+
+        AuraLog.Info("Hotkey already in use elsewhere, not registered.");
+        if (popup == null || previous == null)
+        {
+            return;
+        }
+
+        // Re-read under the lock rather than saving the cached copy: that one can predate a
+        // preset rename or a window-position save and would write them back out.
+        using (AuraFiles.Lock())
+        {
+            _settings = AuraSettings.Load() with { HotkeyEnabled = previous.HotkeyEnabled, Hotkey = previous.Hotkey };
+            _settings.Save();
+        }
+
+        if (_settings.HotkeyEnabled)
+        {
+            HotKey.Register(Handle, _settings.Hotkey);
+        }
+
+        popup.ShowHotkeyConflict(_settings.HotkeyEnabled, _settings.Hotkey);
     }
 
     /// <summary>
