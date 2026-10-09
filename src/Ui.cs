@@ -513,9 +513,13 @@ internal static class EffectPainter
     private static readonly ColorBlend SpectrumBlend = Blend(SpectrumStops);
 
     // The brush wrapping that blend was left allocating a fresh LinearGradientBrush every frame
-    // regardless - rebuilt only when the paint size changes, same as EffectSurface's own buffer.
-    private static LinearGradientBrush? _spectrumBrush;
-    private static SizeF _spectrumBrushSize;
+    // regardless - one per paint size, so the big button and the small effect icons, which paint
+    // at different sizes in the same frame, stop evicting each other's brush.
+    private static readonly Dictionary<SizeF, LinearGradientBrush> SpectrumBrushes = new();
+
+    /// <summary>More sizes than a window ever paints at once (button, icons, a monitor change);
+    /// past it the cache starts over rather than growing without bound.</summary>
+    private const int MaxCachedBrushes = 8;
 
     private static bool UsesColour(byte mode) => AuraPresets.ByMode(mode)?.UsesColour ?? false;
 
@@ -608,26 +612,26 @@ internal static class EffectPainter
         float period = Math.Max(bounds.Width / cycles, 4f);
         var size = new SizeF(period, bounds.Height);
 
-        if (_spectrumBrush == null || _spectrumBrushSize != size)
+        if (!SpectrumBrushes.TryGetValue(size, out LinearGradientBrush? brush))
         {
-            _spectrumBrush?.Dispose();
-            _spectrumBrush = new LinearGradientBrush(new RectangleF(PointF.Empty, size),
+            ClearIfFull(SpectrumBrushes, old => old.Dispose());
+            brush = new LinearGradientBrush(new RectangleF(PointF.Empty, size),
                 SpectrumStops[0], SpectrumStops[^1], LinearGradientMode.Horizontal)
             {
                 WrapMode = WrapMode.Tile,
                 InterpolationColors = SpectrumBlend,
             };
-            _spectrumBrushSize = size;
+            SpectrumBrushes[size] = brush;
         }
 
         // The brush's own rectangle only ever holds the size above; position - the animation
         // shift and the caller's bounds.X/Y - lives entirely in the transform, reset and
         // reapplied every call rather than left to accumulate on the reused brush.
         double shift = ((phase % 1.0) + 1.0) % 1.0;
-        _spectrumBrush.ResetTransform();
-        _spectrumBrush.TranslateTransform(bounds.X + (float)(shift * period) - period, bounds.Y);
+        brush.ResetTransform();
+        brush.TranslateTransform(bounds.X + (float)(shift * period) - period, bounds.Y);
 
-        g.FillRectangle(_spectrumBrush, bounds);
+        g.FillRectangle(brush, bounds);
     }
 
     private static ColorBlend Blend(Color[] colours)
@@ -641,13 +645,28 @@ internal static class EffectPainter
         return new ColorBlend { Colors = colours, Positions = positions };
     }
 
-    // Shared like _spectrumBrush above: the comet's gradient only ever needs its own size and the
-    // two colours it fades between, both cheap to compare, so a changed channel colour or a
-    // resized control still replaces it - only an identical repaint reuses it.
-    private static LinearGradientBrush? _chaseBrush;
-    private static SizeF _chaseBrushSize;
-    private static Color _chaseBrushDim;
-    private static Color _chaseBrushColour;
+    // Shared like the spectrum brushes above, one per size: the comet's gradient only needs its
+    // size and the two colours it fades between, both cheap to compare, so a changed channel
+    // colour still replaces that size's brush - only an identical repaint reuses it.
+    private sealed record ChaseBrush(LinearGradientBrush Brush, Color Dim, Color Colour);
+
+    private static readonly Dictionary<SizeF, ChaseBrush> ChaseBrushes = new();
+
+    /// <summary>Starts a brush cache over once it holds <see cref="MaxCachedBrushes"/> sizes.</summary>
+    private static void ClearIfFull<T>(Dictionary<SizeF, T> cache, Action<T> dispose)
+    {
+        if (cache.Count < MaxCachedBrushes)
+        {
+            return;
+        }
+
+        foreach (T old in cache.Values)
+        {
+            dispose(old);
+        }
+
+        cache.Clear();
+    }
 
     /// <summary>
     /// A lit segment travelling along the strip, with a tail that fades out behind it. The
@@ -662,24 +681,30 @@ internal static class EffectPainter
         float head = (float)(((seconds / 3.8) % 1.0) * (bounds.Width + tailWidth)) - tailWidth;
         var size = new SizeF(tailWidth + 2, bounds.Height);
 
-        if (_chaseBrush == null || _chaseBrushSize != size || _chaseBrushDim != dim ||
-            _chaseBrushColour != colour)
+        if (!ChaseBrushes.TryGetValue(size, out ChaseBrush? cached) || cached.Dim != dim || cached.Colour != colour)
         {
-            _chaseBrush?.Dispose();
-            _chaseBrush = new LinearGradientBrush(new RectangleF(PointF.Empty, size), dim, colour,
-                LinearGradientMode.Horizontal);
-            _chaseBrushSize = size;
-            _chaseBrushDim = dim;
-            _chaseBrushColour = colour;
+            if (cached == null)
+            {
+                ClearIfFull(ChaseBrushes, old => old.Brush.Dispose());
+            }
+            else
+            {
+                cached.Brush.Dispose();
+            }
+
+            cached = new ChaseBrush(
+                new LinearGradientBrush(new RectangleF(PointF.Empty, size), dim, colour, LinearGradientMode.Horizontal),
+                dim, colour);
+            ChaseBrushes[size] = cached;
         }
 
         // Drawn twice so the comet re-enters on the left exactly as it leaves on the right; both
-        // bands share the one brush above, repositioned through the transform like _spectrumBrush.
-        DrawComet(g, bounds, head, tailWidth);
-        DrawComet(g, bounds, head - bounds.Width - tailWidth, tailWidth);
+        // bands share the one brush above, repositioned through the transform like the spectrum.
+        DrawComet(g, cached.Brush, bounds, head, tailWidth);
+        DrawComet(g, cached.Brush, bounds, head - bounds.Width - tailWidth, tailWidth);
     }
 
-    private static void DrawComet(Graphics g, RectangleF bounds, float offset, float tailWidth)
+    private static void DrawComet(Graphics g, LinearGradientBrush brush, RectangleF bounds, float offset, float tailWidth)
     {
         var band = new RectangleF(bounds.X + offset, bounds.Y, tailWidth, bounds.Height);
         if (band.Right < bounds.X || band.X > bounds.Right)
@@ -687,9 +712,9 @@ internal static class EffectPainter
             return;
         }
 
-        _chaseBrush!.ResetTransform();
-        _chaseBrush.TranslateTransform(band.X - 1, band.Y);
-        g.FillRectangle(_chaseBrush, band);
+        brush.ResetTransform();
+        brush.TranslateTransform(band.X - 1, band.Y);
+        g.FillRectangle(brush, band);
     }
 
     /// <summary>
