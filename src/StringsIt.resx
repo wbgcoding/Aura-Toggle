@@ -341,6 +341,9 @@
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Non è stato reimpostato nulla: non è stato possibile scrivere il backup delle tue impostazioni e preimpostazioni. Libera un po' di spazio su disco e riprova.</value>
   </data>
+  <data name="ErrorResetIncomplete" xml:space="preserve">
+    <value>Alcuni file non sono stati reimpostati perché un altro programma li sta usando. Chiudilo e riprova.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Scorciatoia globale (Acceso/Spento)</value>
   </data>

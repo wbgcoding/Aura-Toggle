@@ -341,6 +341,9 @@
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Hiçbir şey sıfırlanmadı: ayarlarının ve ön ayarlarının yedeği yazılamadı. Biraz disk alanı boşalt ve yeniden dene.</value>
   </data>
+  <data name="ErrorResetIncomplete" xml:space="preserve">
+    <value>Bazı dosyalar başka bir program kullandığı için sıfırlanamadı. O programı kapat ve yeniden dene.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Genel kısayol tuşu (Açık/Kapalı)</value>
   </data>

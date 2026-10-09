@@ -218,6 +218,8 @@ internal static class Strings
 
     public static string ErrorResetBackupFailed => Get("ErrorResetBackupFailed");
 
+    public static string ErrorResetIncomplete => Get("ErrorResetIncomplete");
+
     public static string SettingHotkey => Get("SettingHotkey");
 
     public static string SettingHotkeyConflict => Get("SettingHotkeyConflict");

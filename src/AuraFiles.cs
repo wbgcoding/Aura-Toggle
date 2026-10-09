@@ -136,17 +136,21 @@ internal static class AuraFiles
     /// resetting is itself worth a line in it.
     /// </summary>
     /// <returns>
-    /// False when the backup could not be written: nothing is deleted then, since a reset the user
-    /// cannot take back is only acceptable with the net underneath it.
+    /// <see cref="ResetResult.BackupFailed"/> when the backup could not be written: nothing is
+    /// deleted then, since a reset the user cannot take back is only acceptable with the net
+    /// underneath it. <see cref="ResetResult.Incomplete"/> when some file would not go (another
+    /// program holds it) - the rest is gone and the caller says so.
     /// </returns>
-    public static bool ResetAll()
+    public static ResetResult ResetAll()
     {
         using IDisposable held = Lock();
 
         if (!BackUpBeforeReset())
         {
-            return false;
+            return ResetResult.BackupFailed;
         }
+
+        bool incomplete = false;
 
         foreach (string name in new[]
         {
@@ -160,10 +164,20 @@ internal static class AuraFiles
             }
             catch (Exception ex) when (IsExpected(ex))
             {
+                incomplete = true;
+                AuraLog.Error("Reset: could not delete " + name, ex);
             }
         }
 
-        return true;
+        return incomplete ? ResetResult.Incomplete : ResetResult.Done;
+    }
+
+    /// <summary>How <see cref="ResetAll"/> ended.</summary>
+    public enum ResetResult
+    {
+        Done,
+        BackupFailed,
+        Incomplete,
     }
 
     /// <summary>

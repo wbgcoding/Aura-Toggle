@@ -341,6 +341,9 @@
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>No se restableció nada: no se pudo escribir la copia de seguridad de tu configuración y tus preajustes. Libera algo de espacio en disco e inténtalo de nuevo.</value>
   </data>
+  <data name="ErrorResetIncomplete" xml:space="preserve">
+    <value>Algunos archivos no se pudieron restablecer porque otro programa los está usando. Ciérralo e inténtalo de nuevo.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Atajo global (Activado/Desactivado)</value>
   </data>

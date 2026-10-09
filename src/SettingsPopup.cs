@@ -364,23 +364,12 @@ internal sealed class SettingsPopup : PopupForm
     /// is just the action itself, run once the second click confirms it.</summary>
     private void OnResetConfirmed()
     {
-        if (!AuraFiles.ResetAll())
+        AuraFiles.ResetResult result = AuraFiles.ResetAll();
+        if (result == AuraFiles.ResetResult.BackupFailed)
         {
             // Nothing was deleted, so the Run key, the window and the settings all stay as they
             // are; the user is told why and can try again.
-            // Held open while the dialog is up: it is owned by this panel, and the panel losing
-            // the activation to it would otherwise close it, and the dialog with it.
-            _childOpen = true;
-            ErrorDialog? dialog = ErrorDialog.Report(new IOException(Strings.ErrorResetBackupFailed), "Reset", this,
-                onClosed: () =>
-                {
-                    _childOpen = false;
-                    if (!IsDisposed)
-                    {
-                        Close();
-                    }
-                });
-            _childOpen = dialog != null;
+            ShowResetError(Strings.ErrorResetBackupFailed);
             return;
         }
 
@@ -390,7 +379,33 @@ internal sealed class SettingsPopup : PopupForm
         AuraSettings.AutoStart = false;
 
         Reset?.Invoke(this, EventArgs.Empty);
+
+        if (result == AuraFiles.ResetResult.Incomplete)
+        {
+            // What could be deleted is gone and the window has picked that up; the user hears
+            // about the rest instead of finding out later.
+            ShowResetError(Strings.ErrorResetIncomplete);
+            return;
+        }
+
         Close();
+    }
+
+    private void ShowResetError(string message)
+    {
+        // Held open while the dialog is up: it is owned by this panel, and the panel losing
+        // the activation to it would otherwise close it, and the dialog with it.
+        _childOpen = true;
+        ErrorDialog? dialog = ErrorDialog.Report(new IOException(message), "Reset", this,
+            onClosed: () =>
+            {
+                _childOpen = false;
+                if (!IsDisposed)
+                {
+                    Close();
+                }
+            });
+        _childOpen = dialog != null;
     }
 
     /// <summary>Puts the button into "waiting for a key" mode; the next non-modifier key with at

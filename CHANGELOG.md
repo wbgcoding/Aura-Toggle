@@ -29,6 +29,7 @@ All notable changes to this project are documented here. The format follows
 - Autostart with a controller that is not up yet at logon keeps looking for it for a minute and then applies the start lighting
 - A hotkey combination another program already holds is refused and the previous one stays in place; at startup a taken hotkey is no longer saved as switched off
 - The "Start with Windows" switch shows what was really stored when the Run key refuses the change
+- Resetting everything now says so when a file could not be deleted because another program holds it
 
 ## [1.3.0] - 2026-08-22
 

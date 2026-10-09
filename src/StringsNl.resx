@@ -341,6 +341,9 @@
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Er is niets hersteld: de back-up van je instellingen en voorinstellingen kon niet worden geschreven. Maak wat schijfruimte vrij en probeer het opnieuw.</value>
   </data>
+  <data name="ErrorResetIncomplete" xml:space="preserve">
+    <value>Sommige bestanden konden niet worden hersteld omdat een ander programma ze gebruikt. Sluit het en probeer het opnieuw.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Globale sneltoets (Aan/Uit)</value>
   </data>

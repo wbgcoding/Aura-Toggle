@@ -341,6 +341,9 @@
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Nic nie zostało zresetowane: nie udało się zapisać kopii zapasowej twoich ustawień i presetów. Zwolnij trochę miejsca na dysku i spróbuj ponownie.</value>
   </data>
+  <data name="ErrorResetIncomplete" xml:space="preserve">
+    <value>Nie udało się zresetować niektórych plików, bo używa ich inny program. Zamknij go i spróbuj ponownie.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Globalny skrót (wł./wył.)</value>
   </data>

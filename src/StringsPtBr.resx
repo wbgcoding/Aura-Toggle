@@ -341,6 +341,9 @@
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Nada foi redefinido: não foi possível gravar o backup das suas configurações e predefinições. Libere um pouco de espaço em disco e tente novamente.</value>
   </data>
+  <data name="ErrorResetIncomplete" xml:space="preserve">
+    <value>Alguns arquivos não puderam ser redefinidos porque outro programa os está usando. Feche-o e tente novamente.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Atalho global (Ligado/Desligado)</value>
   </data>
