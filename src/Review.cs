@@ -535,14 +535,58 @@ internal static partial class Program
             return PrintSurfaceIds();
         }
 
+        if (surface == "swap")
+        {
+            return args.Length >= 3 ? ReviewSwap(args[2]) : 2;
+        }
+
         Strings.Override = AuraSettings.Load().Language;
         return RunReview(surface, args.Length >= 3 ? args[2] : "");
+    }
+
+    /// <summary>
+    /// The portable self-update without GitHub: verifies a local file against its <c>.sig</c> with
+    /// the same gate the download uses, then swaps this running exe for it and starts the new copy.
+    /// The result goes to <c>%TEMP%\aura-swap.txt</c> as well, since this is a WinExe.
+    /// </summary>
+    private static int ReviewSwap(string file)
+    {
+        string result;
+        int code;
+
+        try
+        {
+            byte[] data = File.ReadAllBytes(file);
+            string signature = File.Exists(file + ".sig") ? File.ReadAllText(file + ".sig") : "";
+
+            if (!UpdateSignature.Verify(data, signature, UpdatePublicKey.Value))
+            {
+                (result, code) = ("not verified, nothing swapped", 1);
+            }
+            else if (!AuraUpdate.SwapPortable(new UpdateDownload(UpdateResult.Verified, data, Path.GetFileName(file))))
+            {
+                (result, code) = ("verified, swap failed", 3);
+            }
+            else
+            {
+                StartReplacement(RestartPath!);
+                (result, code) = ("verified, swapped, restarted " + RestartPath, 0);
+            }
+        }
+        catch (IOException ex)
+        {
+            (result, code) = ("cannot read " + file + ": " + ex.Message, 2);
+        }
+
+        File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-swap.txt"), result + Environment.NewLine);
+        WriteLine(result);
+        return code;
     }
 
     private static int PrintSurfaceIds()
     {
         WriteLine("Review surfaces (-review <id> [scale%]):");
-        WriteLine("  settings  error  editor  layout  gear  tip  preview");
+        WriteLine("  settings  error  editor  layout  gear  tip  preview  swap <signed exe>");
         WriteLine("");
         WriteLine("Shot surfaces (-shot [id|group ...] [scale=100,150] [lang=en,de] [out=<folder>]):");
         foreach ((string id, string description) in ShotSurfaces)
