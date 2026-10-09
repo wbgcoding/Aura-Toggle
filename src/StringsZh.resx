@@ -305,6 +305,9 @@
   <data name="SettingResetConfirm" xml:space="preserve">
     <value>重置所有内容？</value>
   </data>
+  <data name="ErrorResetBackupFailed" xml:space="preserve">
+    <value>未执行任何重置：无法写入设置和预设的备份。请释放一些磁盘空间后重试。</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>全局热键（开/关）</value>
   </data>

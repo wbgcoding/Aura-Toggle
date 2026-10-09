@@ -305,6 +305,9 @@
   <data name="SettingResetConfirm" xml:space="preserve">
     <value>Reimpostare tutto?</value>
   </data>
+  <data name="ErrorResetBackupFailed" xml:space="preserve">
+    <value>Non è stato reimpostato nulla: non è stato possibile scrivere il backup delle tue impostazioni e preimpostazioni. Libera un po' di spazio su disco e riprova.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Tasto di scelta rapida globale (Acceso/Spento)</value>
   </data>

@@ -305,6 +305,9 @@
   <data name="SettingResetConfirm" xml:space="preserve">
     <value>Zresetować wszystko?</value>
   </data>
+  <data name="ErrorResetBackupFailed" xml:space="preserve">
+    <value>Nic nie zostało zresetowane: nie udało się zapisać kopii zapasowej twoich ustawień i presetów. Zwolnij trochę miejsca na dysku i spróbuj ponownie.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Globalny skrót (wł./wył.)</value>
   </data>

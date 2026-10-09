@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -134,11 +135,18 @@ internal static class AuraFiles
     /// captured in <c>reset-backup.zip</c> first. The log is deliberately not one of the five -
     /// resetting is itself worth a line in it.
     /// </summary>
-    public static void ResetAll()
+    /// <returns>
+    /// False when the backup could not be written: nothing is deleted then, since a reset the user
+    /// cannot take back is only acceptable with the net underneath it.
+    /// </returns>
+    public static bool ResetAll()
     {
         using IDisposable held = Lock();
 
-        BackUpBeforeReset();
+        if (!BackUpBeforeReset())
+        {
+            return false;
+        }
 
         foreach (string name in new[]
         {
@@ -154,17 +162,21 @@ internal static class AuraFiles
             {
             }
         }
+
+        return true;
     }
 
     /// <summary>
     /// One <c>reset-backup.zip</c> of every file a reset is about to delete, named so it opens
-    /// directly in Explorer instead of needing a rename first. A failed backup does not stop the
-    /// reset itself, since that is the action the user actually asked for; only the net underneath
-    /// it is missing, and that goes to the log.
+    /// directly in Explorer instead of needing a rename first. Written under a temporary name and
+    /// moved over the previous backup only once the archive is closed, so a failed write never
+    /// costs the backup from before. A failure goes to the log and is returned: the reset itself
+    /// is not allowed to go ahead without it.
     /// </summary>
-    private static void BackUpBeforeReset()
+    private static bool BackUpBeforeReset()
     {
         string zipPath = PathTo("reset-backup.zip");
+        string temp = zipPath + "." + Environment.ProcessId + ".tmp";
 
         try
         {
@@ -178,27 +190,47 @@ internal static class AuraFiles
             {
             }
 
-            // A second reset replaces the backup from before it, not both at once - there is
-            // only ever one.
-            File.Delete(zipPath);
-
-            using ZipArchive archive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
-            foreach (string name in new[]
+            string[] present = new[]
             {
                 AuraState.FileName, AuraSettings.FileName, AuraChannelNames.FileName,
                 AuraChannelStates.FileName, AuraCustomPresets.FileName,
-            })
+            }.Where(name => File.Exists(PathTo(name))).ToArray();
+
+            if (present.Length == 0)
             {
-                string path = PathTo(name);
-                if (File.Exists(path))
+                // Nothing to lose, so nothing to back up - and an empty archive must not replace
+                // the backup of an earlier reset.
+                return true;
+            }
+
+            Directory.CreateDirectory(Folder);
+
+            using (ZipArchive archive = ZipFile.Open(temp, ZipArchiveMode.Create))
+            {
+                foreach (string name in present)
                 {
-                    archive.CreateEntryFromFile(path, name);
+                    archive.CreateEntryFromFile(PathTo(name), name);
                 }
             }
+
+            // A second reset replaces the backup from before it, not both at once - there is
+            // only ever one.
+            File.Move(temp, zipPath, overwrite: true);
+            return true;
         }
         catch (Exception ex) when (IsExpected(ex))
         {
             AuraLog.Error("ResetBackup", ex);
+
+            try
+            {
+                File.Delete(temp);
+            }
+            catch (Exception cleanupEx) when (IsExpected(cleanupEx))
+            {
+            }
+
+            return false;
         }
     }
 

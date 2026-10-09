@@ -305,6 +305,9 @@
   <data name="SettingResetConfirm" xml:space="preserve">
     <value>すべてリセットしますか?</value>
   </data>
+  <data name="ErrorResetBackupFailed" xml:space="preserve">
+    <value>リセットは行われませんでした。設定とプリセットのバックアップを書き込めませんでした。ディスクの空き容量を増やして、もう一度お試しください。</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>グローバルホットキー（オン/オフ）</value>
   </data>

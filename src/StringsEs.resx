@@ -305,6 +305,9 @@
   <data name="SettingResetConfirm" xml:space="preserve">
     <value>¿Restablecer todo?</value>
   </data>
+  <data name="ErrorResetBackupFailed" xml:space="preserve">
+    <value>No se restableció nada: no se pudo escribir la copia de seguridad de tus ajustes y preajustes. Libera algo de espacio en disco e inténtalo de nuevo.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Atajo global (Activado/Desactivado)</value>
   </data>

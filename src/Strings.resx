@@ -305,6 +305,9 @@
   <data name="SettingResetConfirm" xml:space="preserve">
     <value>Reset everything?</value>
   </data>
+  <data name="ErrorResetBackupFailed" xml:space="preserve">
+    <value>Nothing was reset: the backup of your settings and presets could not be written. Free some disk space and try again.</value>
+  </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Global hotkey (On/Off)</value>
   </data>

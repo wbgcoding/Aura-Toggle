@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -335,7 +336,25 @@ internal sealed class SettingsPopup : PopupForm
     /// is just the action itself, run once the second click confirms it.</summary>
     private void OnResetConfirmed()
     {
-        AuraFiles.ResetAll();
+        if (!AuraFiles.ResetAll())
+        {
+            // Nothing was deleted, so the Run key, the window and the settings all stay as they
+            // are; the user is told why and can try again.
+            // Held open while the dialog is up: it is owned by this panel, and the panel losing
+            // the activation to it would otherwise close it, and the dialog with it.
+            _childOpen = true;
+            ErrorDialog? dialog = ErrorDialog.Report(new IOException(Strings.ErrorResetBackupFailed), "Reset", this,
+                onClosed: () =>
+                {
+                    _childOpen = false;
+                    if (!IsDisposed)
+                    {
+                        Close();
+                    }
+                });
+            _childOpen = dialog != null;
+            return;
+        }
 
         // Not one of the stored files ResetAll clears - it lives in the registry - but it is
         // still one of the switches on this very panel, so "reset settings" leaving it on was as

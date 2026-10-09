@@ -205,6 +205,8 @@ internal static class Strings
 
     public static string SettingResetConfirm => Get("SettingResetConfirm");
 
+    public static string ErrorResetBackupFailed => Get("ErrorResetBackupFailed");
+
     public static string SettingHotkey => Get("SettingHotkey");
 
     public static string SettingHotkeyConflict => Get("SettingHotkeyConflict");
