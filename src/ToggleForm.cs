@@ -483,6 +483,13 @@ internal sealed class ToggleForm : Form
     /// <summary>Opens the editor for a new preset, or for the one the pencil was clicked on.</summary>
     private void OpenPresetEditor(CustomPreset? preset)
     {
+        // One editor at a time: a second would preview over the first and both would save.
+        if (OwnedForms.OfType<CustomPresetEditor>().FirstOrDefault() is { } open)
+        {
+            open.Activate();
+            return;
+        }
+
         var editor = new CustomPresetEditor(preset, _devices, _state);
         editor.PresetsChanged += (_, _) =>
         {
@@ -658,8 +665,24 @@ internal sealed class ToggleForm : Form
             // when the window is hidden to the tray (autostart): there is nothing to bring
             // forward.
             ForegroundWindow.Claim(this);
+
+            // Claim ends by taking the window off the topmost layer again, which is right for a
+            // normal window and wrong for one the user pinned on top.
+            if (_settings.AlwaysOnTop)
+            {
+                SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0,
+                    SwpNoSize | SwpNoMove | SwpNoActivate);
+            }
         }
     }
+
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoActivate = 0x0010;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y,
+        int width, int height, uint flags);
 
     /// <summary>
     /// Looks for the controller and enables or disables the window's hardware-facing controls to
@@ -688,6 +711,19 @@ internal sealed class ToggleForm : Form
         try
         {
             _devices = ReviewDevices ?? await Task.Run(AuraDevice.ListDevices);
+        }
+        catch (Exception ex)
+        {
+            // A missing or unreachable controller comes back as an empty list; anything that gets
+            // here instead (a driver fault, a denied device) is reported once and the window
+            // carries on as if no controller were found, rather than faulting this async void.
+            AuraLog.Error("Discover", ex);
+            _devices = new List<AuraDeviceSummary>();
+
+            if (!IsDisposed && Visible)
+            {
+                ErrorDialog.Report(ex, "Discover", this);
+            }
         }
         finally
         {
@@ -1152,7 +1188,9 @@ internal sealed class ToggleForm : Form
         {
             Color colour = _colours.Colour;
             (string? deviceKey, int channel) = Target;
-            _ = Run(() => Program.ApplyPreset(preset, colour, deviceKey, channel));
+            // Queued: a second release while the first is still on the controller is a colour the
+            // user picked, and dropping it leaves the chip showing one the board is not.
+            _ = Run(() => Program.ApplyPreset(preset, colour, deviceKey, channel), queue: true);
         }
     }
 
@@ -1476,8 +1514,16 @@ internal sealed class ToggleForm : Form
         retry.Start();
     }
 
+    /// <summary>The client width at the 96 dpi baseline, last measured while the window was Normal.</summary>
+    private int _lastWidth96;
+
     private void OnResize(object? sender, EventArgs e)
     {
+        if (WindowState == FormWindowState.Normal && ClientSize.Width > 0)
+        {
+            _lastWidth96 = ClientSize.Width * 96 / DeviceDpi;
+        }
+
         if (WindowState == FormWindowState.Minimized)
         {
             HideToTray();
@@ -1653,14 +1699,22 @@ internal sealed class ToggleForm : Form
 
         // Normalised to the 96 dpi baseline everything else here is written in, or a window
         // remembered from a 150 % display would come back too wide on a 100 % one.
-        int width96 = ClientSize.Width * 96 / DeviceDpi;
+        // A minimised window reports a client width of 0, so the width is only measured while the
+        // window is Normal and the last good one is saved otherwise.
+        if (WindowState == FormWindowState.Normal && ClientSize.Width > 0)
+        {
+            _lastWidth96 = ClientSize.Width * 96 / DeviceDpi;
+        }
+
+        int? width96 = _lastWidth96 > 0 ? _lastWidth96 : null;
 
         // Reloaded and merged under the same lock every other settings writer uses, rather than
         // saving this object's own possibly-stale copy of Settings - an open settings popup saves
         // independently, and it landing between this method's read and write would otherwise be
         // overwritten right back out.
         using IDisposable guard = AuraFiles.Lock();
-        _settings = AuraSettings.Load() with { WindowX = location.X, WindowY = location.Y, WindowWidth = width96 };
+        AuraSettings stored = AuraSettings.Load();
+        _settings = stored with { WindowX = location.X, WindowY = location.Y, WindowWidth = width96 ?? stored.WindowWidth };
         _settings.Save();
     }
 
@@ -1790,6 +1844,9 @@ internal sealed class ToggleForm : Form
         {
             if (!queue)
             {
+                // Dropped, but the control that asked for it (a slider, a picked chip) is already
+                // showing the value that was refused - painted again from the real state.
+                Render();
                 return;
             }
 

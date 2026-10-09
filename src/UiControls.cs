@@ -802,11 +802,17 @@ internal sealed class SelectPopup : PopupForm
         Width - (_inset * 2),
         _rowHeight);
 
+    /// <summary>Wheel movement not yet worth a whole notch - precision touchpads report small deltas.</summary>
+    private int _wheelRemainder;
+
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         if (_maxScroll > 0)
         {
-            _scroll = Math.Clamp(_scroll - (e.Delta / 120 * _rowHeight), 0, _maxScroll);
+            _wheelRemainder += e.Delta;
+            int notches = _wheelRemainder / 120;
+            _wheelRemainder -= notches * 120;
+            _scroll = Math.Clamp(_scroll - (notches * _rowHeight), 0, _maxScroll);
             _hovered = IndexAt(e.Location);
             Invalidate();
         }
@@ -2554,10 +2560,16 @@ internal sealed class Slider : FlatControl
         keyData is Keys.Left or Keys.Right or Keys.Home or Keys.End or Keys.PageUp or Keys.PageDown
             || base.IsInputKey(keyData);
 
+    /// <summary>Wheel movement not yet worth a whole notch - precision touchpads report small deltas.</summary>
+    private int _wheelRemainder;
+
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         int before = _value;
-        Value = _value + (e.Delta / 120 * 5);
+        _wheelRemainder += e.Delta;
+        int notches = _wheelRemainder / 120;
+        _wheelRemainder -= notches * 120;
+        Value = _value + (notches * 5);
 
         if (_value != before)
         {
