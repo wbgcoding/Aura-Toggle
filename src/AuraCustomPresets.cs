@@ -70,16 +70,16 @@ internal static class AuraCustomPresets
                     // Same rule AuraChannelStates applies before a mode reaches the hardware: only
                     // a mode this build actually knows - or "off" - is trusted from a hand-edited
                     // or imported file, otherwise the window names an effect the board never runs
-                    // while sending the board something else entirely. Falls back to static, not
-                    // AuraState.Default.Mode (rainbow): a per-channel entry is sent to one channel
-                    // alone, and rainbow is one of the four firmware-generated modes that pulls
-                    // every channel on the controller into it the moment one channel gets it -
-                    // exactly the kind of surprise this validation exists to prevent, not
-                    // reintroduce through its own fallback.
-                    byte rawMode = AuraFiles.JsonByte(entry, "mode");
-                    byte mode = rawMode == AuraState.ModeOff || AuraPresets.ByMode(rawMode) != null
-                        ? rawMode
-                        : AuraState.ModeStatic;
+                    // while sending the board something else entirely.
+                    byte mode = AuraPresets.ValidChannelMode(AuraFiles.JsonByte(entry, "mode"));
+
+                    // Brightness gets the same treatment as in AuraChannelStates: 0 stays "leave
+                    // the channel as it is", anything else is held to the range the slider offers.
+                    byte brightness = AuraFiles.JsonByte(entry, "brightness");
+                    if (brightness != 0)
+                    {
+                        brightness = Math.Clamp(brightness, AuraState.MinBrightness, AuraState.MaxBrightness);
+                    }
 
                     // Missing channel means an entry written before presets went per-channel: -1
                     // keeps its old meaning of "the whole controller". Anything below that is not a
@@ -101,7 +101,7 @@ internal static class AuraCustomPresets
                         AuraFiles.JsonByte(entry, "green"), AuraFiles.JsonByte(entry, "blue"),
                         // Missing brightness means an entry written before presets carried one:
                         // 0 leaves the channel at whatever brightness it already has.
-                        AuraFiles.JsonByte(entry, "brightness")));
+                        brightness));
                 }
 
                 if (entries.Count > 0)

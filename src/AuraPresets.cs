@@ -64,6 +64,16 @@ internal static class AuraPresets
     public static AuraPreset? ByMode(byte mode) => All.FirstOrDefault(preset => preset.Mode == mode);
 
     /// <summary>
+    /// The mode a stored per-channel record may carry: one this build knows, or "off"; anything
+    /// else (a hand-edited or outdated file) falls back to static. Not <c>AuraState.Default.Mode</c>
+    /// (rainbow): rainbow is one of the four firmware-generated modes that pulls every channel of
+    /// the controller into it the moment one channel gets it, which is exactly the surprise this
+    /// check exists to prevent, not to reintroduce through its own fallback.
+    /// </summary>
+    public static byte ValidChannelMode(byte mode) =>
+        mode == AuraState.ModeOff || ByMode(mode) != null ? mode : AuraState.ModeStatic;
+
+    /// <summary>
     /// Whether the controller generates this mode's colours itself (spectrum cycle, rainbow,
     /// rainbow breathing, wave). Those share one effect engine per controller, so two of them with
     /// different modes cannot run side by side.
