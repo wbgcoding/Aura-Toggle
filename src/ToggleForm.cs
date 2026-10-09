@@ -850,12 +850,47 @@ internal sealed class ToggleForm : Form
         };
         popup.FormClosed += (_, _) =>
         {
+            // This handler owns the source: RunIdentify only borrows it. A run that ends on its
+            // own (the controller went away) must not take the source with it, or this Cancel
+            // would be the call on a disposed source.
             cts.Cancel();
+            DisposeIdentifySource(cts);
             popup.Dispose();
         };
         popup.Open(_channel.PointToScreen(new Point(0, _channel.Height + this.Scaled(4))), this);
 
         _ = RunIdentify(deviceKey, channelIndex, cts);
+    }
+
+    /// <summary>
+    /// Disposes the source of a rename popup once the run using its token has ended - disposing it
+    /// under a live <see cref="Program.Identify"/> would make that wait throw. Always called after
+    /// the source was cancelled, which is what <see cref="CancelIdentify"/> relies on.
+    /// </summary>
+    private void DisposeIdentifySource(CancellationTokenSource cts)
+    {
+        Task? run = ReferenceEquals(_identifyCts, cts) ? _identifyTask : null;
+
+        if (run == null || run.IsCompleted)
+        {
+            cts.Dispose();
+            return;
+        }
+
+        run.ContinueWith(_ => cts.Dispose(), CancellationToken.None, TaskContinuationOptions.None,
+            TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    /// <summary>
+    /// Cancels the current identify run, if any. A source whose popup closed is cancelled before
+    /// it is disposed, so one that is already cancelled is left alone rather than touched again.
+    /// </summary>
+    private void CancelIdentify()
+    {
+        if (_identifyCts is { IsCancellationRequested: false } cts)
+        {
+            cts.Cancel();
+        }
     }
 
     /// <summary>
@@ -888,7 +923,7 @@ internal sealed class ToggleForm : Form
         // the same controller.
         if (_identifyCts != null)
         {
-            _identifyCts.Cancel();
+            CancelIdentify();
             try
             {
                 if (_identifyTask != null)
@@ -918,7 +953,6 @@ internal sealed class ToggleForm : Form
 
         if (IsDisposed)
         {
-            cts.Dispose();
             return;
         }
 
@@ -927,7 +961,6 @@ internal sealed class ToggleForm : Form
         // be touched at all.
         if (cts.IsCancellationRequested)
         {
-            cts.Dispose();
             return;
         }
 
@@ -965,8 +998,6 @@ internal sealed class ToggleForm : Form
             {
                 _identifyCts = null;
             }
-
-            cts.Dispose();
         }
     }
 
@@ -1459,7 +1490,7 @@ internal sealed class ToggleForm : Form
             // Program.Identify's restore pass (putting every channel of that controller back to
             // its own record) runs on a thread-pool thread that would otherwise die with the
             // process before it finishes, leaving the identified channel stuck lit.
-            _identifyCts.Cancel();
+            CancelIdentify();
             Settle(_identifyTask);
         }
 
