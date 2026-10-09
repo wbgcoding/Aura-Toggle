@@ -535,6 +535,11 @@ internal static partial class Program
             return PrintSurfaceIds();
         }
 
+        if (surface == "follow")
+        {
+            return ReviewFollow();
+        }
+
         if (surface == "swap")
         {
             return args.Length >= 3 ? ReviewSwap(args[2]) : 2;
@@ -542,6 +547,37 @@ internal static partial class Program
 
         Strings.Override = AuraSettings.Load().Language;
         return RunReview(surface, args.Length >= 3 ? args[2] : "");
+    }
+
+    /// <summary>
+    /// The start lighting following its preset, against the seeded sample data: a rename of
+    /// another preset leaves it alone, a rename of its own preset carries it along, deleting that
+    /// preset falls back to leaving the lighting unchanged. Printed and written to
+    /// <c>%TEMP%\aura-follow.txt</c>.
+    /// </summary>
+    private static int ReviewFollow()
+    {
+        var lines = new List<string>();
+        bool ok = true;
+
+        void Step(string what, Action act, string expected)
+        {
+            act();
+            string actual = AuraSettings.Load().StartAction;
+            ok &= actual == expected;
+            lines.Add($"{(actual == expected ? "ok  " : "FAIL")} {what}: start action \"{actual}\" (expected \"{expected}\")");
+        }
+
+        Step("seeded", () => { }, AuraSettings.CustomStartAction("Desk"));
+        Step("rename another preset", () => AuraSettings.FollowPresetRename("Night", "Late"), AuraSettings.CustomStartAction("Desk"));
+        Step("rename its preset", () => AuraSettings.FollowPresetRename("Desk", "Work"), AuraSettings.CustomStartAction("Work"));
+        Step("delete another preset", () => AuraSettings.FollowPresetRename("Late", null), AuraSettings.CustomStartAction("Work"));
+        Step("delete its preset", () => AuraSettings.FollowPresetRename("Work", null), AuraSettings.StartActionNone);
+
+        string report = string.Join(Environment.NewLine, lines);
+        File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-follow.txt"), report + Environment.NewLine);
+        WriteLine(report);
+        return ok ? 0 : 1;
     }
 
     /// <summary>
@@ -586,7 +622,7 @@ internal static partial class Program
     private static int PrintSurfaceIds()
     {
         WriteLine("Review surfaces (-review <id> [scale%]):");
-        WriteLine("  settings  error  editor  layout  gear  tip  preview  swap <signed exe>");
+        WriteLine("  settings  error  editor  layout  gear  tip  preview  follow  swap <signed exe>");
         WriteLine("");
         WriteLine("Shot surfaces (-shot [id|group ...] [scale=100,150] [lang=en,de] [out=<folder>]):");
         foreach ((string id, string description) in ShotSurfaces)
