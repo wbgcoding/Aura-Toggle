@@ -176,6 +176,9 @@
   <data name="TrayExit" xml:space="preserve">
     <value>Salir</value>
   </data>
+  <data name="TrayEffects" xml:space="preserve">
+    <value>Efectos</value>
+  </data>
   <data name="SettingAnimate" xml:space="preserve">
     <value>Animar el interruptor</value>
   </data>

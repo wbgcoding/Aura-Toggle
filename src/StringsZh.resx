@@ -176,6 +176,9 @@
   <data name="TrayExit" xml:space="preserve">
     <value>退出</value>
   </data>
+  <data name="TrayEffects" xml:space="preserve">
+    <value>效果</value>
+  </data>
   <data name="SettingAnimate" xml:space="preserve">
     <value>开关动画</value>
   </data>

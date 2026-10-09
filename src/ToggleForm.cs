@@ -115,6 +115,9 @@ internal sealed class ToggleForm : Form
     private readonly NotifyIcon _tray = new();
     private readonly ToolStripMenuItem _trayLighting = new();
 
+    /// <summary>The built-in effects and custom presets, as in the window's list - see <see cref="RefreshTrayEffects"/>.</summary>
+    private readonly ToolStripMenuItem _trayEffects = new();
+
     /// <summary>Hidden until <see cref="CheckForUpdatesIfDue"/> actually finds a newer release.</summary>
     private readonly ToolStripMenuItem _trayUpdate = new() { Visible = false };
 
@@ -462,6 +465,15 @@ internal sealed class ToggleForm : Form
         // make a per-channel switch mean anything. Same reasoning as the hotkey.
         _trayLighting.Click += (_, _) => _ = Run(() => Program.Switch(!_state.On));
         menu.Items.Add(_trayLighting);
+
+        _trayEffects.Text = Strings.TrayEffects;
+        _trayEffects.DropDown.Renderer = menu.Renderer;
+        _trayEffects.DropDown.BackColor = Theme.Surface;
+        _trayEffects.DropDown.ForeColor = Theme.Text;
+        _trayEffects.DropDown.Font = Theme.Menu;
+        menu.Items.Add(_trayEffects);
+        RefreshTrayEffects();
+
         menu.Items.Add(new ToolStripSeparator());
         _trayUpdate.Click += (_, _) => _trayUpdateAction?.Invoke();
         menu.Items.Add(_trayUpdate);
@@ -544,7 +556,64 @@ internal sealed class ToggleForm : Form
         }
 
         FitEffectList();
+        RefreshTrayEffects();
     }
+
+    /// <summary>
+    /// The tray's "Effects" submenu: the same built-in effects and custom presets, in the same
+    /// order, as the window's list (without its hint and "new preset" rows). Rebuilt with that
+    /// list, so a new, renamed or deleted preset and a language change reach it too.
+    /// </summary>
+    private void RefreshTrayEffects()
+    {
+        _trayEffects.Text = Strings.TrayEffects;
+
+        foreach (ToolStripItem old in _trayEffects.DropDownItems.Cast<ToolStripItem>().ToList())
+        {
+            old.Dispose();
+        }
+
+        _trayEffects.DropDownItems.Clear();
+
+        void Add(string key, string text)
+        {
+            var item = new ToolStripMenuItem(text) { Tag = key };
+            item.Click += (_, _) => ApplyTrayEffect(key, text);
+            _trayEffects.DropDownItems.Add(item);
+        }
+
+        foreach (AuraPreset preset in AuraPresets.All)
+        {
+            Add(preset.Key, preset.DisplayName);
+        }
+
+        foreach (CustomPreset custom in AuraCustomPresets.Load())
+        {
+            Add(CustomKey(custom.Name), custom.Name);
+        }
+
+        UpdateTrayEffectChecks();
+    }
+
+    /// <summary>Ticks the effect the board is running, the same one the window's list shows.</summary>
+    private void UpdateTrayEffectChecks()
+    {
+        string active = _state.CustomPreset.Length > 0
+            ? CustomKey(_state.CustomPreset)
+            : (AuraPresets.ByMode(_state.Mode) ?? AuraPresets.All[0]).Key;
+
+        foreach (ToolStripMenuItem item in _trayEffects.DropDownItems.OfType<ToolStripMenuItem>())
+        {
+            item.Checked = item.Tag is string key && key == active;
+        }
+    }
+
+    /// <summary>
+    /// Like choosing the entry in the window, but for the whole board in the board's own colour:
+    /// nothing in the notification area names a channel (same reasoning as the lighting entry).
+    /// </summary>
+    private void ApplyTrayEffect(string key, string text) =>
+        ApplyEffect(key, text, deviceKey: null, channel: -1, CurrentColour);
 
     private static string CustomKey(string name) => CustomPrefix + name;
 
@@ -1063,6 +1132,7 @@ internal sealed class ToggleForm : Form
         // The tray entry has to go grey too, or it stays clickable and every click just raises
         // the same balloon about there being no controller.
         _trayLighting.Enabled = found;
+        _trayEffects.Enabled = found;
 
         _noController = !found;
         UpdateNotice();
@@ -1566,10 +1636,19 @@ internal sealed class ToggleForm : Form
             return;
         }
 
-        if (_effects.Selected.Key.StartsWith(CustomPrefix, StringComparison.Ordinal))
+        // The colour that goes with a built-in effect is the one on show, which for a single
+        // channel is that channel's own rather than whatever was last set board-wide.
+        (string? deviceKey, int channel) = Target;
+        ApplyEffect(_effects.Selected.Key, _effects.Selected.Text, deviceKey, channel, _displayed.Colour);
+    }
+
+    /// <summary>What picking an effect does, whether it was picked in the window or in the tray menu.</summary>
+    private void ApplyEffect(string key, string text, string? deviceKey, int channel, Color colour)
+    {
+        if (key.StartsWith(CustomPrefix, StringComparison.Ordinal))
         {
             // A custom preset names its own channels, so the selector does not apply to it.
-            if (FindCustomPreset(_effects.Selected.Text) is CustomPreset preset)
+            if (FindCustomPreset(text) is CustomPreset preset)
             {
                 _ = Run(() => Program.ApplyCustomPreset(preset));
             }
@@ -1577,12 +1656,8 @@ internal sealed class ToggleForm : Form
             return;
         }
 
-        if (AuraPresets.Find(_effects.Selected.Key) is AuraPreset built)
+        if (AuraPresets.Find(key) is AuraPreset built)
         {
-            // The colour that goes with it is the one on show, which for a single channel is
-            // that channel's own rather than whatever was last set board-wide.
-            Color colour = _displayed.Colour;
-            (string? deviceKey, int channel) = Target;
             _ = Run(() => Program.ApplyPreset(built, colour, deviceKey, channel));
         }
     }
@@ -2092,6 +2167,8 @@ internal sealed class ToggleForm : Form
             // read per item, so it only needs its own two colours moved over.
             menu.BackColor = Theme.Surface;
             menu.ForeColor = Theme.Text;
+            _trayEffects.DropDown.BackColor = Theme.Surface;
+            _trayEffects.DropDown.ForeColor = Theme.Text;
         }
 
         Render();
@@ -2388,6 +2465,7 @@ internal sealed class ToggleForm : Form
         // Requests that arrive while a switch is in flight are dropped, so the tray entry says
         // so instead of looking like it did nothing.
         _trayLighting.Enabled = ready;
+        _trayEffects.Enabled = ready;
         UseWaitCursor = busy;
     }
 
@@ -2542,6 +2620,7 @@ internal sealed class ToggleForm : Form
 
         _trayLighting.Text = _state.On ? Strings.ButtonStateOn : Strings.ButtonStateOff;
         _trayLighting.Checked = _state.On;
+        UpdateTrayEffectChecks();
 
         // NotifyIcon.Text throws past 128 characters - AuraFiles.Caption already keeps a stored
         // preset name (at most 40) well under that, but a long translated WindowTitle plus a

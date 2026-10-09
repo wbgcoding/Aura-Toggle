@@ -95,6 +95,8 @@ internal static class Strings
 
     public static string TrayExit => Get("TrayExit");
 
+    public static string TrayEffects => Get("TrayEffects");
+
     public static string StatusControllerMissing => Get("StatusControllerMissing");
 
     public static string ButtonRetry => Get("ButtonRetry");

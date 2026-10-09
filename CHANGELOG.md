@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 - A note under "Apply and close the app" says the hotkey only works while the app is open, shown when both are on
 - With no controller the window now says why (not found, in use by another program, or not answering) and offers a "Try again" button
 - Screen readers: the big button reads as a switch that is on or off, the brightness slider and the drop downs report their value; drop downs open on Alt+Down and F4 and step with Up and Down
+- The notification area menu has an "Effects" submenu with the built-in effects and your custom presets
 
 ### Changed
 
