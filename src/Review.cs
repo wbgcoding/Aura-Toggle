@@ -916,6 +916,23 @@ internal static partial class Program
         return form.Bounds;
     }
 
+    /// <summary>
+    /// <see cref="VisibleBounds"/> cut down to what WinForms actually paints. At a simulated scale
+    /// the window rectangle is larger than its client area plus the frame (the non-client part
+    /// stays at the real dpi), and the surplus comes out of PrintWindow as black rows at the
+    /// bottom and black columns on the right. The frame is as thick on the right and bottom as it
+    /// is on the left, so the painted edge is the client edge plus that thickness.
+    /// </summary>
+    private static Rectangle PaintedBounds(Form form)
+    {
+        Rectangle visible = VisibleBounds(form);
+        Point client = form.PointToScreen(Point.Empty);
+        int border = Math.Max(0, client.X - visible.Left);
+        int right = Math.Min(visible.Right, client.X + form.ClientSize.Width + border);
+        int bottom = Math.Min(visible.Bottom, client.Y + form.ClientSize.Height + border);
+        return Rectangle.FromLTRB(visible.Left, visible.Top, right, bottom);
+    }
+
     /// <summary>Asks DWM for the window's real pixels, which a plain WM_PRINT misses for
     /// layered and composited windows.</summary>
     private const uint RenderFullContent = 2;
@@ -935,7 +952,7 @@ internal static partial class Program
             throw new InvalidOperationException("nothing visible to capture");
         }
 
-        Rectangle union = forms.Select(VisibleBounds).Aggregate(Rectangle.Union);
+        Rectangle union = forms.Select(PaintedBounds).Aggregate(Rectangle.Union);
         var shot = new Bitmap(union.Width, union.Height, PixelFormat.Format32bppArgb);
         using Graphics canvas = Graphics.FromImage(shot);
         canvas.Clear(Color.Transparent);
@@ -957,7 +974,7 @@ internal static partial class Program
                 }
             }
 
-            Rectangle visible = VisibleBounds(form);
+            Rectangle visible = PaintedBounds(form);
             canvas.DrawImage(layer,
                 new Rectangle(visible.Left - union.Left, visible.Top - union.Top, visible.Width, visible.Height),
                 new Rectangle(visible.Left - form.Left, visible.Top - form.Top, visible.Width, visible.Height),
