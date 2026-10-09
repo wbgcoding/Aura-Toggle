@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- "Lighting at start" offers your own custom presets too, and follows a preset when you rename it
+- "Set it and close the app": autostart only sets the start lighting and quits again, with no
+  window and no notification area icon; a controller still coming up at logon is waited for
+
 ## [1.3.0] - 2026-08-22
 
 A quieter window - the brightness slider previews itself and steps aside for the effects it

@@ -161,6 +161,9 @@
   <data name="StartActionOff" xml:space="preserve">
     <value>Kapat</value>
   </data>
+  <data name="SettingCloseAfterStart" xml:space="preserve">
+    <value>Ayarla ve uygulamayı kapat</value>
+  </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Aç</value>
   </data>

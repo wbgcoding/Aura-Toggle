@@ -161,6 +161,9 @@
   <data name="StartActionOff" xml:space="preserve">
     <value>关闭</value>
   </data>
+  <data name="SettingCloseAfterStart" xml:space="preserve">
+    <value>设置后关闭应用</value>
+  </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>打开</value>
   </data>

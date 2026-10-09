@@ -161,6 +161,9 @@
   <data name="StartActionOff" xml:space="preserve">
     <value>Wyłącz</value>
   </data>
+  <data name="SettingCloseAfterStart" xml:space="preserve">
+    <value>Ustaw i zamknij aplikację</value>
+  </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Otwórz</value>
   </data>

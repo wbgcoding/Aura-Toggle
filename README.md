@@ -84,7 +84,9 @@ permanently means committing it to flash, and a write that goes wrong there can 
 controller for good. This tool deliberately never does that — everything it sends is volatile, so
 a restart always brings the BIOS lighting back, on purpose. If you want lighting that starts off
 without this tool running, set autostart with "lighting at start: off" in the gear, or turn it off
-in the BIOS itself.
+in the BIOS itself. Switch on "set it and close the app" below it and the tool only sets that
+lighting at logon and quits again, with no window and nothing left running in the notification
+area (the global hotkey then only works while you have the tool open).
 
 ## 📥 Download
 
@@ -148,7 +150,8 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    before it is committed. Effects the controller generates itself cannot be dimmed, so the
    slider is not shown for those rather than sitting there doing nothing.
 6. **⚙️ Gear** — minimise instead of close, always on top, animate switch, a global hotkey,
-   autostart, lighting at start, language, reset everything back to first-run defaults -
+   autostart, lighting at start (off, any effect or one of your own presets, optionally set
+   without the tool staying open), language, reset everything back to first-run defaults -
    including your own custom presets - after first zipping every file it is about to delete into
    `reset-backup.zip`, right next to them.
 

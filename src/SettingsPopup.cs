@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace AuraToggle;
@@ -20,6 +21,7 @@ internal sealed class SettingsPopup : PopupForm
     private readonly Label _hotkeyHint;
     private readonly ToggleSwitch _autoStart = new();
     private readonly Select _startAction = new();
+    private readonly ToggleSwitch _closeAfterStart = new();
     private readonly Select _language = new();
     private readonly PillButton _reset = new();
     private readonly ArmedButton _resetArm;
@@ -29,6 +31,7 @@ internal sealed class SettingsPopup : PopupForm
     private readonly Label _hotkeyLabel;
     private readonly Label _autoStartLabel;
     private readonly Label _startActionLabel;
+    private readonly Label _closeAfterStartLabel;
     private readonly Label _languageLabel;
     private readonly Layout _layout;
 
@@ -85,7 +88,7 @@ internal sealed class SettingsPopup : PopupForm
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 12,
+            RowCount = 13,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -109,12 +112,13 @@ internal sealed class SettingsPopup : PopupForm
         _autoStartLabel = AddSwitch(6, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
         _startActionLabel = AddLabel(7, Strings.SettingStartAction);
         AddSelect(8, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
+        _closeAfterStartLabel = AddSwitch(9, Strings.SettingCloseAfterStart, _closeAfterStart, settings.CloseAfterStart);
         UpdateStartActionVisibility();
 
-        _languageLabel = AddLabel(9, Strings.SettingLanguage);
-        AddSelect(10, _language, Strings.SettingLanguage, Languages(), settings.Language);
+        _languageLabel = AddLabel(10, Strings.SettingLanguage);
+        AddSelect(11, _language, Strings.SettingLanguage, Languages(), settings.Language);
 
-        AddButton(11, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
+        AddButton(12, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
 
@@ -125,6 +129,12 @@ internal sealed class SettingsPopup : PopupForm
         _alwaysOnTop.CheckedChanged += (_, _) => Apply();
         _animate.CheckedChanged += (_, _) => Apply();
         _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
+        _closeAfterStart.CheckedChanged += (_, _) => Apply();
+        _startAction.SelectionChanged += (_, _) =>
+        {
+            UpdateStartActionVisibility();
+            FitToContent();
+        };
         _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
         _autoStart.CheckedChanged += (_, _) =>
         {
@@ -177,12 +187,18 @@ internal sealed class SettingsPopup : PopupForm
     /// <summary>
     /// The start action can only ever fire on a real Windows-startup launch, so the row is dead
     /// weight while autostart is off - same reasoning as the hotkey row only existing while its
-    /// own switch is on.
+    /// own switch is on. Closing after the start lighting only means something once there is a
+    /// start lighting to set.
     /// </summary>
     private void UpdateStartActionVisibility()
     {
         _startActionLabel.Visible = _autoStart.Checked;
         _startAction.Visible = _autoStart.Checked;
+
+        bool closeApplies = _autoStart.Checked &&
+            (_startAction.Selected?.Key ?? AuraSettings.StartActionNone) != AuraSettings.StartActionNone;
+        _closeAfterStartLabel.Visible = closeApplies;
+        _closeAfterStart.Visible = closeApplies;
     }
 
     public AuraSettings Settings { get; private set; }
@@ -217,6 +233,14 @@ internal sealed class SettingsPopup : PopupForm
         foreach (AuraPreset preset in AuraPresets.All)
         {
             yield return new SelectItem(preset.Key, preset.DisplayName, preset.Mode);
+        }
+
+        // The user's own presets after the built-in effects, drawn with their colours the same way
+        // the main window's effect list shows them.
+        foreach (CustomPreset preset in AuraCustomPresets.Load())
+        {
+            yield return new SelectItem(AuraSettings.CustomStartAction(preset.Name), preset.Name, null,
+                preset.Entries.Select(e => Color.FromArgb(e.Red, e.Green, e.Blue)).ToArray());
         }
     }
 
@@ -401,6 +425,7 @@ internal sealed class SettingsPopup : PopupForm
                 Animate = _animate.Checked,
                 AlwaysOnTop = _alwaysOnTop.Checked,
                 StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
+                CloseAfterStart = _closeAfterStart.Checked,
                 Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
                 HotkeyEnabled = _hotkeyEnabled.Checked,
                 Hotkey = _pendingHotkey,
@@ -433,6 +458,8 @@ internal sealed class SettingsPopup : PopupForm
         _hotkeyEnabled.AccessibleName = Strings.SettingHotkey;
         _startActionLabel.Text = Strings.SettingStartAction;
         _startAction.AccessibleName = Strings.SettingStartAction;
+        _closeAfterStartLabel.Text = Strings.SettingCloseAfterStart;
+        _closeAfterStart.AccessibleName = Strings.SettingCloseAfterStart;
         _languageLabel.Text = Strings.SettingLanguage;
         _language.AccessibleName = Strings.SettingLanguage;
         _hotkeyHint.Text = Strings.SettingHotkeyConflict;

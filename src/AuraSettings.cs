@@ -11,6 +11,7 @@ namespace AuraToggle;
 internal sealed record AuraSettings(
     bool MinimiseOnClose,
     string StartAction,
+    bool CloseAfterStart,
     bool Animate,
     bool AlwaysOnTop,
     string Language,
@@ -26,12 +27,27 @@ internal sealed record AuraSettings(
     /// <summary>Switch the lighting off when the tool starts.</summary>
     public const string StartActionOff = "off";
 
+    /// <summary>
+    /// Start action prefix for a custom preset, followed by the preset's exact name. Built-in
+    /// effect keys never contain a colon, so the two can never be mistaken for each other.
+    /// </summary>
+    public const string StartActionCustomPrefix = "custom:";
+
+    public static string CustomStartAction(string presetName) => StartActionCustomPrefix + presetName;
+
+    /// <summary>The custom preset a start action names, or null for any other action.</summary>
+    public static string? CustomStartPreset(string action) =>
+        action.StartsWith(StartActionCustomPrefix, StringComparison.Ordinal)
+            ? action[StartActionCustomPrefix.Length..]
+            : null;
+
     /// <summary>Follow the Windows display language.</summary>
     public const string LanguageAuto = "";
 
     public static readonly AuraSettings Default = new(
         MinimiseOnClose: false,
         StartAction: StartActionNone,
+        CloseAfterStart: false,
         Animate: true,
         AlwaysOnTop: false,
         Language: LanguageAuto,
@@ -71,6 +87,7 @@ internal sealed record AuraSettings(
             return new AuraSettings(
                 MinimiseOnClose: AuraFiles.JsonFlag(root, "minimiseOnClose", Default.MinimiseOnClose),
                 StartAction: AuraFiles.JsonText(root, "startAction", StartActionNone),
+                CloseAfterStart: AuraFiles.JsonFlag(root, "closeAfterStart", Default.CloseAfterStart),
                 Animate: AuraFiles.JsonFlag(root, "animate", Default.Animate),
                 AlwaysOnTop: AuraFiles.JsonFlag(root, "alwaysOnTop", Default.AlwaysOnTop),
                 Language: AuraFiles.JsonText(root, "language", LanguageAuto),
@@ -107,6 +124,7 @@ internal sealed record AuraSettings(
         writer.WriteStartObject();
         writer.WriteBoolean("minimiseOnClose", MinimiseOnClose);
         writer.WriteString("startAction", StartAction);
+        writer.WriteBoolean("closeAfterStart", CloseAfterStart);
         writer.WriteBoolean("animate", Animate);
         writer.WriteBoolean("alwaysOnTop", AlwaysOnTop);
         writer.WriteString("language", Language);
@@ -126,6 +144,29 @@ internal sealed record AuraSettings(
 
         writer.WriteEndObject();
     });
+
+    /// <summary>
+    /// Keeps a custom preset chosen as the start action pointing at the right preset: a rename
+    /// carries the new name over, a delete (<paramref name="newName"/> null) falls back to leaving
+    /// the lighting alone. Without this a renamed preset silently stopped applying at logon.
+    /// </summary>
+    public static void FollowPresetRename(string oldName, string? newName)
+    {
+        if (oldName == newName)
+        {
+            return;
+        }
+
+        using IDisposable guard = AuraFiles.Lock();
+
+        AuraSettings settings = Load();
+        if (CustomStartPreset(settings.StartAction) != oldName)
+        {
+            return;
+        }
+
+        (settings with { StartAction = newName == null ? StartActionNone : CustomStartAction(newName) }).Save();
+    }
 
     /// <summary>
     /// Whether Windows starts the tool at logon. Backed by the per-user Run key, so no

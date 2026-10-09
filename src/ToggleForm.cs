@@ -516,6 +516,7 @@ internal sealed class ToggleForm : Form
             }
 
             AuraCustomPresets.Save(presets);
+            AuraSettings.FollowPresetRename(name, null);
         }
 
         ClearActiveCustomPreset(name);
@@ -978,13 +979,9 @@ internal sealed class ToggleForm : Form
     {
         string action = _settings.StartAction;
 
-        if (action == AuraSettings.StartActionOff)
+        if (action != AuraSettings.StartActionNone)
         {
-            await Run(() => Program.Switch(on: false));
-        }
-        else if (action != AuraSettings.StartActionNone && AuraPresets.Find(action) is AuraPreset preset)
-        {
-            await Run(() => Program.ApplyPreset(preset, CurrentColour));
+            await Run(() => Program.ApplyStartAction(action) ?? _state);
         }
     }
 
@@ -1174,6 +1171,9 @@ internal sealed class ToggleForm : Form
             return;
         }
 
+        // Fresh from disk: renaming or deleting a preset can change the start action behind this
+        // window's back, and a panel opened on the cached copy would show and save the old one.
+        _settings = AuraSettings.Load();
         var popup = new SettingsPopup(_settings);
         _settingsPopup = popup;
 
@@ -1324,8 +1324,14 @@ internal sealed class ToggleForm : Form
             // At startup there is no popup open to show this in - logged so it leaves a trace
             // beyond the setting silently flipping back off.
             AuraLog.Info("Hotkey already in use elsewhere, disabled.");
-            _settings = _settings with { HotkeyEnabled = false };
-            _settings.Save();
+            // Re-read under the lock rather than saving the cached copy: that one can predate a
+            // preset rename or a window-position save and would write them back out.
+            using (AuraFiles.Lock())
+            {
+                _settings = AuraSettings.Load() with { HotkeyEnabled = false };
+                _settings.Save();
+            }
+
             popup?.ShowHotkeyConflict();
         }
     }

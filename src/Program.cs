@@ -78,6 +78,16 @@ internal static class Program
 
         LaunchedAtStartup = args.Length == 1 && args[0] == AuraSettings.AutoStartArgument;
 
+        // Set the start lighting and leave again, without a window or a tray icon. Done before
+        // the single-instance check on purpose: holding that lock while waiting for a controller
+        // that is still coming up at logon would make opening the tool by hand in those seconds
+        // do nothing at all.
+        if (LaunchedAtStartup && AuraSettings.Load() is { CloseAfterStart: true } startSettings &&
+            startSettings.StartAction != AuraSettings.StartActionNone)
+        {
+            return ApplyStartActionAndExit(startSettings.StartAction);
+        }
+
         if (args.Length == 0 || LaunchedAtStartup)
         {
             // A second start hands over to the instance already running, which may be sitting
@@ -116,6 +126,66 @@ internal static class Program
             WriteError(ex.Message);
             return 5;
         }
+    }
+
+    /// <summary>
+    /// The headless half of autostart. A controller can still be enumerating when the logon
+    /// launch arrives, so a missing one is retried for a while before giving up; the outcome is
+    /// written to the log, the only place a run without a window can report to.
+    /// </summary>
+    private static int ApplyStartActionAndExit(string action)
+    {
+        const int attempts = 20;
+        const int pauseMs = 3000;
+
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                if (ApplyStartAction(action) == null)
+                {
+                    AuraLog.Info($"Start action \"{action}\" names nothing that exists any more, left the lighting alone.");
+                    return 0;
+                }
+
+                AuraLog.Info($"Start action \"{action}\" applied, exiting without a window.");
+                return 0;
+            }
+            catch (Exception ex) when (ex is AuraNotFoundException or IOException)
+            {
+                if (attempt == attempts)
+                {
+                    AuraLog.Error("Start action", ex);
+                    return ex is AuraNotFoundException notFound ? notFound.ExitCode : 5;
+                }
+
+                Thread.Sleep(pauseMs);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Puts the lighting into the state a start action names: off, a built-in effect in the
+    /// remembered colour, or a custom preset. Shared by the window and the headless autostart.
+    /// Returns null when the action names a preset that no longer exists.
+    /// </summary>
+    public static AuraState? ApplyStartAction(string action)
+    {
+        if (action == AuraSettings.StartActionOff)
+        {
+            return Switch(on: false);
+        }
+
+        if (AuraSettings.CustomStartPreset(action) is string name)
+        {
+            return AuraCustomPresets.Load().Find(p => p.Name == name) is CustomPreset custom
+                ? ApplyCustomPreset(custom)
+                : null;
+        }
+
+        return action != AuraSettings.StartActionNone && AuraPresets.Find(action) is AuraPreset preset
+            ? ApplyPreset(preset)
+            : null;
     }
 
     /// <summary>

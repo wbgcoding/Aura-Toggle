@@ -109,6 +109,8 @@ internal static class Strings
 
     public static string StartActionOff => Get("StartActionOff");
 
+    public static string SettingCloseAfterStart => Get("SettingCloseAfterStart");
+
     public static string SettingAnimate => Get("SettingAnimate");
     public static string SettingAlwaysOnTop => Get("SettingAlwaysOnTop");
 

@@ -630,6 +630,11 @@ internal sealed class CustomPresetEditor : PopupForm
             presets.RemoveAll(p => p.Name == name || p.Name == _editing);
             presets.Add(saved);
             AuraCustomPresets.Save(presets);
+
+            if (_editing != null)
+            {
+                AuraSettings.FollowPresetRename(_editing, name);
+            }
         }
 
         _saved = true;
@@ -894,6 +899,7 @@ internal sealed class CustomPresetEditor : PopupForm
             List<CustomPreset> presets = AuraCustomPresets.Load();
             presets.RemoveAll(p => p.Name == _editing);
             AuraCustomPresets.Save(presets);
+            AuraSettings.FollowPresetRename(_editing, null);
         }
 
         // Deleted first: it clears _state.CustomPreset if this was the active one, so the render
