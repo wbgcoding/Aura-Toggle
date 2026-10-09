@@ -164,6 +164,9 @@
   <data name="SettingCloseAfterStart" xml:space="preserve">
     <value>Anwenden und App schließen</value>
   </data>
+  <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
+    <value>Der Hotkey geht nur, solange die App offen ist.</value>
+  </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>&#214;ffnen</value>
   </data>

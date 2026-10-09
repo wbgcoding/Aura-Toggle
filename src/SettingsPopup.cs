@@ -34,6 +34,7 @@ internal sealed class SettingsPopup : PopupForm
     private readonly Label _autoStartLabel;
     private readonly Label _startActionLabel;
     private readonly Label _closeAfterStartLabel;
+    private readonly Label _closeNote;
     private readonly Label _checkUpdatesLabel;
     private readonly Label _languageLabel;
     private readonly Layout _layout;
@@ -92,7 +93,7 @@ internal sealed class SettingsPopup : PopupForm
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 14,
+            RowCount = 15,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -121,14 +122,23 @@ internal sealed class SettingsPopup : PopupForm
         _startAction.Colour = Color.FromArgb(current.Red, current.Green, current.Blue);
         AddSelect(8, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
         _closeAfterStartLabel = AddSwitch(9, Strings.SettingCloseAfterStart, _closeAfterStart, settings.CloseAfterStart);
+
+        // A muted line under the switch, only while it and the hotkey are both on: a copy that
+        // closes after setting the lighting is not around to receive the key.
+        _closeNote = AddLabel(10, Strings.SettingCloseAfterStartHotkeyNote);
+        _metrics.Add(() =>
+        {
+            _closeNote.Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(4));
+            _closeNote.MaximumSize = new Size(this.Scaled(250), 0);
+        });
         UpdateStartActionVisibility();
 
-        _checkUpdatesLabel = AddSwitch(10, Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
+        _checkUpdatesLabel = AddSwitch(11, Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
 
-        _languageLabel = AddLabel(11, Strings.SettingLanguage);
-        AddSelect(12, _language, Strings.SettingLanguage, Languages(), settings.Language);
+        _languageLabel = AddLabel(12, Strings.SettingLanguage);
+        AddSelect(13, _language, Strings.SettingLanguage, Languages(), settings.Language);
 
-        AddButton(13, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
+        AddButton(14, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
 
@@ -232,6 +242,7 @@ internal sealed class SettingsPopup : PopupForm
             (_startAction.Selected?.Key ?? AuraSettings.StartActionNone) != AuraSettings.StartActionNone;
         _closeAfterStartLabel.Visible = closeApplies;
         _closeAfterStart.Visible = closeApplies;
+        _closeNote.Visible = closeApplies && _closeAfterStart.Checked && _hotkeyEnabled.Checked;
     }
 
     public AuraSettings Settings { get; private set; }
@@ -483,6 +494,7 @@ internal sealed class SettingsPopup : PopupForm
         bool languageChanged = Settings.Language != (_language.Selected?.Key ?? AuraSettings.LanguageAuto);
         _hotkeyHint.Visible = false;
         _hotkeyRecord.Visible = _hotkeyEnabled.Checked;
+        UpdateStartActionVisibility();
         FitToContent();
 
         // Reloaded and merged under the same lock every other settings writer uses, rather than
@@ -534,6 +546,7 @@ internal sealed class SettingsPopup : PopupForm
         _startAction.AccessibleName = Strings.SettingStartAction;
         _closeAfterStartLabel.Text = Strings.SettingCloseAfterStart;
         _closeAfterStart.AccessibleName = Strings.SettingCloseAfterStart;
+        _closeNote.Text = Strings.SettingCloseAfterStartHotkeyNote;
         _checkUpdatesLabel.Text = Strings.SettingCheckUpdates;
         _checkUpdates.AccessibleName = Strings.SettingCheckUpdates;
         _languageLabel.Text = Strings.SettingLanguage;

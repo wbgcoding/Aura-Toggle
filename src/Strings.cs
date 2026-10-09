@@ -111,6 +111,8 @@ internal static class Strings
 
     public static string SettingCloseAfterStart => Get("SettingCloseAfterStart");
 
+    public static string SettingCloseAfterStartHotkeyNote => Get("SettingCloseAfterStartHotkeyNote");
+
     public static string SettingAnimate => Get("SettingAnimate");
     public static string SettingAlwaysOnTop => Get("SettingAlwaysOnTop");
     public static string SettingCheckUpdates => Get("SettingCheckUpdates");

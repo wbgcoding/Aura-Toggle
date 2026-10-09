@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows
 - "Lighting at start" offers your own custom presets too, and follows a preset when you rename it and falls back to leaving the lighting alone when you delete it
 - "Apply and close the app": autostart only sets the start lighting and quits again, with no
   window and no notification area icon; a controller still coming up at logon is waited for
+- A note under "Apply and close the app" says the hotkey only works while the app is open, shown when both are on
 
 ### Changed
 

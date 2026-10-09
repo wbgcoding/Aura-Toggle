@@ -164,6 +164,9 @@
   <data name="SettingCloseAfterStart" xml:space="preserve">
     <value>Applica e chiudi l'app</value>
   </data>
+  <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
+    <value>La scorciatoia funziona solo finché l'app è aperta.</value>
+  </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Apri</value>
   </data>

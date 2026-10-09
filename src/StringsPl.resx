@@ -164,6 +164,9 @@
   <data name="SettingCloseAfterStart" xml:space="preserve">
     <value>Zastosuj i zamknij aplikację</value>
   </data>
+  <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
+    <value>Skrót działa tylko, gdy aplikacja jest otwarta.</value>
+  </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Otwórz</value>
   </data>

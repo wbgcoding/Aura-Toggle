@@ -164,6 +164,9 @@
   <data name="SettingCloseAfterStart" xml:space="preserve">
     <value>適用してアプリを終了</value>
   </data>
+  <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
+    <value>ホットキーはアプリを開いている間だけ使えます。</value>
+  </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>開く</value>
   </data>
