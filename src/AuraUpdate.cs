@@ -295,6 +295,18 @@ internal static class AuraUpdate
             string path = Path.Combine(folder, verified.FileName);
             File.WriteAllBytes(path, verified.Data);
 
+            // The folder is under the user's temp directory, so another process of this user could
+            // swap the file between the write and the elevated run. Reopened for reading with no
+            // write or delete sharing, what is on disk is hashed through that very handle and the
+            // handle is kept until the process has started: from the hash to the run nothing can
+            // change the file, and Process.Start still opens it for execution with the handle held.
+            using var hold = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (!CryptographicOperations.FixedTimeEquals(SHA256.HashData(hold), SHA256.HashData(verified.Data)))
+            {
+                AuraLog.Warn("UpdateInstall: the setup on disk no longer matches the verified download, not run.");
+                return false;
+            }
+
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path, "/SILENT")
             {
                 UseShellExecute = true,

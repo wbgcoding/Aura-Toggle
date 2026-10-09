@@ -41,6 +41,7 @@ All notable changes to this project are documented here. The format follows
 - A channel of a controller that is attached keeps its remembered look however long ago it was last switched
 - Resetting everything keeps the lighting the board is running, so the window and the board stay in step
 - A hand-edited start lighting that names nothing known is read as "leave the lighting alone"
+- The update setup is checked again right before it runs, so it cannot be swapped in the temp folder in between
 
 ## [1.3.0] - 2026-08-22
 
