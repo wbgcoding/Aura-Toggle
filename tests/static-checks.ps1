@@ -209,6 +209,7 @@ Write-Section "Leftovers and private traces"
 
 $textFiles = @(
     $csharp
+    Get-ChildItem (Join-Path $root "src") -Filter *.resx | ForEach-Object { $_.FullName }
     Get-ChildItem (Join-Path $root "tools") -Filter *.ps1 | ForEach-Object { $_.FullName }
     Get-ChildItem (Join-Path $root "tools") -Filter *.py | ForEach-Object { $_.FullName }
     Get-ChildItem (Join-Path $root "tests") -Filter *.ps1 | ForEach-Object { $_.FullName }
@@ -222,7 +223,8 @@ foreach ($line in Get-SourceLines $textFiles) {
     # This file is the one place the patterns themselves are written down.
     if ($line.File -eq "tests\static-checks.ps1") { continue }
 
-    if ($line.Text -match "\b(TODO|FIXME|HACK|XXX)\b") {
+    # Case-sensitive: Spanish and Portuguese "todo" is an ordinary word.
+    if ($line.Text -cmatch "\b(TODO|FIXME|HACK|XXX)\b") {
         Add-Finding "$($line.File):$($line.Number)" "leftover marker: $($line.Text.Trim())"
     }
     # A user profile path or a mail address in a shipped file is a privacy leak, not a bug.
@@ -241,6 +243,11 @@ foreach ($line in Get-SourceLines $textFiles) {
     if ($line.Text -match "\b(PRIVATE)\b" -or
         ($env:USERNAME -and $line.Text -match "\b$([regex]::Escape($env:USERNAME))\b")) {
         Add-Finding "$($line.File):$($line.Number)" "author or tooling trace in a shipped file"
+    }
+    # Em and en dashes are out of the house style in every language; written as char codes so
+    # this file does not trip its own check.
+    if ($line.Text.Contains([char]0x2014) -or $line.Text.Contains([char]0x2013)) {
+        Add-Finding "$($line.File):$($line.Number)" "em or en dash: use a colon, comma or full stop"
     }
     # Pascal's "external 'Name@user32.dll'" reads like a mail address to any simple pattern.
     if ($line.Text -match "[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" -and
