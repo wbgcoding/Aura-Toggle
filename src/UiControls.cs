@@ -145,10 +145,15 @@ internal sealed class EffectButton : FlatControl
         }
     }
 
-    /// <summary>Animating an unlit board would be a lie, and it would burn cycles for nothing.</summary>
+    /// <summary>
+    /// Animating an unlit board would be a lie, and it would burn cycles for nothing. A static
+    /// colour has no time component either (<see cref="EffectPainter.Render"/> fills it flat), so
+    /// it needs no timer; hover, press and focus repaint through their own invalidations.
+    /// </summary>
     private void UpdateAnimation()
     {
-        _timer.Enabled = _on && _animate && Visible && Enabled && !_busy && !_paused;
+        _timer.Enabled = _on && _animate && Visible && Enabled && !_busy && !_paused &&
+            _mode != AuraState.ModeStatic;
         Invalidate();
     }
 

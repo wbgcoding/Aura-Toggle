@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 
 - Interface texts tightened in all ten languages: effect state and reset labels, the close switch ("Apply and close the app"), the close-to-tray switch, usage line with every command, a separate keyboard hint for channel rows, and "Aura" instead of "AURA"
+- The big button no longer repaints 30 times a second while a static colour is showing
 
 ### Fixed
 
