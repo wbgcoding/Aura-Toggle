@@ -529,7 +529,7 @@ internal sealed class ToggleForm : Form
 
         // All effects are always offered, even with a single channel selected. The controller
         // still runs its own firmware-generated modes across every channel of that controller at
-        // once, so picking one here still affects the others — the hint row below is what tells
+        // once, so picking one here still affects the others; the hint row below is what tells
         // the user that, not a missing list entry.
         bool oneChannel = Target.Channel >= 0;
 
