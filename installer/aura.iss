@@ -336,6 +336,9 @@ begin
   try
     repeat
       if ((Found.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0) and
+         { A preview build ("10.0.0-rc.2...") is not what this release runs on - its folder name
+           carries a '-' where a final one has none. }
+         (Pos('-', Found.Name) = 0) and
          FileExists(DotnetRoot + '\shared\Microsoft.WindowsDesktop.App\' + Found.Name +
            '\System.Windows.Forms.dll') then
       begin
@@ -600,6 +603,44 @@ begin
   end;
 end;
 
+{ Whether the folder itself is a junction or symbolic link. The path comes from the user's own
+  environment, so a link planted there would make an elevated delete reach into whatever it
+  points at. FindFirst on the exact path returns the folder's own entry, attributes included. }
+function IsReparsePoint(const Path: String): Boolean;
+var
+  FindRec: TFindRec;
+begin
+  Result := False;
+  if FindFirst(Path, FindRec) then
+  begin
+    try
+      Result := (FindRec.Attributes and $400) <> 0; { FILE_ATTRIBUTE_REPARSE_POINT }
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
+{ Deletes the user's data folder with the user's own rights, not the uninstaller's: when this
+  process is elevated it runs the delete as the original user, so it can only remove what that
+  user could remove anyway. ExecAsOriginalUser raises when the uninstaller was never elevated -
+  then it already runs as that user and removes the folder itself. A folder that is a link is
+  left alone. }
+procedure DeleteDataDir(const DataDir: String);
+var
+  ResultCode: Integer;
+begin
+  if IsReparsePoint(DataDir) then
+    Exit;
+
+  try
+    ExecAsOriginalUser(ExpandConstant('{cmd}'), '/c rd /s /q "' + DataDir + '"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  except
+    DelTree(DataDir, True, True, True);
+  end;
+end;
+
 { User data lives outside the install folder and is kept unless the user opts out. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
@@ -636,7 +677,7 @@ begin
       FileList := ListDataFiles(DataDir);
       if SuppressibleMsgBox(FmtMessage(CustomMessage('RemoveSettings'), [FileList]),
         mbConfirmation, MB_YESNO, IDNO) = IDYES then
-        DelTree(DataDir, True, True, True);
+        DeleteDataDir(DataDir);
     end;
   end;
 end;

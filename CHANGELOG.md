@@ -20,6 +20,7 @@ All notable changes to this project are documented here. The format follows
 - Saving a custom preset that cannot be written (disk full, file locked) now says so and keeps the editor open instead of pretending it worked
 - Resetting settings no longer deletes anything when the backup of them cannot be written, and no longer replaces an older backup with a half-written one
 - Picking a rainbow, spectrum or wave effect for one channel is no longer overridden by a different one of those left on another channel of the same controller
+- Uninstalling removes your settings folder with your own account's rights, leaves it alone if it is a link, and the setup no longer counts a preview .NET runtime as installed
 
 ## [1.3.0] - 2026-08-22
 
