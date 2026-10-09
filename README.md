@@ -324,7 +324,13 @@ click it, and it produces everything a release consists of:
 build.bat                REM everything: portable exe, installer, checksums
 build.bat portable       REM only the portable x64 exe and its two shortcuts
 build.bat installer      REM only the setup
+build.bat review         REM a separate build for screenshots and layout checks, bin\review-build\
 ```
+
+The review build is never part of a release. It opens any window against stand-in controllers and
+throwaway sample data (`-review ids` lists them) and can write screenshots of every window at
+several display scales and languages with `-shot`; nothing in your own settings, presets or
+lighting is touched.
 
 A full build empties `dist\` first, so what is left there afterwards is exactly the release:
 `AuraToggle.exe`, the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe` and
