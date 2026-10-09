@@ -168,6 +168,10 @@ internal sealed record AuraSettings(
         (settings with { StartAction = newName == null ? StartActionNone : CustomStartAction(newName) }).Save();
     }
 
+#if REVIEW
+    private static bool _reviewAutoStart = true;
+#endif
+
     /// <summary>
     /// Whether Windows starts the tool at logon. Backed by the per-user Run key, so no
     /// administrator rights and no scheduled task are involved, and removing it is one click.
@@ -176,6 +180,13 @@ internal sealed record AuraSettings(
     {
         get
         {
+#if REVIEW
+            if (AuraFiles.ReviewStore)
+            {
+                return _reviewAutoStart;
+            }
+#endif
+
             try
             {
                 using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKey);
@@ -212,6 +223,15 @@ internal sealed record AuraSettings(
 
         set
         {
+#if REVIEW
+            // The surface tool's switch flips for real but never reaches the registry.
+            if (AuraFiles.ReviewStore)
+            {
+                _reviewAutoStart = value;
+                return;
+            }
+#endif
+
             try
             {
                 // Without a path to point the Run entry at there is nothing to write, and

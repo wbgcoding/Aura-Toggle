@@ -20,8 +20,22 @@ internal static class AuraFiles
     /// </summary>
     private const int LockTimeoutMs = 2000;
 
-    public static readonly string Folder = Path.Combine(
+    public static string Folder { get; private set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "aura-toggle");
+
+#if REVIEW
+    /// <summary>
+    /// True once the surface tool has pointed <see cref="Folder"/> at a throwaway copy: nothing
+    /// the review build does may then touch the real profile, the Run key or a controller.
+    /// </summary>
+    public static bool ReviewStore { get; private set; }
+
+    public static void UseReviewFolder(string folder)
+    {
+        Folder = folder;
+        ReviewStore = true;
+    }
+#endif
 
     public static string PathTo(string name) => Path.Combine(Folder, name);
 

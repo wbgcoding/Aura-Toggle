@@ -26,6 +26,13 @@
     <DeterministicSourcePaths Condition="'$(ContinuousIntegrationBuild)' == ''">false</DeterministicSourcePaths>
   </PropertyGroup>
 
+  <!-- The review build: a Release build plus the surface tool (src\Review.cs and its hooks).
+       Built by "build.bat review" into bin\review-build, never into dist. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Review'">
+    <DefineConstants>$(DefineConstants);REVIEW</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- Logical names are set by hand: the default would carry the src folder into them. -->
     <EmbeddedResource Include="src\Strings.resx" LogicalName="AuraToggle.Strings.resources" />

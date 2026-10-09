@@ -455,6 +455,19 @@ internal sealed class Select : FlatControl
     /// <summary>This control's own open list, for pushing item changes into while it is up.</summary>
     private SelectPopup? _popup;
 
+#if REVIEW
+    /// <summary>Surface tool only: opens the list exactly as a click does and keeps it open
+    /// while nothing on an automated desktop holds the focus.</summary>
+    internal void OpenForReview()
+    {
+        OnClick(EventArgs.Empty);
+        if (_openPopup != null)
+        {
+            _openPopup.KeepOpenOnDeactivate = true;
+        }
+    }
+#endif
+
     protected override void OnClick(EventArgs e)
     {
         base.OnClick(e);

@@ -5,6 +5,8 @@ REM   build.bat                      EVERYTHING: portable, installer, dist\relea
 REM   build.bat portable             only the portable x64 exe (~630 KB) and its two shortcuts
 REM   build.bat installer            only the x64 setup (needs Inno Setup)
 REM   build.bat all                  same as no argument at all
+REM   build.bat review               the review build with the surface tool, into bin\review-build\
+REM                                  (never into dist: it is for screenshots and layout checks)
 REM
 REM No argument means "build the lot": a double click has to leave nothing out, which is what
 REM kept the installer from appearing when only the portable exe was built by default.
@@ -34,12 +36,13 @@ if "%MODE%"=="" goto :dispatch
 if /I "%MODE%"=="all" goto :dispatch
 if /I "%MODE%"=="installer" goto :dispatch
 if /I "%MODE%"=="portable" goto :dispatch
+if /I "%MODE%"=="review" goto :dispatch
 
 REM A typo must not quietly build something else than what was asked for - and must not reach
 REM the taskkill below, which would close the user's running copy for nothing.
 echo.
 echo Unknown option "%MODE%".
-echo Use: portable ^| installer ^| all, or no argument for everything.
+echo Use: portable ^| installer ^| all ^| review, or no argument for everything.
 call :maybepause
 exit /b 2
 
@@ -61,12 +64,34 @@ powershell -NoProfile -Command "& { param($root, $name) $root = $root.TrimEnd('\
 if "%MODE%"=="" goto :all
 if /I "%MODE%"=="all" goto :all
 if /I "%MODE%"=="installer" goto :installer
+if /I "%MODE%"=="review" goto :review
 
 call :publish win-x64 "%ROOT%dist"
 if errorlevel 1 exit /b 1
 
 echo.
 echo Done: %ROOT%dist\%EXE%
+call :maybepause
+exit /b 0
+
+REM The review build: same publish, configuration "Review", which compiles the surface tool in
+REM (-review, -shot). Lands in bin\review-build\ so nothing a user downloads ever carries it.
+:review
+set "STAGE=%ROOT%bin\publish\review"
+echo Building "%EXE%" [review]
+if exist "%STAGE%" rd /s /q "%STAGE%"
+dotnet publish "%ROOT%AuraToggle.csproj" -c Review -r win-x64 --self-contained false -p:PublishSingleFile=true -o "%STAGE%"
+if errorlevel 1 (
+    echo.
+    echo BUILD FAILED
+    call :maybepause
+    exit /b 1
+)
+if not exist "%ROOT%bin\review-build" mkdir "%ROOT%bin\review-build"
+copy /y "%STAGE%\%EXE%" "%ROOT%bin\review-build" >nul
+if errorlevel 1 goto :copyfailed
+echo.
+echo Done: %ROOT%bin\review-build\%EXE%
 call :maybepause
 exit /b 0
 

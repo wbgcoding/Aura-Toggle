@@ -1240,6 +1240,21 @@ internal sealed class ToggleForm : Form
         }
     }
 
+#if REVIEW
+    /// <summary>Surface tool only: the effect list, opened the way a click on it does.</summary>
+    internal void OpenEffectsForReview() => _effects.OpenForReview();
+
+    /// <summary>Surface tool only: the editor for a new preset, as its list row opens it.</summary>
+    internal void OpenEditorForReview() => OpenPresetEditor(null);
+
+    /// <summary>Surface tool only: the settings panel with its start lighting list open.</summary>
+    internal void OpenStartActionsForReview()
+    {
+        OpenSettingsForReview();
+        _settingsPopup?.OpenStartActionsForReview();
+    }
+#endif
+
     /// <summary>Review mode only: see <see cref="SettingsPopup.RefitForReview"/>.</summary>
     internal void RefitSettingsForReview(int percent) => _settingsPopup?.RefitForReview(percent);
 

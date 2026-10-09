@@ -4,7 +4,9 @@
 #   powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 
 param(
-    [string]$Exe = (Join-Path $PSScriptRoot "..\dist\AuraToggle.exe")
+    [string]$Exe = (Join-Path $PSScriptRoot "..\dist\AuraToggle.exe"),
+    # The review build ("build.bat review"): the published exe carries no -review surfaces.
+    [string]$ReviewExe = (Join-Path $PSScriptRoot "..\bin\review-build\AuraToggle.exe")
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,6 +24,16 @@ if (-not (Test-Path $Exe)) {
     Write-Host "$Exe not found - run build.bat"
     exit 1
 }
+
+if (-not (Test-Path $ReviewExe)) {
+    Write-Host "$ReviewExe not found - run build.bat review"
+    exit 1
+}
+
+# The review build swaps the data folder for a throwaway one unless told otherwise. Pointed at the
+# real one here, so the review cases below read exactly what each test seeds - every file in it is
+# on the backup list and comes back at the end.
+$env:AURA_REVIEW_DATA = $dataDir
 
 # Every file the tool writes, not just settings.json: the suite switches the lighting, changes
 # presets and rewrites the per-channel records, so all of them have to come back exactly as they
@@ -692,6 +704,75 @@ foreach ($linkName in "Aura On.lnk", "Aura Off.lnk") {
 
 Write-Host "Window"
 
+Test-Case "the published build carries no surface tool" {
+    $r = Invoke-Aura @("-review", "ids")
+    Assert-Equal 2 $r.ExitCode "-review exit code"
+    $r = Invoke-Aura @("-shot")
+    Assert-Equal 2 $r.ExitCode "-shot exit code"
+}
+
+# "Set it and close the app": autostart applies the start lighting without a window and quits.
+# A preset that was deleted since must not keep it waiting for a controller - nothing to apply.
+Test-Case "-autostart with close-after-start and a vanished preset exits at once" {
+    Set-Content -Path $settings -Encoding ascii `
+        -Value '{"startAction":"custom:Suite Gone","closeAfterStart":true}'
+    try {
+        $process = Start-Process $Exe -ArgumentList "-autostart" -PassThru
+        if (-not $process.WaitForExit(10000)) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            throw "still running after 10 s"
+        }
+        Assert-Equal 0 $process.ExitCode "exit code"
+        if (-not (Select-String -Path $log -SimpleMatch "names nothing that exists" -Quiet)) {
+            throw "the log does not say why nothing was applied"
+        }
+    }
+    finally {
+        Set-Content -Path $settings -Encoding ascii `
+            -Value '{"startMinimised":false,"minimiseOnClose":false,"startAction":""}'
+    }
+}
+
+Test-Case "-autostart with close-after-start switches off and exits without a window" {
+    [void](Invoke-Aura @("-on"))
+    Set-Content -Path $settings -Encoding ascii -Value '{"startAction":"off","closeAfterStart":true}'
+    try {
+        $process = Start-Process $Exe -ArgumentList "-autostart" -PassThru
+        if (-not $process.WaitForExit(15000)) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            throw "still running after 15 s"
+        }
+        Assert-Equal 0 $process.ExitCode "exit code"
+        $stored = Get-Content $state -Raw | ConvertFrom-Json
+        Assert-Equal $false $stored.on "stored on"
+    }
+    finally {
+        Set-Content -Path $settings -Encoding ascii `
+            -Value '{"startMinimised":false,"minimiseOnClose":false,"startAction":""}'
+    }
+}
+
+Test-Case "-shot writes a picture per surface, scale and language" {
+    $out = Join-Path $env:TEMP "aura-shots-suite"
+    Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue
+    try {
+        $process = Start-Process $ReviewExe -ArgumentList "-shot", "window", "settings-start", "scale=100", "lang=en,de", "out=$out" -PassThru
+        if (-not $process.WaitForExit(120000)) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            throw "still running after 120 s"
+        }
+        Assert-Equal 0 $process.ExitCode "exit code"
+        foreach ($name in @("window-100-en.png", "window-100-de.png", "settings-start-100-en.png", "settings-start-100-de.png")) {
+            $file = Join-Path $out $name
+            if (-not (Test-Path $file)) { throw "$name was not written" }
+            if ((Get-Item $file).Length -lt 2000) { throw "$name is suspiciously small" }
+        }
+    }
+    finally {
+        Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Test-Case "-autostart shows no window, but the process stays running and can be stopped" {
     $process = Start-Process $Exe -ArgumentList "-autostart" -PassThru
     Start-Sleep -Seconds 3
@@ -748,7 +829,7 @@ Test-Case "the button animates a custom preset's most used effect" {
     Set-Content -Path $state -Encoding utf8 `
         -Value '{"on":true,"mode":5,"red":255,"green":255,"blue":255,"brightness":100,"customPreset":"Suite Mix"}'
 
-    $process = Start-Process $Exe -ArgumentList "-review", "layout" -PassThru
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout" -PassThru
     try {
         Start-Sleep -Seconds 6
         if (-not (Test-Path $report)) { throw "no layout report was written" }
@@ -779,7 +860,7 @@ foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "edi
         $report = Join-Path $env:TEMP "aura-layout.txt"
         Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-        $process = Start-Process $Exe -ArgumentList "-review", $surface.Name, "200" -PassThru
+        $process = Start-Process $ReviewExe -ArgumentList "-review", $surface.Name, "200" -PassThru
         try {
             Start-Sleep -Seconds 5
             if (-not (Test-Path $report)) { throw "no report was written" }
@@ -808,7 +889,7 @@ Test-Case "the window opens at the width it will keep, before anything is discov
 
     function Invoke-LayoutRun {
         Remove-Item $report -Force -ErrorAction SilentlyContinue
-        $process = Start-Process $Exe -ArgumentList "-review", "layout" -PassThru
+        $process = Start-Process $ReviewExe -ArgumentList "-review", "layout" -PassThru
         try {
             Start-Sleep -Seconds 4
             if (-not (Test-Path $report)) { throw "no layout report was written" }
@@ -853,7 +934,7 @@ Test-Case "the window comes back to the same size after a round trip" {
     $report = Join-Path $env:TEMP "aura-layout.txt"
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $Exe -ArgumentList "-review", "layout", "150,200,150" -PassThru
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", "150,200,150" -PassThru
     try {
         Start-Sleep -Seconds 20
         if (-not (Test-Path $report)) { throw "no layout report was written" }
@@ -886,7 +967,7 @@ Test-Case "the layout catches up mid-drag, not only after release" {
     $report = Join-Path $env:TEMP "aura-layout.txt"
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $Exe -ArgumentList "-review", "layout", "200" -PassThru
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", "200" -PassThru
     try {
         Start-Sleep -Seconds 5
         if (-not (Test-Path $report)) { throw "no layout report was written" }
@@ -912,7 +993,7 @@ Test-Case "the window is only as wide as the display scale asks for" {
     $report = Join-Path $env:TEMP "aura-layout.txt"
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $Exe -ArgumentList "-review", "layout", "100,200" -PassThru
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", "100,200" -PassThru
     try {
         Start-Sleep -Seconds 14
         if (-not (Test-Path $report)) { throw "no layout report was written" }
@@ -943,7 +1024,7 @@ foreach ($scale in 100, 125, 200) {
         $report = Join-Path $env:TEMP "aura-layout.txt"
         Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-        $process = Start-Process $Exe -ArgumentList "-review", "layout", $scale -PassThru
+        $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", $scale -PassThru
         try {
             Start-Sleep -Seconds 5
             if (-not (Test-Path $report)) { throw "no layout report was written" }
@@ -992,7 +1073,7 @@ Test-Case "the settings panel sits a few px inside the window edge and covers th
     $report = Join-Path $env:TEMP "aura-gear.txt"
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $Exe -ArgumentList "-review", "gear", "125,150,200" -PassThru
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "gear", "125,150,200" -PassThru
     try {
         Start-Sleep -Seconds 8
         if (-not (Test-Path $report)) { throw "no gear report was written" }
@@ -1035,7 +1116,7 @@ Test-Case "the effect-list tooltip actually draws in the current theme" {
     $png = Join-Path $env:TEMP "aura-tip.png"
     Remove-Item $png -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $Exe -ArgumentList "-review", "tip" -PassThru
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "tip" -PassThru
     try {
         Start-Sleep -Seconds 3
         if (-not (Test-Path $png)) { throw "no aura-tip.png was written" }

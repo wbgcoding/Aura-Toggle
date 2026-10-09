@@ -111,6 +111,10 @@ internal sealed class SettingsPopup : PopupForm
 
         _autoStartLabel = AddSwitch(6, Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
         _startActionLabel = AddLabel(7, Strings.SettingStartAction);
+        // The built-in effects are applied in the colour the board was last given, so that is
+        // the colour their icons are drawn in - the default white vanished on the light panel.
+        AuraState current = AuraState.Load();
+        _startAction.Colour = Color.FromArgb(current.Red, current.Green, current.Blue);
         AddSelect(8, _startAction, Strings.SettingStartAction, StartActions(), settings.StartAction);
         _closeAfterStartLabel = AddSwitch(9, Strings.SettingCloseAfterStart, _closeAfterStart, settings.CloseAfterStart);
         UpdateStartActionVisibility();
@@ -513,6 +517,11 @@ internal sealed class SettingsPopup : PopupForm
     /// </summary>
     private void PlaceAtAnchor() =>
         Place(new Point(_anchor.X - Width, _anchor.Y), horizontalMargin: 0, screen: _anchorScreen);
+
+#if REVIEW
+    /// <summary>Surface tool only: the start lighting list, opened the way a click does.</summary>
+    internal void OpenStartActionsForReview() => _startAction.OpenForReview();
+#endif
 
     /// <summary>
     /// Review mode only: re-fits the panel at <paramref name="percent"/> of its measured width, the

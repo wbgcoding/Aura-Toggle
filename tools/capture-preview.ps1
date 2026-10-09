@@ -1,6 +1,6 @@
 # Captures the README preview screenshots from the real window.
 #
-# Opens dist\AuraToggle.exe -review preview - the main window against stand-in controllers, on the
+# Opens bin\review-build\AuraToggle.exe -review preview - the main window against stand-in controllers, on the
 # state a first run starts on and in English - and writes it to a PNG with the rounded corners
 # punched out, ready for tools\make-preview.py. No controller is touched, nothing stored on
 # this machine is read, and the theme is picked by the switch rather than by Windows, so both
@@ -72,7 +72,7 @@ public static class Capture
 '@
 
 $repo = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $repo "dist\AuraToggle.exe"
+$exe = Join-Path $repo "bin\review-build\AuraToggle.exe"
 if (-not (Test-Path $exe)) { throw "$exe not found - run build.bat portable first" }
 if (-not [System.IO.Path]::IsPathRooted($OutDir)) { $OutDir = Join-Path $repo $OutDir }
 

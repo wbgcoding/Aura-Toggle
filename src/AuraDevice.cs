@@ -156,6 +156,14 @@ internal sealed class AuraDevice : IDisposable
     /// <summary>Every Aura LED controller present. Throws if none answers.</summary>
     public static List<AuraDevice> DiscoverAll()
     {
+#if REVIEW
+        // The surface tool runs against stand-in controllers only; a real one is never opened.
+        if (AuraFiles.ReviewStore)
+        {
+            throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3);
+        }
+#endif
+
         // One sweep, not two: enumerating opens and queries every HID interface on the machine,
         // which is the slow part of discovery, and the known and unknown ids were each doing a
         // full pass of their own.
