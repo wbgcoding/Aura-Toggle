@@ -458,7 +458,7 @@ internal static partial class Program
         List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int listErrorExitCode);
         if (devices.Count == 0)
         {
-            WriteError(listErrorExitCode == 4 ? Strings.ErrorControllerBusy : Strings.ErrorControllerNotFound);
+            WriteError(ListErrorText(listErrorExitCode));
             errorExitCode = listErrorExitCode;
             return false;
         }
@@ -648,12 +648,20 @@ internal static partial class Program
         return 0;
     }
 
+    /// <summary>The message that goes with the exit code <see cref="AuraDevice.ListDevices(out int)"/> reports.</summary>
+    private static string ListErrorText(int exitCode) => exitCode switch
+    {
+        4 => Strings.ErrorControllerBusy,
+        5 => Strings.ErrorWriteGeneric,
+        _ => Strings.ErrorControllerNotFound,
+    };
+
     private static int PrintList()
     {
         List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int errorExitCode);
         if (devices.Count == 0)
         {
-            WriteError(errorExitCode == 4 ? Strings.ErrorControllerBusy : Strings.ErrorControllerNotFound);
+            WriteError(ListErrorText(errorExitCode));
             return errorExitCode;
         }
 
@@ -689,7 +697,7 @@ internal static partial class Program
         List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int errorExitCode);
         if (devices.Count == 0)
         {
-            WriteError(errorExitCode == 4 ? Strings.ErrorControllerBusy : Strings.ErrorControllerNotFound);
+            WriteError(ListErrorText(errorExitCode));
             return errorExitCode;
         }
 
@@ -890,7 +898,7 @@ internal static partial class Program
     /// </remarks>
     /// <returns>The channels that were named, for the caller to record.</returns>
     private static List<(string DeviceKey, int Channel)> ApplyMix(List<AuraDevice> devices, string? deviceKey,
-        int channel, AuraState state, ChannelLighting? look)
+        int channel, AuraState state, ChannelLighting? look, byte? brightness = null)
     {
         List<AuraDevice> targets = ResolveDevices(devices, deviceKey);
 
@@ -921,7 +929,7 @@ internal static partial class Program
                 // A new effect or colour carries no brightness, so the one this channel was given
                 // keeps applying - the same rule the stored record follows.
                 (byte red, byte green, byte blue) = AuraState.Dim(apply.Red, apply.Green, apply.Blue,
-                    Brightness(apply.Brightness != 0 ? apply : own, state));
+                    chosen && brightness.HasValue ? brightness.Value : Brightness(apply.Brightness != 0 ? apply : own, state));
 
                 // A named channel takes the mode it was given, even when its record says it was
                 // off - being named is what switches it back on. An untouched one keeps its own
@@ -1121,16 +1129,18 @@ internal static partial class Program
 
         try
         {
-            // Recorded before anything is re-sent, so the replay below picks the new value up per
-            // channel. Setting it board-wide hands the channels back to the board-wide value
-            // instead of leaving each one pinned to what it was given individually.
-            AuraChannelStates.SetBrightness(Channels(devices, deviceKey, channel), wholeBoard ? (byte)0 : percent,
-                BoardWide(state));
-
+            // The new value goes to the named channels as an override of what their records say, and
+            // is written into the records only once the controller has taken it: a brightness the
+            // board never received must not be what the window shows afterwards. Setting it
+            // board-wide hands the channels back to the board-wide value instead of leaving each one
+            // pinned to what it was given individually.
             if (state.On)
             {
-                ApplyMix(devices, deviceKey, channel, state, look: null);
+                ApplyMix(devices, deviceKey, channel, state, look: null, brightness: percent);
             }
+
+            AuraChannelStates.SetBrightness(Channels(devices, deviceKey, channel), wholeBoard ? (byte)0 : percent,
+                BoardWide(state));
         }
         finally
         {

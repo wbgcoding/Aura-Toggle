@@ -81,13 +81,21 @@ internal static class AuraCustomPresets
                         ? rawMode
                         : AuraState.ModeStatic;
 
+                    // Missing channel means an entry written before presets went per-channel: -1
+                    // keeps its old meaning of "the whole controller". Anything below that is not a
+                    // channel at all - a hand-edited or imported file - and the entry is dropped
+                    // rather than read as "the whole controller" by the `< 0` checks downstream.
+                    int channelIndex = entry.TryGetProperty("channel", out JsonElement c) && c.TryGetInt32(out int index)
+                        ? index
+                        : -1;
+                    if (channelIndex < -1)
+                    {
+                        continue;
+                    }
+
                     entries.Add(new CustomPresetEntry(
                         AuraFiles.JsonText(entry, "deviceKey"),
-                        // Missing channel means an entry written before presets went
-                        // per-channel: -1 keeps its old meaning of "the whole controller".
-                        entry.TryGetProperty("channel", out JsonElement c) && c.TryGetInt32(out int index)
-                            ? index
-                            : -1,
+                        channelIndex,
                         AuraFiles.Caption(AuraFiles.JsonText(entry, "label"), AuraFiles.MaxChannelLabel),
                         mode, AuraFiles.JsonByte(entry, "red"),
                         AuraFiles.JsonByte(entry, "green"), AuraFiles.JsonByte(entry, "blue"),

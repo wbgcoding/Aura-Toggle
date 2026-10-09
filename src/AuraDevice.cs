@@ -182,6 +182,7 @@ internal sealed class AuraDevice : IDisposable
         int tooShort = candidates.Count(info => info.OutputReportLength < ReportLength);
         int noAnswer = 0;
         int unreachable = 0;
+        IOException? unreachableCause = null;
 
         foreach (HidInfo info in candidates.Where(info => info.OutputReportLength >= ReportLength))
         {
@@ -211,6 +212,7 @@ internal sealed class AuraDevice : IDisposable
             {
                 // One unresponsive interface must not stop the others from being found.
                 unreachable++;
+                unreachableCause ??= ex;
                 AuraLog.Warn($"Discover: PID {info.Pid:X4} (usage page {info.UsagePage:X4}) not reachable - " +
                     $"{ex.GetType().Name}: {ex.Message}");
                 stream?.Dispose();
@@ -231,6 +233,14 @@ internal sealed class AuraDevice : IDisposable
 
         if (devices.Count == 0)
         {
+            if (accessDenied == 0 && unreachableCause != null)
+            {
+                // A controller is there but would not talk to us: that is a communication error
+                // (exit code 5), not "no controller" (3) - the user should look at the cable or
+                // the driver, not at whether the board has Aura at all.
+                throw unreachableCause;
+            }
+
             throw accessDenied > 0
                 ? new AuraNotFoundException(Strings.ErrorControllerBusy, 4)
                 : new AuraNotFoundException(Strings.ErrorControllerNotFound, 3);
@@ -248,7 +258,7 @@ internal sealed class AuraDevice : IDisposable
 
     /// <summary>
     /// Same as <see cref="ListDevices()"/>, but <paramref name="errorExitCode"/> carries why the
-    /// list came back empty - 3 (not found) or 4 (busy) - so callers can report the real cause
+    /// list came back empty - 3 (not found), 4 (busy) or 5 (would not answer) - so callers can report the real cause
     /// instead of collapsing both into "not found".
     /// </summary>
     public static List<AuraDeviceSummary> ListDevices(out int errorExitCode)
@@ -269,7 +279,7 @@ internal sealed class AuraDevice : IDisposable
         }
         catch (IOException)
         {
-            errorExitCode = 3;
+            errorExitCode = 5;
             return new List<AuraDeviceSummary>();
         }
 
