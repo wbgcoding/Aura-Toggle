@@ -34,6 +34,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The root project globs every .cs below it; the signing tool is a project of its own. -->
+    <Compile Remove="tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Logical names are set by hand: the default would carry the src folder into them. -->
     <EmbeddedResource Include="src\Strings.resx" LogicalName="AuraToggle.Strings.resources" />
     <EmbeddedResource Include="src\StringsDe.resx" LogicalName="AuraToggle.StringsDe.resources" />

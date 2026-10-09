@@ -10,9 +10,9 @@ Einzige Bedingung: Der Copyright-Hinweis und dieser Lizenztext bleiben bei einer
 
 DATENSCHUTZ UND NETZWERKZUGRIFF
 
-Die Anwendung erhebt keine Daten, benötigt kein Benutzerkonto und enthält weder Werbung noch Nachverfolgung. Ihre Einstellungen, Ihre Presets und der gemerkte Beleuchtungszustand liegen in Ihrem eigenen Benutzerprofil auf diesem PC und werden nirgendwohin übertragen. Aura Toggle baut selbst keinerlei Netzwerkverbindung auf.
+Die Anwendung erhebt keine Daten, benötigt kein Benutzerkonto und enthält weder Werbung noch Nachverfolgung. Ihre Einstellungen, Ihre Presets und der gemerkte Beleuchtungszustand liegen in Ihrem eigenen Benutzerprofil auf diesem PC und werden nirgendwohin übertragen. Aura Toggle selbst geht nur online, um höchstens einmal am Tag bei GitHub nachzufragen, ob es eine neuere Version gibt (in den Einstellungen abschaltbar), und um diese Version herunterzuladen, wenn Sie die Installation wählen. Es werden weder eine Kennung noch Nutzungsdaten übertragen, und ein Download wird nur installiert, wenn er die digitale Signatur des Projekts trägt.
 
-Fehlt auf diesem PC die Microsoft .NET 10 Desktop Runtime, die die Anwendung zum Laufen braucht, bietet dieses Setup an, sie von Microsoft herunterzuladen - der einzige Netzwerkzugriff in diesem gesamten Paket, nur mit Ihrer Zustimmung, die digitale Signatur vor der Installation geprüft.
+Fehlt auf diesem PC die Microsoft .NET 10 Desktop Runtime, die die Anwendung zum Laufen braucht, bietet dieses Setup an, sie von Microsoft herunterzuladen - der einzige Netzwerkzugriff, den das Setup selbst vornimmt, nur mit Ihrer Zustimmung, die digitale Signatur vor der Installation geprüft.
 
 
 AUSWIRKUNG AUF IHR MAINBOARD

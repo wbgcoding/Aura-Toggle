@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Signed automatic updates: the program checks GitHub for a newer release at most once a day and installs it on one click, only when the download carries the project's signature; a "Check for updates" switch in the gear turns the check off
 - "Lighting at start" offers your own custom presets too, and follows a preset when you rename it
 - "Set it and close the app": autostart only sets the start lighting and quits again, with no
   window and no notification area icon; a controller still coming up at logon is waited for
