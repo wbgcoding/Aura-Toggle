@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 
 - Closing the channel rename popup after the controller went away no longer closes the whole app
+- Renaming a channel, or reopening the window from the notification area, no longer leaves the window out of step with the channel selector
 
 ## [1.3.0] - 2026-08-22
 

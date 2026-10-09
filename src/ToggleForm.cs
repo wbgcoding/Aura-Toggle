@@ -119,6 +119,13 @@ internal sealed class ToggleForm : Form
     private bool _exiting;
     private bool _dark = Theme.Dark;
     private CancellationTokenSource? _identifyCts;
+
+    /// <summary>
+    /// Whether the channel selector is part of the layout. The control's own Visible reads false
+    /// for as long as the whole window is hidden in the tray, which is not the question any
+    /// measurement or target lookup is asking.
+    /// </summary>
+    private bool _channelShown;
     private Task? _identifyTask;
     private Task<AuraState>? _runTask;
     private readonly Icon? _iconOff = LoadIconOff();
@@ -199,6 +206,7 @@ internal sealed class ToggleForm : Form
         _channel.AccessibleName = Strings.ChannelAccessibleName;
         _channel.Width = this.Scaled(112); // "Alle Kanäle" has to fit without being cut off
         _channel.PopupWidth = this.Scaled(210);
+        _channelShown = false;
         _channel.Visible = false; // shown once the board has more than one switchable channel
         _channel.SelectionChanged += (_, _) =>
         {
@@ -758,11 +766,12 @@ internal sealed class ToggleForm : Form
 
         _channel.SetItems(items);
         _channel.ShowSelection(selected ?? ChannelAll);
-        _channel.Visible = items.Count > 2;
+        _channelShown = items.Count > 2;
+        _channel.Visible = _channelShown;
 
         // Measured from the actual labels: channels can be renamed to anything, and on a
         // multi-controller board the name is prefixed too, so a fixed width would clip them.
-        if (_channel.Visible)
+        if (_channelShown)
         {
             // Kept as narrow as its own longest label: the effect list takes the rest of the row,
             // and that is where a long preset name would otherwise be cut off. The list it opens
@@ -813,7 +822,7 @@ internal sealed class ToggleForm : Form
     {
         get
         {
-            if (!_channel.Visible || _channel.Selected?.Key is not string key || key == ChannelAll)
+            if (!_channelShown || _channel.Selected?.Key is not string key || key == ChannelAll)
             {
                 return (null, -1);
             }
@@ -847,6 +856,7 @@ internal sealed class ToggleForm : Form
         {
             AuraChannelNames.Set(deviceKey, channelIndex, name);
             SetUpChannelSelector();
+            Render();
         };
         popup.FormClosed += (_, _) =>
         {
@@ -1668,6 +1678,10 @@ internal sealed class ToggleForm : Form
             // reasonable moment to check again, since the user just came back to look.
             await DiscoverDevices();
         }
+
+        // The selector and the effect list were rebuilt while the window was hidden (a rename, a
+        // discovery in the tray), and nothing repainted the rest of the window from them.
+        Render();
     }
 
     /// <summary>The newest preview waiting for the controller to be free, or null.</summary>
@@ -2138,7 +2152,7 @@ internal sealed class ToggleForm : Form
         foreach ((string name, Control control) in new (string, Control)[]
                  { ("effects", _effects), ("channel", _channel), ("gear", _gear), ("colours", _colours) })
         {
-            if (!control.Visible)
+            if (!(ReferenceEquals(control, _channel) ? _channelShown : control.Visible))
             {
                 continue;
             }
@@ -2228,7 +2242,7 @@ internal sealed class ToggleForm : Form
         int usable = ClientSize.Width - Padding.Horizontal;
         int needed = _effects.PreferredWidthForItems(includeHints: false) + _effects.Margin.Horizontal
             + _gear.Width + _gear.Margin.Horizontal
-            + (_channel.Visible ? _channel.Width + _channel.Margin.Horizontal : 0);
+            + (_channelShown ? _channel.Width + _channel.Margin.Horizontal : 0);
 
         var lines = new List<string>
         {
@@ -2242,7 +2256,7 @@ internal sealed class ToggleForm : Form
             $"width bounds  min={this.Scaled(MinWidth)} max={this.Scaled(MaxWidth)} wanted={WantedWidth}",
             $"toprow needs  {needed}  usable={usable}  headroom={usable - needed}",
             $"  effects     w={_effects.Width} preferred={_effects.PreferredWidthForItems(includeHints: false)}",
-            $"  channel     w={_channel.Width} visible={_channel.Visible}",
+            $"  channel     w={_channel.Width} visible={_channelShown}",
             $"  gear        w={_gear.Width} (expected {this.Scaled(GearSize)})",
             $"  colours     w={_colours.Width} visible={_colours.Visible}",
             // The slider only exists for an effect brightness can reach - the one thing about it
@@ -2298,7 +2312,7 @@ internal sealed class ToggleForm : Form
             int row = _effects.PreferredWidthForItems(includeHints: false) + _effects.Margin.Horizontal
                 + _gear.Width + _gear.Margin.Horizontal;
 
-            if (_channel.Visible)
+            if (_channelShown)
             {
                 row += _channel.Width + _channel.Margin.Horizontal;
             }
