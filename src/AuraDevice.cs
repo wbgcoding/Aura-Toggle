@@ -257,6 +257,9 @@ internal sealed class AuraDevice : IDisposable
         List<AuraDevice> devices;
         try
         {
+            // Two sweeps at once answer each other's handshakes, so listing waits for whoever
+            // else is talking to the controller.
+            using IDisposable guard = AuraFiles.Lock();
             devices = DiscoverAll();
         }
         catch (AuraNotFoundException ex)

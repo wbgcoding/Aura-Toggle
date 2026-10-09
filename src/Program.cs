@@ -1450,7 +1450,14 @@ internal static partial class Program
     /// </remarks>
     public static void Identify(string deviceKey, int channel, CancellationToken token)
     {
-        var devices = AuraDevice.DiscoverAll();
+        // The controller talks to one caller at a time: the discovery and the lighting burst
+        // below each hold the files lock, the open-ended wait between them deliberately does not
+        // - a rename popup can stay open for minutes, and nothing else may be shut out for that.
+        List<AuraDevice> devices;
+        using (AuraFiles.Lock())
+        {
+            devices = AuraDevice.DiscoverAll();
+        }
 
         try
         {
@@ -1470,19 +1477,22 @@ internal static partial class Program
 
             try
             {
-                foreach (AuraDevice device in devices)
+                using (AuraFiles.Lock())
                 {
-                    var looks = new List<ChannelLook>();
-
-                    foreach (AuraChannel other in device.Channels)
+                    foreach (AuraDevice device in devices)
                     {
-                        looks.Add(device.Key == deviceKey && other.Index == channel
-                            ? new ChannelLook(other.Index, AuraState.ModeStatic, 0xFF, 0xFF, 0xFF)
-                            : new ChannelLook(other.Index, AuraState.ModeStatic, 0, 0, 0));
-                    }
+                        var looks = new List<ChannelLook>();
 
-                    touched.Add(device);
-                    device.Apply(looks);
+                        foreach (AuraChannel other in device.Channels)
+                        {
+                            looks.Add(device.Key == deviceKey && other.Index == channel
+                                ? new ChannelLook(other.Index, AuraState.ModeStatic, 0xFF, 0xFF, 0xFF)
+                                : new ChannelLook(other.Index, AuraState.ModeStatic, 0, 0, 0));
+                        }
+
+                        touched.Add(device);
+                        device.Apply(looks);
+                    }
                 }
 
                 token.WaitHandle.WaitOne(Timeout.Infinite);
@@ -1492,9 +1502,12 @@ internal static partial class Program
                 // Even when lighting the target channel itself failed, whatever this did turn dark
                 // still needs to go back to its own record - a failure here must not leave a
                 // controller stuck dark with channel-state.json still describing it as lit.
-                foreach (AuraDevice device in touched)
+                using (AuraFiles.Lock())
                 {
-                    Replay(device, state, remembered);
+                    foreach (AuraDevice device in touched)
+                    {
+                        Replay(device, state, remembered);
+                    }
                 }
             }
         }
@@ -1512,6 +1525,8 @@ internal static partial class Program
     /// </summary>
     public static void Preview(CustomPreset preset)
     {
+        using IDisposable guard = AuraFiles.Lock();
+
         var devices = AuraDevice.DiscoverAll();
 
         try
@@ -1553,6 +1568,8 @@ internal static partial class Program
     /// </summary>
     public static void RestoreFromRecords()
     {
+        using IDisposable guard = AuraFiles.Lock();
+
         var devices = AuraDevice.DiscoverAll();
 
         try

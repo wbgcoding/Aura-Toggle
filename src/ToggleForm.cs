@@ -717,12 +717,16 @@ internal sealed class ToggleForm : Form
             // A missing or unreachable controller comes back as an empty list; anything that gets
             // here instead (a driver fault, a denied device) is reported once and the window
             // carries on as if no controller were found, rather than faulting this async void.
-            AuraLog.Error("Discover", ex);
             _devices = new List<AuraDeviceSummary>();
 
+            // Report logs it as well; a window nobody can see just gets the log line.
             if (!IsDisposed && Visible)
             {
                 ErrorDialog.Report(ex, "Discover", this);
+            }
+            else
+            {
+                AuraLog.Error("Discover", ex);
             }
         }
         finally
@@ -1590,16 +1594,16 @@ internal sealed class ToggleForm : Form
     }
 
     /// <summary>
-    /// Gives one last hardware task the moment it needs to finish while the window closes. Two
-    /// seconds comfortably covers a full restore even on a board with many channels - each one
-    /// costs two passes of two 8 ms-gapped writes - and matches the margin
-    /// <see cref="AuraFiles.Lock"/> already gives a wedged process.
+    /// Gives one last hardware task the moment it needs to finish while the window closes. A full
+    /// restore on a board with many channels costs two passes of two 8 ms-gapped writes each, and
+    /// a single write can itself block for up to <c>Hid.WriteTimeoutMs</c> (3000 ms) on a stuck
+    /// controller - so the wait has to outlast that one write, not just the usual run.
     /// </summary>
     private static void Settle(Task? task)
     {
         try
         {
-            task?.Wait(2000);
+            task?.Wait(3500);
         }
         catch (AggregateException)
         {
