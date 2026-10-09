@@ -82,6 +82,7 @@ internal sealed class CustomPresetEditor : PopupForm
             ColumnCount = 1,
             BackColor = Theme.Surface,
         };
+        _root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
         // A board with a lot of channels would make this taller than the screen, so the rows
         // live in a scrolling panel and the window itself stops at the work area. Added to the
@@ -112,6 +113,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _metrics.Add(() => _header.Margin = new Padding(0, 0, 0, this.Scaled(8)));
         _header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         _header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         var heading = new Label
         {
@@ -148,6 +150,7 @@ internal sealed class CustomPresetEditor : PopupForm
         nameRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         nameRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         nameRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        nameRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _name.Dock = DockStyle.Fill;
         _name.PlaceholderText = Strings.CustomPresetNamePlaceholder;
@@ -182,7 +185,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _tips.SetToolTip(_import, Strings.CustomPresetImport);
         nameRow.Controls.Add(_import, 2, 0);
 
-        _root.Controls.Add(nameRow);
+        AddRootRow(nameRow);
 
         _transferHint.Dock = DockStyle.Top;
         _transferHint.AutoSize = true;
@@ -194,7 +197,7 @@ internal sealed class CustomPresetEditor : PopupForm
             _transferHint.MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0);
             _transferHint.Margin = new Padding(this.Scaled(2), this.Scaled(6), 0, this.Scaled(10));
         });
-        _root.Controls.Add(_transferHint);
+        AddRootRow(_transferHint);
 
         if (devices.Count == 0)
         {
@@ -207,7 +210,7 @@ internal sealed class CustomPresetEditor : PopupForm
                 BackColor = Theme.Surface,
             };
             _metrics.Add(() => empty.Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(10)));
-            _root.Controls.Add(empty);
+            AddRootRow(empty);
         }
 
         Dictionary<string, string> chosen = AuraChannelNames.All();
@@ -234,6 +237,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _metrics.Add(() => _buttons.Margin = new Padding(0, this.Scaled(6), 0, 0));
         _buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         _buttons.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _buttons.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _save.Text = preset == null ? Strings.CustomPresetCreate : Strings.CustomPresetSave;
         _save.Primary = true;
@@ -339,6 +343,17 @@ internal sealed class CustomPresetEditor : PopupForm
     /// <summary>Raised once the editor closes, so the lighting goes back to what it was.</summary>
     public event EventHandler? PreviewEnded;
 
+    /// <summary>
+    /// Appends one control as a new row of the single-column list, with its own AutoSize style - the
+    /// rows are only known as they are built, and a row without a style is sized by whatever it
+    /// happens to contain.
+    /// </summary>
+    private void AddRootRow(Control control)
+    {
+        _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _root.Controls.Add(control);
+    }
+
     private ChannelRow BuildChannelRow(AuraDeviceSummary device, AuraChannel channel, bool nameDevice,
         AuraState current, Dictionary<string, string> chosen, Dictionary<string, ChannelLighting> remembered)
     {
@@ -359,7 +374,7 @@ internal sealed class CustomPresetEditor : PopupForm
                 rule.Height = this.Scaled(1);
                 rule.Margin = new Padding(this.Scaled(2), this.Scaled(6), this.Scaled(2), 0);
             });
-            _root.Controls.Add(rule);
+            AddRootRow(rule);
         }
 
         var caption = new Label
@@ -378,7 +393,7 @@ internal sealed class CustomPresetEditor : PopupForm
             caption.MaximumSize = new Size(this.Scaled(ContentWidth - 4), 0);
             caption.Margin = new Padding(this.Scaled(2), this.Scaled(10), 0, this.Scaled(6));
         });
-        _root.Controls.Add(caption);
+        AddRootRow(caption);
 
         var effect = new Select
         {
@@ -395,7 +410,7 @@ internal sealed class CustomPresetEditor : PopupForm
 
         effect.SetItems(AuraPresets.All.Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode)));
         effect.ShowSelection(AuraPresets.ByMode(seed.Mode)?.Key ?? AuraPresets.All[0].Key);
-        _root.Controls.Add(effect);
+        AddRootRow(effect);
 
         var colours = new ColourStrip
         {
@@ -404,7 +419,7 @@ internal sealed class CustomPresetEditor : PopupForm
             Colour = Color.FromArgb(seed.Red, seed.Green, seed.Blue),
         };
         _metrics.Add(() => colours.Margin = new Padding(0, 0, 0, this.Scaled(8)));
-        _root.Controls.Add(colours);
+        AddRootRow(colours);
 
         // Brightness per channel, laid out like the one in the window so both read the same way.
         var brightnessValue = new Label
@@ -437,6 +452,8 @@ internal sealed class CustomPresetEditor : PopupForm
         };
         brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         brightnessRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        brightnessRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        brightnessRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         var brightnessLabel = new Label
         {
@@ -454,7 +471,7 @@ internal sealed class CustomPresetEditor : PopupForm
         brightnessRow.Controls.Add(brightnessValue, 1, 0);
         brightnessRow.Controls.Add(brightness, 0, 1);
         brightnessRow.SetColumnSpan(brightness, 2);
-        _root.Controls.Add(brightnessRow);
+        AddRootRow(brightnessRow);
 
         var row = new ChannelRow
         {
