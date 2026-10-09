@@ -54,10 +54,10 @@
     <value>Mainboard-Beleuchtung ein- oder ausschalten</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Aufruf: AuraToggle [-on | -off | -preset &lt;Name&gt; [Farbe] | -brightness &lt;10-100&gt; | -custom &lt;Name|Nummer&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;Ziel&gt;]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
+    <value>Aufruf: AuraToggle [-on | -off | -toggle | -preset &lt;Name&gt; [Farbe] | -brightness &lt;10-100&gt; | -custom &lt;Name|Nummer&gt; | -list | -status [--json] | --version | -help] [-device &lt;n&gt;] [-channel &lt;Ziel&gt;]   (ohne Argument &#246;ffnet sich das Umschaltfenster)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Presets: {0}</value>
+    <value>Effekte: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Kein Controller gefunden</value>
@@ -99,7 +99,7 @@
     <value>Die Farbe wird langsam heller und dunkler.</value>
   </data>
   <data name="EffectHintFlashing" xml:space="preserve">
-    <value>Die Farbe blinkt scharf an und aus.</value>
+    <value>Die Farbe blinkt hart an und aus.</value>
   </data>
   <data name="EffectHintSpectrumCycle" xml:space="preserve">
     <value>Durchläuft das gesamte Farbspektrum. Nicht dimmbar.</value>
@@ -111,7 +111,7 @@
     <value>Der Regenbogenverlauf wird heller und dunkler. Nicht dimmbar.</value>
   </data>
   <data name="EffectHintChaseFade" xml:space="preserve">
-    <value>Ein Lichtpunkt läuft über den Kanal mit einem verblassenden Schweif.</value>
+    <value>Ein Lichtpunkt mit verblassendem Schweif läuft über den Kanal.</value>
   </data>
   <data name="EffectHintChase" xml:space="preserve">
     <value>Ein Lichtpunkt läuft über den Kanal, ohne Schweif.</value>
@@ -120,22 +120,22 @@
     <value>Die Farbe fließt wellenförmig über den Kanal. Nicht dimmbar.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>Kein AURA-LED-Controller gefunden (USB VID 0B05). Dieses Tool funktioniert nur auf ASUS-Mainboards mit Aura-USB-Beleuchtung.</value>
+    <value>Kein Aura-LED-Controller gefunden (USB VID 0B05). Dieses Tool funktioniert nur auf ASUS-Mainboards mit Aura-USB-Beleuchtung.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>Der AURA-LED-Controller wird von einem anderen Programm belegt (Armoury Crate, OpenRGB, SignalRGB). Bitte beenden und erneut versuchen.</value>
+    <value>Der Aura-LED-Controller wird von einem anderen Programm belegt (Armoury Crate, OpenRGB, SignalRGB). Beende es und versuch es noch mal.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Schreiben an den AURA-Controller fehlgeschlagen (Befehl 0x{0}): {1}</value>
+    <value>Schreiben an den Aura-Controller fehlgeschlagen (Befehl 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>Der AURA-Controller hat auf einen vorherigen Befehl noch nicht geantwortet.</value>
+    <value>Der Aura-Controller hat auf einen vorherigen Befehl noch nicht geantwortet.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>Der AURA-Controller hat den Befehl nicht rechtzeitig angenommen.</value>
+    <value>Der Aura-Controller hat den Befehl nicht rechtzeitig angenommen.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Schreiben an den AURA-Controller fehlgeschlagen.</value>
+    <value>Schreiben an den Aura-Controller fehlgeschlagen.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>Unbekannte Controller-Nummer. -list zeigt die g&#252;ltigen.</value>
@@ -150,7 +150,7 @@
     <value>Mit Windows starten</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Beim Schlie&#223;en minimieren</value>
+    <value>Beim Schließen in den Infobereich</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Beleuchtung beim Start</value>
@@ -162,7 +162,7 @@
     <value>Ausschalten</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>Setzen und App beenden</value>
+    <value>Anwenden und App schließen</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>&#214;ffnen</value>
@@ -327,16 +327,16 @@
     <value>Details kopieren</value>
   </data>
   <data name="ErrorOpenLog" xml:space="preserve">
-    <value>Logordner &#246;ffnen</value>
+    <value>Log-Ordner öffnen</value>
   </data>
   <data name="ErrorClose" xml:space="preserve">
     <value>Schlie&#223;en</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Einstellungen zur&#252;cksetzen</value>
+    <value>Alles zurücksetzen</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Wirklich alles zur&#252;cksetzen?</value>
+    <value>Auch Presets. Sicher?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Nichts wurde zur&#252;ckgesetzt: Die Sicherung deiner Einstellungen und Presets konnte nicht geschrieben werden. Gib etwas Speicherplatz frei und versuche es erneut.</value>
@@ -348,7 +348,10 @@
     <value>Diese Kombination ist bereits belegt.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 umbenennen, Entf löschen</value>
+    <value>F2 bearbeiten, Strg+D duplizieren, Entf löschen</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>F2 umbenennen</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>Taste dr&#252;cken...</value>

@@ -54,10 +54,10 @@
     <value>マザーボードの照明をオンまたはオフに切り替えます</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>使い方: AuraToggle [-on | -off | -preset &lt;名前&gt; [色] | -brightness &lt;10-100&gt; | -custom &lt;名前|番号&gt; | -list | -status | --version] [-device &lt;番号&gt;] [-channel &lt;対象&gt;]   （引数なしで切り替えウィンドウを開きます）</value>
+    <value>使い方: AuraToggle [-on | -off | -toggle | -preset &lt;名前&gt; [色] | -brightness &lt;10-100&gt; | -custom &lt;名前|番号&gt; | -list | -status [--json] | --version | -help] [-device &lt;番号&gt;] [-channel &lt;対象&gt;]   （引数なしで切り替えウィンドウを開きます）</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>プリセット: {0}</value>
+    <value>効果: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>コントローラーが見つかりません</value>
@@ -120,22 +120,22 @@
     <value>色が波のようにチャンネル上を流れます。明るさは変更できません。</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>AURA LEDコントローラーが見つかりません（USB VID 0B05）。このツールはAura USB照明対応のASUSマザーボードでのみ動作します。</value>
+    <value>Aura LEDコントローラーが見つかりません（USB VID 0B05）。このツールはAura USB照明対応のASUSマザーボードでのみ動作します。</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>AURA LEDコントローラーは別のプログラム（Armoury Crate、OpenRGB、SignalRGB）で使用中です。そのプログラムを閉じてからもう一度試してください。</value>
+    <value>Aura LEDコントローラーは別のプログラム（Armoury Crate、OpenRGB、SignalRGB）で使用中です。そのプログラムを閉じてからもう一度試してください。</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>AURAコントローラーへの書き込みに失敗しました（コマンド 0x{0}）: {1}</value>
+    <value>Auraコントローラーへの書き込みに失敗しました（コマンド 0x{0}）: {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>AURAコントローラーは前のコマンドにまだ応答していません。</value>
+    <value>Auraコントローラーは前のコマンドにまだ応答していません。</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>AURAコントローラーが時間内にコマンドを受け付けませんでした。</value>
+    <value>Auraコントローラーが時間内にコマンドを受け付けませんでした。</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>AURAコントローラーへの書き込みに失敗しました。</value>
+    <value>Auraコントローラーへの書き込みに失敗しました。</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>不明なコントローラー番号です。有効な番号は -list で確認してください。</value>
@@ -150,7 +150,7 @@
     <value>Windowsと同時に起動</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>閉じると最小化</value>
+    <value>閉じるときに通知領域へ</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>起動時の照明</value>
@@ -162,7 +162,7 @@
     <value>オフにする</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>設定後にアプリを終了</value>
+    <value>適用してアプリを終了</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>開く</value>
@@ -246,7 +246,7 @@
     <value>リセット</value>
   </data>
   <data name="ChannelRenameResetConfirm" xml:space="preserve">
-    <value>名前をリセットしますか?</value>
+    <value>名前をリセットしますか？</value>
   </data>
   <data name="ChannelRenameAccessibleName" xml:space="preserve">
     <value>チャンネル名</value>
@@ -282,7 +282,7 @@
     <value>削除</value>
   </data>
   <data name="CustomPresetConfirmDelete" xml:space="preserve">
-    <value>完全に削除しますか?</value>
+    <value>完全に削除しますか？</value>
   </data>
   <data name="CustomPresetDiscard" xml:space="preserve">
     <value>破棄</value>
@@ -333,10 +333,10 @@
     <value>閉じる</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>設定をリセット</value>
+    <value>すべてリセット</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>すべてリセットしますか?</value>
+    <value>プリセットも対象です。よろしいですか？</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>リセットは行われませんでした。設定とプリセットのバックアップを書き込めませんでした。ディスクの空き容量を増やして、もう一度お試しください。</value>
@@ -348,7 +348,10 @@
     <value>このキーの組み合わせはすでに使用されています。</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2で名前変更、Delで削除</value>
+    <value>F2で編集、Ctrl+Dで複製、Delで削除</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>F2で名前変更</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>キーを押してください...</value>

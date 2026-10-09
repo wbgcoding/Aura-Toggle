@@ -223,6 +223,8 @@ internal static class Strings
     public static string SettingHotkeyConflict => Get("SettingHotkeyConflict");
     public static string PresetShortcutHint => Get("PresetShortcutHint");
 
+    public static string ChannelShortcutHint => Get("ChannelShortcutHint");
+
     public static string HotkeyRecordPrompt => Get("HotkeyRecordPrompt");
 
     public static string HotkeyModifierControl => Get("HotkeyModifierControl");

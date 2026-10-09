@@ -54,10 +54,10 @@
     <value>Ligar ou desligar a iluminação da placa-mãe</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Uso: AuraToggle [-on | -off | -preset &lt;nome&gt; [cor] | -brightness &lt;10-100&gt; | -custom &lt;nome|número&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;destino&gt;]   (sem argumento, a janela de alternância é aberta)</value>
+    <value>Uso: AuraToggle [-on | -off | -toggle | -preset &lt;nome&gt; [cor] | -brightness &lt;10-100&gt; | -custom &lt;nome|número&gt; | -list | -status [--json] | --version | -help] [-device &lt;n&gt;] [-channel &lt;destino&gt;]   (sem argumento, a janela de alternância é aberta)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Predefinições: {0}</value>
+    <value>Efeitos: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Nenhum controlador encontrado</value>
@@ -84,10 +84,10 @@
     <value>Respiração arco-íris</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
-    <value>Chase Fade</value>
+    <value>Perseguição com rastro</value>
   </data>
   <data name="PresetChase" xml:space="preserve">
-    <value>Chase</value>
+    <value>Perseguição</value>
   </data>
   <data name="PresetWave" xml:space="preserve">
     <value>Onda</value>
@@ -120,22 +120,22 @@
     <value>A cor flui pelo canal como uma onda. Não permite ajustar o brilho.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>Nenhum controlador LED AURA encontrado (USB VID 0B05). Esta ferramenta funciona apenas em placas-mãe ASUS com iluminação Aura USB.</value>
+    <value>Nenhum controlador LED Aura encontrado (USB VID 0B05). Esta ferramenta funciona apenas em placas-mãe ASUS com iluminação Aura USB.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>O controlador LED AURA está sendo usado por outro programa (Armoury Crate, OpenRGB, SignalRGB). Feche-o e tente novamente.</value>
+    <value>O controlador LED Aura está sendo usado por outro programa (Armoury Crate, OpenRGB, SignalRGB). Feche-o e tente novamente.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Falha ao gravar no controlador AURA (comando 0x{0}): {1}</value>
+    <value>Falha ao gravar no controlador Aura (comando 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>O controlador AURA ainda não respondeu a um comando anterior.</value>
+    <value>O controlador Aura ainda não respondeu a um comando anterior.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>O controlador AURA não aceitou o comando a tempo.</value>
+    <value>O controlador Aura não aceitou o comando a tempo.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Falha ao gravar no controlador AURA.</value>
+    <value>Falha ao gravar no controlador Aura.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>Número de controlador desconhecido. Execute -list para ver os válidos.</value>
@@ -150,13 +150,13 @@
     <value>Iniciar com o Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimizar ao fechar</value>
+    <value>Ao fechar, ir para a área de notificação</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Iluminação ao iniciar</value>
   </data>
   <data name="StartActionNone" xml:space="preserve">
-    <value>Manter inalterada</value>
+    <value>Não alterar</value>
   </data>
   <data name="StartActionOff" xml:space="preserve">
     <value>Desligar</value>
@@ -333,10 +333,10 @@
     <value>Fechar</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Redefinir configurações</value>
+    <value>Redefinir tudo</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Redefinir tudo?</value>
+    <value>As predefinições também. Tem certeza?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Nada foi redefinido: não foi possível gravar o backup das suas configurações e predefinições. Libere um pouco de espaço em disco e tente novamente.</value>
@@ -348,7 +348,10 @@
     <value>Essa combinação já está em uso.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 para renomear, Del para excluir</value>
+    <value>F2 para editar, Ctrl+D para duplicar, Del para excluir</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>F2 para renomear</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>Pressione uma tecla...</value>

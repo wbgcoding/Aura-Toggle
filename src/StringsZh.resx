@@ -54,10 +54,10 @@
     <value>打开或关闭主板灯光</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>用法：AuraToggle [-on | -off | -preset &lt;名称&gt; [颜色] | -brightness &lt;10-100&gt; | -custom &lt;名称|编号&gt; | -list | -status | --version] [-device &lt;编号&gt;] [-channel &lt;目标&gt;]   （不带参数时打开切换窗口）</value>
+    <value>用法：AuraToggle [-on | -off | -toggle | -preset &lt;名称&gt; [颜色] | -brightness &lt;10-100&gt; | -custom &lt;名称|编号&gt; | -list | -status [--json] | --version | -help] [-device &lt;编号&gt;] [-channel &lt;目标&gt;]   （不带参数时打开切换窗口）</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>预设：{0}</value>
+    <value>效果：{0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>未找到控制器</value>
@@ -120,22 +120,22 @@
     <value>颜色像波浪一样沿通道流动。不可调暗。</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>未找到 AURA LED 控制器（USB VID 0B05）。此工具仅适用于配备 Aura USB 灯光的 ASUS 主板。</value>
+    <value>未找到 Aura LED 控制器（USB VID 0B05）。此工具仅适用于配备 Aura USB 灯光的 ASUS 主板。</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>AURA LED 控制器正被其他程序占用（Armoury Crate、OpenRGB、SignalRGB）。请关闭后重试。</value>
+    <value>Aura LED 控制器正被其他程序占用（Armoury Crate、OpenRGB、SignalRGB）。请关闭后重试。</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>写入 AURA 控制器失败（命令 0x{0}）：{1}</value>
+    <value>写入 Aura 控制器失败（命令 0x{0}）：{1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>AURA 控制器尚未响应上一条命令。</value>
+    <value>Aura 控制器尚未响应上一条命令。</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>AURA 控制器未及时接受该命令。</value>
+    <value>Aura 控制器未及时接受该命令。</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>写入 AURA 控制器失败。</value>
+    <value>写入 Aura 控制器失败。</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>未知的控制器编号。运行 -list 查看有效编号。</value>
@@ -150,7 +150,7 @@
     <value>随 Windows 启动</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>关闭时最小化</value>
+    <value>关闭时收起到通知区域</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>启动时的灯光状态</value>
@@ -162,7 +162,7 @@
     <value>关闭</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>设置后关闭应用</value>
+    <value>应用后关闭应用</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>打开</value>
@@ -333,10 +333,10 @@
     <value>关闭</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>重置设置</value>
+    <value>全部重置</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>重置所有内容？</value>
+    <value>预设也会重置。确定吗？</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>未执行任何重置：无法写入设置和预设的备份。请释放一些磁盘空间后重试。</value>
@@ -348,7 +348,10 @@
     <value>该组合键已被占用。</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>按 F2 重命名，按 Del 删除</value>
+    <value>按 F2 编辑，按 Ctrl+D 复制，按 Del 删除</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>按 F2 重命名</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>请按键...</value>

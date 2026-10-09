@@ -54,10 +54,10 @@
     <value>Moederbordverlichting in- of uitschakelen</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Gebruik: AuraToggle [-on | -off | -preset &lt;naam&gt; [kleur] | -brightness &lt;10-100&gt; | -custom &lt;naam|nummer&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;doel&gt;]   (zonder argument wordt het schakelvenster geopend)</value>
+    <value>Gebruik: AuraToggle [-on | -off | -toggle | -preset &lt;naam&gt; [kleur] | -brightness &lt;10-100&gt; | -custom &lt;naam|nummer&gt; | -list | -status [--json] | --version | -help] [-device &lt;n&gt;] [-channel &lt;doel&gt;]   (zonder argument wordt het schakelvenster geopend)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Voorinstellingen: {0}</value>
+    <value>Effecten: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Geen controller gevonden</value>
@@ -84,10 +84,10 @@
     <value>Regenboog ademend</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
-    <value>Chase Fade</value>
+    <value>Looplicht met vervaging</value>
   </data>
   <data name="PresetChase" xml:space="preserve">
-    <value>Chase</value>
+    <value>Looplicht</value>
   </data>
   <data name="PresetWave" xml:space="preserve">
     <value>Golf</value>
@@ -120,22 +120,22 @@
     <value>Kleur stroomt als een golf over het kanaal. Niet dimbaar.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>Geen AURA-ledcontroller gevonden (USB VID 0B05). Dit hulpmiddel werkt alleen op ASUS-moederborden met Aura USB-verlichting.</value>
+    <value>Geen Aura-ledcontroller gevonden (USB VID 0B05). Dit hulpmiddel werkt alleen op ASUS-moederborden met Aura USB-verlichting.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>De AURA-ledcontroller wordt door een ander programma gebruikt (Armoury Crate, OpenRGB, SignalRGB). Sluit het programma en probeer het opnieuw.</value>
+    <value>De Aura-ledcontroller wordt door een ander programma gebruikt (Armoury Crate, OpenRGB, SignalRGB). Sluit het programma en probeer het opnieuw.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Schrijven naar de AURA-controller is mislukt (opdracht 0x{0}): {1}</value>
+    <value>Schrijven naar de Aura-controller is mislukt (opdracht 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>De AURA-controller heeft nog niet op een vorige opdracht geantwoord.</value>
+    <value>De Aura-controller heeft nog niet op een vorige opdracht geantwoord.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>De AURA-controller heeft de opdracht niet op tijd geaccepteerd.</value>
+    <value>De Aura-controller heeft de opdracht niet op tijd geaccepteerd.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Schrijven naar de AURA-controller is mislukt.</value>
+    <value>Schrijven naar de Aura-controller is mislukt.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>Onbekend controllernummer. Voer -list uit om de geldige nummers te zien.</value>
@@ -150,7 +150,7 @@
     <value>Starten met Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimaliseren bij sluiten</value>
+    <value>Bij sluiten naar het systeemvak</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Verlichting bij starten</value>
@@ -162,7 +162,7 @@
     <value>Uitschakelen</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>Instellen en app sluiten</value>
+    <value>Toepassen en app sluiten</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Openen</value>
@@ -174,7 +174,7 @@
     <value>Schakelaar animeren</value>
   </data>
   <data name="SettingAlwaysOnTop" xml:space="preserve">
-    <value>Altijd op voorgrond</value>
+    <value>Altijd op de voorgrond</value>
   </data>
   <data name="TrayUpdateInstall" xml:space="preserve">
     <value>Versie {0} installeren</value>
@@ -333,10 +333,10 @@
     <value>Sluiten</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Instellingen herstellen</value>
+    <value>Alles herstellen</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Alles herstellen?</value>
+    <value>Ook voorinstellingen. Zeker?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Er is niets hersteld: de back-up van je instellingen en voorinstellingen kon niet worden geschreven. Maak wat schijfruimte vrij en probeer het opnieuw.</value>
@@ -348,7 +348,10 @@
     <value>Die combinatie wordt al gebruikt.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 om te hernoemen, Del om te verwijderen</value>
+    <value>F2 om te bewerken, Ctrl+D om te dupliceren, Del om te verwijderen</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>F2 om te hernoemen</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>Druk op een toets...</value>

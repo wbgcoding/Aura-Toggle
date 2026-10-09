@@ -54,10 +54,10 @@
     <value>Switch mainboard lighting on or off</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Usage: AuraToggle [-on | -off | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name|number&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
+    <value>Usage: AuraToggle [-on | -off | -toggle | -preset &lt;name&gt; [colour] | -brightness &lt;10-100&gt; | -custom &lt;name|number&gt; | -list | -status [--json] | --version | -help] [-device &lt;n&gt;] [-channel &lt;target&gt;]   (without an argument the toggle window opens)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Presets: {0}</value>
+    <value>Effects: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>No controller found</value>
@@ -120,22 +120,22 @@
     <value>Colour flows along the channel like a wave. Not dimmable.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>No AURA LED controller found (USB VID 0B05). This tool only works on ASUS mainboards with Aura USB lighting.</value>
+    <value>No Aura LED controller found (USB VID 0B05). This tool only works on ASUS mainboards with Aura USB lighting.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>The AURA LED controller is in use by another program (Armoury Crate, OpenRGB, SignalRGB). Close it and try again.</value>
+    <value>The Aura LED controller is in use by another program (Armoury Crate, OpenRGB, SignalRGB). Close it and try again.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Writing to the AURA controller failed (command 0x{0}): {1}</value>
+    <value>Writing to the Aura controller failed (command 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>The AURA controller has not answered a previous command yet.</value>
+    <value>The Aura controller has not answered a previous command yet.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>The AURA controller did not accept the command in time.</value>
+    <value>The Aura controller did not accept the command in time.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Writing to the AURA controller failed.</value>
+    <value>Writing to the Aura controller failed.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>Unknown controller number. Run -list to see the valid ones.</value>
@@ -150,7 +150,7 @@
     <value>Start with Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimise on close</value>
+    <value>Close to the notification area</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Lighting at start</value>
@@ -162,7 +162,7 @@
     <value>Switch off</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>Set it and close the app</value>
+    <value>Apply and close the app</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Open</value>
@@ -333,10 +333,10 @@
     <value>Close</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Reset settings</value>
+    <value>Reset everything</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Reset everything?</value>
+    <value>Presets too. Sure?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Nothing was reset: the backup of your settings and presets could not be written. Free some disk space and try again.</value>
@@ -348,7 +348,10 @@
     <value>That combination is already in use.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 to rename, Del to delete</value>
+    <value>F2 to edit, Ctrl+D to duplicate, Del to delete</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>F2 to rename</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>Press a key...</value>

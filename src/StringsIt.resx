@@ -54,10 +54,10 @@
     <value>Accendi o spegni l'illuminazione della scheda madre</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Uso: AuraToggle [-on | -off | -preset &lt;nome&gt; [colore] | -brightness &lt;10-100&gt; | -custom &lt;nome|numero&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;destinazione&gt;]   (senza argomenti si apre la finestra di commutazione)</value>
+    <value>Uso: AuraToggle [-on | -off | -toggle | -preset &lt;nome&gt; [colore] | -brightness &lt;10-100&gt; | -custom &lt;nome|numero&gt; | -list | -status [--json] | --version | -help] [-device &lt;n&gt;] [-channel &lt;destinazione&gt;]   (senza argomenti si apre la finestra di commutazione)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Preimpostazioni: {0}</value>
+    <value>Effetti: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Nessun controller trovato</value>
@@ -120,22 +120,22 @@
     <value>Il colore scorre lungo il canale come un'onda. Luminosità non regolabile.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>Nessun controller LED AURA trovato (USB VID 0B05). Questo strumento funziona solo su schede madri ASUS con illuminazione Aura USB.</value>
+    <value>Nessun controller LED Aura trovato (USB VID 0B05). Questo strumento funziona solo su schede madri ASUS con illuminazione Aura USB.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>Il controller LED AURA è in uso da un altro programma (Armoury Crate, OpenRGB, SignalRGB). Chiudilo e riprova.</value>
+    <value>Il controller LED Aura è in uso da un altro programma (Armoury Crate, OpenRGB, SignalRGB). Chiudilo e riprova.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>Scrittura nel controller AURA non riuscita (comando 0x{0}): {1}</value>
+    <value>Scrittura nel controller Aura non riuscita (comando 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>Il controller AURA non ha ancora risposto a un comando precedente.</value>
+    <value>Il controller Aura non ha ancora risposto a un comando precedente.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>Il controller AURA non ha accettato il comando in tempo.</value>
+    <value>Il controller Aura non ha accettato il comando in tempo.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>Scrittura nel controller AURA non riuscita.</value>
+    <value>Scrittura nel controller Aura non riuscita.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>Numero del controller sconosciuto. Esegui -list per vedere quelli validi.</value>
@@ -150,7 +150,7 @@
     <value>Avvia con Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Riduci a icona alla chiusura</value>
+    <value>Alla chiusura, vai nell'area di notifica</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Illuminazione all'avvio</value>
@@ -162,7 +162,7 @@
     <value>Spegni</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>Applicarla e chiudere l'app</value>
+    <value>Applica e chiudi l'app</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Apri</value>
@@ -285,7 +285,7 @@
     <value>Eliminare definitivamente?</value>
   </data>
   <data name="CustomPresetDiscard" xml:space="preserve">
-    <value>Annulla</value>
+    <value>Scarta</value>
   </data>
   <data name="CustomPresetNew" xml:space="preserve">
     <value>Nuova preimpostazione</value>
@@ -333,22 +333,25 @@
     <value>Chiudi</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Reimposta impostazioni</value>
+    <value>Reimposta tutto</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Reimpostare tutto?</value>
+    <value>Anche le preimpostazioni. Sicuro?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Non è stato reimpostato nulla: non è stato possibile scrivere il backup delle tue impostazioni e preimpostazioni. Libera un po' di spazio su disco e riprova.</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
-    <value>Tasto di scelta rapida globale (Acceso/Spento)</value>
+    <value>Scorciatoia globale (Acceso/Spento)</value>
   </data>
   <data name="SettingHotkeyConflict" xml:space="preserve">
     <value>Questa combinazione è già in uso.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 per rinominare, Canc per eliminare</value>
+    <value>F2 per modificare, Ctrl+D per duplicare, Canc per eliminare</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>F2 per rinominare</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>Premi un tasto...</value>

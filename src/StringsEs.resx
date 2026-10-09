@@ -54,10 +54,10 @@
     <value>Activar o desactivar la iluminación de la placa base</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Uso: AuraToggle [-on | -off | -preset &lt;nombre&gt; [color] | -brightness &lt;10-100&gt; | -custom &lt;nombre|número&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;destino&gt;]   (sin argumentos se abre la ventana de conmutación)</value>
+    <value>Uso: AuraToggle [-on | -off | -toggle | -preset &lt;nombre&gt; [color] | -brightness &lt;10-100&gt; | -custom &lt;nombre|número&gt; | -list | -status [--json] | --version | -help] [-device &lt;n&gt;] [-channel &lt;destino&gt;]   (sin argumentos se abre la ventana de conmutación)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Preajustes: {0}</value>
+    <value>Efectos: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>No se encontró ningún controlador</value>
@@ -84,7 +84,7 @@
     <value>Respiración arcoíris</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
-    <value>Persecución con desvanecimiento</value>
+    <value>Persecución con estela</value>
   </data>
   <data name="PresetChase" xml:space="preserve">
     <value>Persecución</value>
@@ -99,7 +99,7 @@
     <value>El color se atenúa y se intensifica lentamente.</value>
   </data>
   <data name="EffectHintFlashing" xml:space="preserve">
-    <value>El color parpadea bruscamente al activarse y desactivarse.</value>
+    <value>El color se enciende y se apaga de golpe.</value>
   </data>
   <data name="EffectHintSpectrumCycle" xml:space="preserve">
     <value>Recorre todo el espectro de colores. No regulable.</value>
@@ -120,22 +120,22 @@
     <value>El color fluye por el canal como una onda. No regulable.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>No se encontró ningún controlador LED AURA (USB VID 0B05). Esta herramienta solo funciona en placas base ASUS con iluminación Aura por USB.</value>
+    <value>No se encontró ningún controlador LED Aura (USB VID 0B05). Esta herramienta solo funciona en placas base ASUS con iluminación Aura por USB.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>El controlador LED AURA está siendo usado por otro programa (Armoury Crate, OpenRGB, SignalRGB). Ciérralo e inténtalo de nuevo.</value>
+    <value>El controlador LED Aura está siendo usado por otro programa (Armoury Crate, OpenRGB, SignalRGB). Ciérralo e inténtalo de nuevo.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>No se pudo escribir en el controlador AURA (comando 0x{0}): {1}</value>
+    <value>No se pudo escribir en el controlador Aura (comando 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>El controlador AURA aún no ha respondido a un comando anterior.</value>
+    <value>El controlador Aura aún no ha respondido a un comando anterior.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>El controlador AURA no aceptó el comando a tiempo.</value>
+    <value>El controlador Aura no aceptó el comando a tiempo.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>No se pudo escribir en el controlador AURA.</value>
+    <value>No se pudo escribir en el controlador Aura.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
     <value>Número de controlador desconocido. Ejecuta -list para ver los válidos.</value>
@@ -150,7 +150,7 @@
     <value>Iniciar con Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Minimizar al cerrar</value>
+    <value>Al cerrar, ir al área de notificación</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Iluminación al iniciar</value>
@@ -162,7 +162,7 @@
     <value>Desactivar</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>Aplicarla y cerrar la app</value>
+    <value>Aplicar y cerrar la app</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Abrir</value>
@@ -333,13 +333,13 @@
     <value>Cerrar</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Restablecer configuración</value>
+    <value>Restablecer todo</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>¿Restablecer todo?</value>
+    <value>También los preajustes. ¿Seguro?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
-    <value>No se restableció nada: no se pudo escribir la copia de seguridad de tus ajustes y preajustes. Libera algo de espacio en disco e inténtalo de nuevo.</value>
+    <value>No se restableció nada: no se pudo escribir la copia de seguridad de tu configuración y tus preajustes. Libera algo de espacio en disco e inténtalo de nuevo.</value>
   </data>
   <data name="SettingHotkey" xml:space="preserve">
     <value>Atajo global (Activado/Desactivado)</value>
@@ -348,7 +348,10 @@
     <value>Esa combinación ya está en uso.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>F2 para cambiar el nombre, Supr para eliminar</value>
+    <value>F2 para editar, Ctrl+D para duplicar, Supr para eliminar</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>F2 para cambiar el nombre</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
     <value>Pulsa una tecla...</value>

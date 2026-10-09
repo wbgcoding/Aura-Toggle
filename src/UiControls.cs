@@ -883,6 +883,10 @@ internal sealed class SelectPopup : PopupForm
         Activate();
     }
 
+    /// <summary>A preset row has edit, duplicate and delete on the keyboard; a channel row only renames.</summary>
+    private static string ShortcutHintFor(SelectItem item) =>
+        item.Editable ? Strings.PresetShortcutHint : Strings.ChannelShortcutHint;
+
     /// <summary>
     /// Review mode only: shows the tooltip on the first row that has one, the same way hovering it
     /// would - so the dark-tooltip fix can be screenshotted directly instead of trusted by reading
@@ -897,7 +901,7 @@ internal sealed class SelectPopup : PopupForm
             return;
         }
 
-        string tip = _items[row].Hint ?? Strings.PresetShortcutHint;
+        string tip = _items[row].Hint ?? ShortcutHintFor(_items[row]);
         Rectangle rect = RowRect(row);
         _tipRow = row;
         _shortcutTip.Show(tip, this, rect.Left + 12, rect.Top + 20, 4000);
@@ -1104,7 +1108,7 @@ internal sealed class SelectPopup : PopupForm
         string? tip = hovered < 0
             ? null
             : _items[hovered].Hint ??
-              (_items[hovered].Editable || _items[hovered].Renamable ? Strings.PresetShortcutHint : null);
+              (_items[hovered].Editable || _items[hovered].Renamable ? ShortcutHintFor(_items[hovered]) : null);
 
         if (tip != null && hovered != _tipRow)
         {

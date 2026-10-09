@@ -36,6 +36,7 @@
   <ItemGroup>
     <!-- The root project globs every .cs below it; the signing tool is a project of its own. -->
     <Compile Remove="tools\**" />
+    <Compile Remove=".tmp\**" />
   </ItemGroup>
 
   <ItemGroup>

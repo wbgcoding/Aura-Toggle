@@ -9,9 +9,13 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Signed automatic updates: the program checks GitHub for a newer release at most once a day and installs it on one click, only when the download carries the project's signature; a "Check for updates" switch in the gear turns the check off
-- "Lighting at start" offers your own custom presets too, and follows a preset when you rename it
-- "Set it and close the app": autostart only sets the start lighting and quits again, with no
+- "Lighting at start" offers your own custom presets too, and follows a preset when you rename it and falls back to leaving the lighting alone when you delete it
+- "Apply and close the app": autostart only sets the start lighting and quits again, with no
   window and no notification area icon; a controller still coming up at logon is waited for
+
+### Changed
+
+- Interface texts tightened in all ten languages: effect state and reset labels, the close switch ("Apply and close the app"), the close-to-tray switch, usage line with every command, a separate keyboard hint for channel rows, and "Aura" instead of "AURA"
 
 ### Fixed
 
@@ -50,7 +54,7 @@ network code left in the tool at all.
 ### Fixed
 
 - A portable copy that was moved, renamed or duplicated no longer reads "Start with Windows" as on
-  because some other copy's entry happens to still be in the registry — the switch now checks that
+  because some other copy's entry happens to still be in the registry: the switch now checks that
   the entry actually points at the copy asking
 - Uninstalling a per-user install no longer hits an internal setup error partway through and skips
   the prompt to delete your settings
@@ -65,7 +69,7 @@ network code left in the tool at all.
 
 ### Removed
 
-- The update check, including its setting and its tray notification — the tool no longer talks to
+- The update check, including its setting and its tray notification: the tool no longer talks to
   the network at all
 
 ## [1.2.1] - 2026-08-22
@@ -151,7 +155,7 @@ looking at, and a round of fixes to the window's sizing, its safety checks and i
 ## [1.2.0] - 2026-08-14
 
 First public release. Aura Toggle switches the Aura lighting of an ASUS mainboard off and on from
-a single portable executable — no background service, no driver, no admin rights.
+a single portable executable: no background service, no driver, no admin rights.
 
 ### Added
 
@@ -170,7 +174,7 @@ a single portable executable — no background service, no driver, no admin righ
 - Every channel remembers its own effect, colour, brightness and on/off state. Switching the board
   back on returns each channel to what it was running instead of pushing one colour across all of
   them.
-- Channels can be given a name of your own — hover one in the selector for a pencil. While you
+- Channels can be given a name of your own. Hover one in the selector for a pencil. While you
   name it, that channel lights up red and the rest of its controller goes faint white, so there is
   no guessing which header is which.
 
@@ -183,7 +187,7 @@ a single portable executable — no background service, no driver, no admin righ
   duplicating names the copy "<name> (2)" and opens straight into its editor.
 - The editor shows what it is building on the real hardware and puts the lighting back the way it
   was if you close it without saving. Deleting asks once before it goes through.
-- Export and Import move a single preset as one `.json` file — to another machine, a second Windows
+- Export and Import move a single preset as one `.json` file, to another machine, a second Windows
   profile, or just a backup. On different hardware the channels are matched by position, since a
   different machine cannot have the same controller.
 
@@ -196,7 +200,7 @@ a single portable executable — no background service, no driver, no admin righ
 - A global hotkey, Ctrl+Alt+L by default and configurable, switches the whole board from anywhere.
   A combination another program already claimed is reported instead of silently doing nothing.
 - The window reopens where it was last placed, as long as that spot is still on a display that
-  exists — otherwise it centres itself instead of opening off-screen — and at the width it last
+  exists (otherwise it centres itself instead of opening off-screen) and at the width it last
   closed at, so it does not visibly grow a moment after opening.
 - "Always on top", for keeping the window in view while something else has the focus.
 
@@ -229,7 +233,7 @@ a single portable executable — no background service, no driver, no admin righ
 - A log at `%LOCALAPPDATA%\aura-toggle\log.txt`, rotated at 200 KB, that records start-up, version
   and what went wrong when a controller could not be reached.
 - "Reset settings" puts everything back to first-run defaults without a restart, and zips every
-  file it is about to delete — your own custom presets included — into `reset-backup.zip` first.
+  file it is about to delete (your own custom presets included) into `reset-backup.zip` first.
 - Every stored file is written through a temporary file, so an interrupted save cannot leave a
   half-written one behind, and the window and a command line call cannot overwrite each other.
 
@@ -237,19 +241,19 @@ a single portable executable — no background service, no driver, no admin righ
 
 - An update check, on by default: at most once every 24 hours the tool asks GitHub for the latest
   release. Finding a newer one adds a tray notice and, the first time the window is open to see it,
-  a small popup with the same choice that closes itself after 30 seconds — either one offered once
+  a small popup with the same choice that closes itself after 30 seconds, either one offered once
   per version, not on every start.
 - An installed copy can install the update once its checksum matches the release's own
   `SHA256SUMS.txt`; a portable copy is offered a link to the release page instead, since it cannot
   replace itself. Nothing is downloaded or run without a click.
-- Nothing but the question for the latest release tag is ever sent — no machine identifier, no
+- Nothing but the question for the latest release tag is ever sent, no machine identifier, no
   usage data. Turned off by setting `"checkUpdates": false` in `settings.json`; there is no switch
   for it in the window.
 
 **Download**
 
 - A portable executable of around 630 KB, and an installer of around 2.3 MB that can install for
-  everyone or just for you — the latter without admin rights. When the .NET 10 Desktop Runtime is
+  everyone or just for you, the latter without admin rights. When the .NET 10 Desktop Runtime is
   missing, the setup asks once and fetches it from Microsoft, verifying the download's Microsoft
   signature before it runs.
 - The uninstaller names the actual files it is about to delete when it asks whether to remove your
@@ -260,9 +264,9 @@ a single portable executable — no background service, no driver, no admin righ
 
 An effect and colour apply to a whole channel, never to a single LED. Spectrum cycle, rainbow,
 rainbow breathing and wave come out of the controller's own firmware, which has one effect engine
-per controller — set one of them on a single header and every header of that controller runs it,
+per controller: set one of them on a single header and every header of that controller runs it,
 and none of the four can be dimmed. Only mainboard lighting is covered: no GPU, RAM, fans or other
-Aura Sync devices, and plain 12 V RGB headers get no channel of their own — only what the board
+Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only what the board
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 

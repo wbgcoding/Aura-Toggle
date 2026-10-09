@@ -54,10 +54,10 @@
     <value>Anakart aydınlatmasını aç veya kapat</value>
   </data>
   <data name="UsageLine" xml:space="preserve">
-    <value>Kullanım: AuraToggle [-on | -off | -preset &lt;ad&gt; [renk] | -brightness &lt;10-100&gt; | -custom &lt;ad|numara&gt; | -list | -status | --version] [-device &lt;n&gt;] [-channel &lt;hedef&gt;]   (bağımsız değişken olmadan açma/kapatma penceresi açılır)</value>
+    <value>Kullanım: AuraToggle [-on | -off | -toggle | -preset &lt;ad&gt; [renk] | -brightness &lt;10-100&gt; | -custom &lt;ad|numara&gt; | -list | -status [--json] | --version | -help] [-device &lt;n&gt;] [-channel &lt;hedef&gt;]   (bağımsız değişken olmadan açma/kapatma penceresi açılır)</value>
   </data>
   <data name="UsagePresets" xml:space="preserve">
-    <value>Ön ayarlar: {0}</value>
+    <value>Efektler: {0}</value>
   </data>
   <data name="StatusControllerMissing" xml:space="preserve">
     <value>Denetleyici bulunamadı</value>
@@ -84,7 +84,7 @@
     <value>Gökkuşağı Nefes Alma</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
-    <value>Kayan Işık Solma</value>
+    <value>Solan Kayan Işık</value>
   </data>
   <data name="PresetChase" xml:space="preserve">
     <value>Kayan Işık</value>
@@ -120,25 +120,25 @@
     <value>Renk kanal boyunca dalga gibi akar. Parlaklık ayarlanamaz.</value>
   </data>
   <data name="ErrorControllerNotFound" xml:space="preserve">
-    <value>AURA LED denetleyicisi bulunamadı (USB VID 0B05). Bu araç yalnızca Aura USB aydınlatmalı ASUS anakartlarda çalışır.</value>
+    <value>Aura LED denetleyicisi bulunamadı (USB VID 0B05). Bu araç yalnızca Aura USB aydınlatmalı ASUS anakartlarda çalışır.</value>
   </data>
   <data name="ErrorControllerBusy" xml:space="preserve">
-    <value>AURA LED denetleyicisi başka bir program tarafından kullanılıyor (Armoury Crate, OpenRGB, SignalRGB). Programı kapatıp yeniden deneyin.</value>
+    <value>Aura LED denetleyicisi başka bir program tarafından kullanılıyor (Armoury Crate, OpenRGB, SignalRGB). Programı kapatıp yeniden dene.</value>
   </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
-    <value>AURA denetleyicisine yazma başarısız oldu (komut 0x{0}): {1}</value>
+    <value>Aura denetleyicisine yazma başarısız oldu (komut 0x{0}): {1}</value>
   </data>
   <data name="ErrorWriteBusy" xml:space="preserve">
-    <value>AURA denetleyicisi önceki bir komuta henüz yanıt vermedi.</value>
+    <value>Aura denetleyicisi önceki bir komuta henüz yanıt vermedi.</value>
   </data>
   <data name="ErrorWriteTimeout" xml:space="preserve">
-    <value>AURA denetleyicisi komutu zamanında kabul etmedi.</value>
+    <value>Aura denetleyicisi komutu zamanında kabul etmedi.</value>
   </data>
   <data name="ErrorWriteGeneric" xml:space="preserve">
-    <value>AURA denetleyicisine yazma başarısız oldu.</value>
+    <value>Aura denetleyicisine yazma başarısız oldu.</value>
   </data>
   <data name="ErrorDeviceNotFound" xml:space="preserve">
-    <value>Bilinmeyen denetleyici numarası. Geçerlileri görmek için -list çalıştırın.</value>
+    <value>Bilinmeyen denetleyici numarası. Geçerlileri görmek için -list çalıştır.</value>
   </data>
   <data name="ErrorChannelNotFound" xml:space="preserve">
     <value>Bilinmeyen veya belirsiz kanal. Olası hedefler:</value>
@@ -150,7 +150,7 @@
     <value>Windows ile başlat</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Kapatınca simge durumuna küçült</value>
+    <value>Kapatınca bildirim alanına gönder</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Başlangıçta aydınlatma</value>
@@ -162,7 +162,7 @@
     <value>Kapat</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>Ayarla ve uygulamayı kapat</value>
+    <value>Uygula ve uygulamayı kapat</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Aç</value>
@@ -183,7 +183,7 @@
     <value>{0} sürümü mevcut - sürüm sayfasını aç</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>{0} sürümü mevcut. Yüklemek için sistem tepsisi menüsüne tıklayın.</value>
+    <value>{0} sürümü mevcut. Yüklemek için sistem tepsisi menüsüne tıkla.</value>
   </data>
   <data name="TrayUpdateFailed" xml:space="preserve">
     <value>Güncelleme indirilemedi veya doğrulanamadı.</value>
@@ -192,7 +192,7 @@
     <value>Güncelleme mevcut</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>{0} sürümü çıktı - kullandığınız sürüm {1}.</value>
+    <value>{0} sürümü çıktı - kullandığın sürüm {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
     <value>Şimdi yükle</value>
@@ -333,10 +333,10 @@
     <value>Kapat</value>
   </data>
   <data name="SettingReset" xml:space="preserve">
-    <value>Ayarları sıfırla</value>
+    <value>Her şeyi sıfırla</value>
   </data>
   <data name="SettingResetConfirm" xml:space="preserve">
-    <value>Her şey sıfırlansın mı?</value>
+    <value>Ön ayarlar da. Emin misin?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
     <value>Hiçbir şey sıfırlanmadı: ayarlarının ve ön ayarlarının yedeği yazılamadı. Biraz disk alanı boşalt ve yeniden dene.</value>
@@ -348,10 +348,13 @@
     <value>Bu tuş birleşimi zaten kullanılıyor.</value>
   </data>
   <data name="PresetShortcutHint" xml:space="preserve">
-    <value>Yeniden adlandırmak için F2, silmek için Del</value>
+    <value>Düzenlemek için F2, çoğaltmak için Ctrl+D, silmek için Del</value>
+  </data>
+  <data name="ChannelShortcutHint" xml:space="preserve">
+    <value>Yeniden adlandırmak için F2</value>
   </data>
   <data name="HotkeyRecordPrompt" xml:space="preserve">
-    <value>Bir tuşa basın...</value>
+    <value>Bir tuşa bas...</value>
   </data>
   <data name="HotkeyModifierControl" xml:space="preserve">
     <value>Ctrl</value>

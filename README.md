@@ -2,7 +2,7 @@
 
 # 💡 Aura Toggle
 
-**Turn off ASUS RGB — without Armoury Crate.**
+**Turn off ASUS RGB without Armoury Crate.**
 
 [![Latest release](https://img.shields.io/github/v/release/wbgcoding/Aura-Toggle)](https://github.com/wbgcoding/Aura-Toggle/releases/latest)
 [![License](https://img.shields.io/github/license/wbgcoding/Aura-Toggle)](LICENSE)
@@ -23,13 +23,13 @@
 | Device range | ASUS Aura mainboard lighting only | ASUS ecosystem | Many vendors, many device types |
 | Effects | 9 built-in, plus your own presets | ASUS's own effect set | Large effect libraries, often per-LED |
 
-OpenRGB and SignalRGB genuinely do more — more devices, more effects, per-LED control on
-hardware that supports it. Aura Toggle needs no service and no background process — it does its job and gets out of the way.
+OpenRGB and SignalRGB genuinely do more: more devices, more effects, per-LED control on
+hardware that supports it. Aura Toggle needs no service and no background process. It does its job and gets out of the way.
 
 **Quickstart:**
 
 1. Download `AuraToggle.exe` below (or the installer)
-2. Run it — no setup, no admin rights
+2. Run it: no setup, no admin rights
 3. Click the button
 
 ---
@@ -38,7 +38,7 @@ hardware that supports it. Aura Toggle needs no service and no background proces
 
 RGB lighting on a mainboard is usually all-or-nothing: it either runs whatever effect the BIOS
 left it in, or it runs whatever the vendor's control suite last set. Turning it off for a while
-— a dark room at night, a long render, a stretch without needing the show — normally means one
+(a dark room at night, a long render, a stretch without needing the show) normally means one
 of two routes:
 
 | Option | What it costs |
@@ -52,15 +52,15 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 ## ✨ What it does
 
 - 🔌 Switches **every** channel the board reports: the onboard zone and all addressable ARGB headers
-- 🎯 Or **one channel at a time** — the onboard zone steady white while an ARGB header breathes red
+- 🎯 Or **one channel at a time**: the onboard zone steady white while an ARGB header breathes red
 - 🎨 Nine built-in effects with a colour picker, applied instantly
-- 🔆 **Brightness** for the colour effects, 10–100%, per channel or for the whole board
-- 🧩 **Custom presets** — a name, one effect and colour per channel, saved and reusable
+- 🔆 **Brightness** for the colour effects, 10 to 100%, per channel or for the whole board
+- 🧩 **Custom presets**: a name, one effect and colour per channel, saved and reusable
 - 🖥️ One window: a button that animates the running effect and switches it
 - 📌 Lives in the notification area, left-click for on/off
-- ⌨️ Full command line with exit codes — **Stream Deck**, scheduled tasks, scripts, shortcuts
-- 🔥 A global hotkey, configurable, switches the whole board from anywhere
-- 🏷️ **Name your channels** — "Desk strip" rather than "ARGB 1". While you pick a name, that one
+- ⌨️ Full command line with exit codes: **Stream Deck**, scheduled tasks, scripts, shortcuts
+- 🔥 A global hotkey (Ctrl+Alt+L by default, configurable) switches the whole board from anywhere
+- 🏷️ **Name your channels**: "Desk strip" rather than "ARGB 1". While you pick a name, that one
   header lights up white and the rest of the board goes dark, so there is nothing to guess
 - 🌍 **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
   Italian, Dutch, Polish, Turkish, Japanese and Chinese
@@ -71,34 +71,34 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 
 ## 🚫 What it can't do
 
-- No individual LED control — an effect and colour apply to a whole channel, not one LED
-- Only one dynamic effect per controller — spectrum cycle, rainbow, rainbow breathing and wave
+- No individual LED control: an effect and colour apply to a whole channel, not one LED
+- Only one dynamic effect per controller: spectrum cycle, rainbow, rainbow breathing and wave
   run across every channel of a controller at once, not one at a time
-- Only mainboard lighting — no GPU, RAM, fans or other Aura Sync devices
-- No channel of its own for a plain (non-addressable) 12 V RGB header — only what the board
+- Only mainboard lighting: no GPU, RAM, fans or other Aura Sync devices
+- No channel of its own for a plain (non-addressable) 12 V RGB header: only what the board
   reports as its onboard zone is switched
-- Can't read the current effect back from the controller — it remembers what it last set instead
-- Doesn't survive a reboot on its own — see below for why, and what to do instead
+- Can't read the current effect back from the controller, it remembers what it last set instead
+- Doesn't survive a reboot on its own; see below for why, and what to do instead
 
 **Why "off" doesn't stay off without the tool running:** writing a look into the controller
 permanently means committing it to flash, and a write that goes wrong there can brick the
-controller for good. This tool deliberately never does that — everything it sends is volatile, so
+controller for good. This tool deliberately never does that. Everything it sends is volatile, so
 a restart always brings the BIOS lighting back, on purpose. If you want lighting that starts off
 without this tool running, set autostart with "lighting at start: off" in the gear, or turn it off
-in the BIOS itself. Switch on "set it and close the app" below it and the tool only sets that
+in the BIOS itself. Switch on "Apply and close the app" below it and the tool only sets that
 lighting at logon and quits again, with no window and nothing left running in the notification
 area (the global hotkey then only works while you have the tool open).
 
 ## 📥 Download
 
-**➡️ [Latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)** — both files are
+**➡️ [Latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)**: both files are
 attached there, along with `SHA256SUMS.txt` to check them against and a `.sig` file per exe, the
 signature the program's own updater checks.
 
 | | Size | Needs |
 |---|---|---|
 | **Portable** `AuraToggle.exe` | ~700 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| **Installer** `AuraToggle-Setup-<version>.exe` | ~2.3 MB | Nothing — it fetches the runtime if you lack it |
+| **Installer** `AuraToggle-Setup-<version>.exe` | ~2.3 MB | Nothing, it fetches the runtime if you lack it |
 
 Portable: download, double-click, done. Installer: for everyone or just for you, optional
 autostart and desktop shortcut, clean uninstall. If the .NET 10 Desktop Runtime is missing it
@@ -111,13 +111,13 @@ Get-FileHash .\AuraToggle.exe -Algorithm SHA256
 ```
 
 Compare the result against the matching line in `SHA256SUMS.txt`. Windows SmartScreen will warn
-on the first run either way, since the file is not code-signed — "More info" then "Run anyway"
+on the first run either way, since the file is not code-signed: "More info" then "Run anyway"
 gets past it.
 
 **Does this fit my board?** Grab the portable exe and run `AuraToggle.exe -list`; if it names a
 controller, it works.
 
-**Unattended installs** — verified switches, for scripted rollouts:
+**Unattended installs**: verified switches, for scripted rollouts:
 
 ```bat
 AuraToggle-Setup-<version>.exe /VERYSILENT /NORESTART        :: for everyone, no prompts
@@ -135,23 +135,23 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
 
 <img src="docs/preview-light.webp" alt="Light mode" width="333" align="right">
 
-1. **Big button** — shows the state and switches it. While the lighting is on it animates
+1. **Big button**: shows the state and switches it. While the lighting is on it animates
    whatever effect is running, brightness included.
-2. **Drop down** — pick a built-in effect or a saved custom preset; it applies immediately. Hover
+2. **Drop down**: pick a built-in effect or a saved custom preset; it applies immediately. Hover
    a built-in effect for a one-line explanation of what it does. The last row creates a preset;
    each preset of your own carries icons to duplicate it, edit it, or delete it (which asks once
-   more before it does) — F2 and Delete do the edit and delete from the keyboard.
-3. **Channel selector** — all channels, or a single one: the onboard zone, one ARGB header, or
+   more before it does). F2, Ctrl+D and Delete edit, duplicate and delete from the keyboard.
+3. **Channel selector**: all channels, or a single one, meaning the onboard zone, one ARGB header, or
    one whole controller on boards that have several. Hover a channel for a ✏️ to give it a name
-   of your own — while the name box is open that header is lit white and every other channel on
+   of your own. While the name box is open that header is lit white and every other channel on
    the board is taken dark, which is the quickest way to find out which header is which.
-4. **Colour chips** — appear for effects that use a colour, including a custom colour picker.
-5. **Brightness** — appears with the chips, 10 to 100%, and follows the channel selector: dim
+4. **Colour chips**: appear for effects that use a colour, including a custom colour picker.
+5. **Brightness**: appears with the chips, 10 to 100%, and follows the channel selector: dim
    one header on its own, or set the whole board at once, which hands every channel back to the
    board-wide value. The big button dims along while you drag, so the setting can be judged
    before it is committed. Effects the controller generates itself cannot be dimmed, so the
    slider is not shown for those rather than sitting there doing nothing.
-6. **⚙️ Gear** — minimise instead of close, always on top, animate switch, a global hotkey,
+6. **⚙️ Gear**: minimise instead of close, always on top, animate switch, a global hotkey,
    autostart, lighting at start (off, any effect or one of your own presets, optionally set
    without the tool staying open), language, reset everything back to first-run defaults -
    including your own custom presets - after first zipping every file it is about to delete into
@@ -160,12 +160,12 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
 Minimising sends the window to the notification area. Left click the icon there to toggle the
 lighting, double-click to reopen the window, right-click for the same options in a menu.
 
-The window reopens where and how wide you last left it — unless that spot belongs to a display
+The window reopens where and how wide you last left it, unless that spot belongs to a display
 that is no longer attached, in which case it centres itself rather than opening off-screen.
 
 ### Custom presets
 
-A custom preset bundles one effect and colour **per channel** under a name of your own — the
+A custom preset bundles one effect and colour **per channel** under a name of your own, the
 onboard zone steady white while an ARGB header breathes red, say. Create one from the last row
 of the effect drop down: name it, then an effect and colour per channel, save. Every channel
 starts out matching whatever is running right now, so a preset that should just save the
@@ -174,7 +174,7 @@ person icon, told apart from the built-in effects at a glance. Each channel also
 brightness there, so a preset can hold one header at 30% and the next at full. The editor has no
 title bar of its own but can be dragged by its heading, so it never sits in the way.
 
-Export and Import in the editor move a preset as a single `.json` file — to another machine, a
+Export and Import in the editor move a preset as a single `.json` file, to another machine, a
 second Windows profile, or just a backup. On different hardware the channels are matched by their
 position (first channel to first channel, and so on) rather than the exact controller, since a
 different machine has no way to have the same one. Import takes the file as it finds it: anything
@@ -200,7 +200,7 @@ AuraToggle.exe --version                  :: version number, nothing else
 AuraToggle.exe -help                      :: every command, explained
 ```
 
-`-on`, `--on`, `/on`, `on` — all accepted, any casing. Same for `off`, `toggle`, `preset`,
+`-on`, `--on`, `/on`, `on`: all accepted, any casing. Same for `off`, `toggle`, `preset`,
 `brightness`, `custom`, `list`, `status`, `version` and `help` (also `-h` and `/?`). Creating a
 custom preset still only happens in the window - applying an existing one does not.
 
@@ -235,7 +235,7 @@ schtasks /create /tn "LEDs on"  /tr "C:\tools\AuraToggle.exe -on"  /sc daily /st
 ```
 
 **Stream Deck and other macro software:** every command above is a plain program call that ends
-on its own, so anything able to start a program can drive the lighting — no plugin, no background
+on its own, so anything able to start a program can drive the lighting, no plugin, no background
 service, no window flashing up. On a Stream Deck, add a **System → Open** button and give it the
 exe plus its arguments:
 
@@ -257,22 +257,22 @@ on the desktop. `-status --json` reads the current state back if the macro needs
 | `static` | One steady colour | ✅ |
 | `breathing` | Fades in and out | ✅ |
 | `flashing` | Blinks | ✅ |
-| `spectrum-cycle` | All LEDs cycle the spectrum together | — |
-| `rainbow` | Gradient travelling across the LEDs *(ASUS default)* | — |
-| `rainbow-breathing` | Spectrum cycle that fades | — |
+| `spectrum-cycle` | All LEDs cycle the spectrum together | - |
+| `rainbow` | Gradient travelling across the LEDs *(ASUS default)* | - |
+| `rainbow-breathing` | Spectrum cycle that fades | - |
 | `chase-fade` | Running light with a fading tail | ✅ |
 | `chase` | Running light | ✅ |
-| `wave` | Slow spectrum drifting across the strip | — |
+| `wave` | Slow spectrum drifting across the strip | - |
 
 Names are forgiving: casing, spaces, hyphens and underscores are ignored, and the translated
 names work too. An unknown name prints the list.
 
 > **Brightness** works by scaling the colour that is sent, so it applies to the five effects
 > marked ✅ above. The other four are generated inside the controller's own firmware, which
-> takes no colour and no brightness — nothing can dim those short of switching them off, and
+> takes no colour and no brightness, nothing can dim those short of switching them off, and
 > the window hides the slider while one of them is running.
 >
-> Effects can be **mixed** across channels — one header steady red while the next one breathes —
+> Effects can be **mixed** across channels (one header steady red while the next one breathes)
 > but only for the five colour effects. The other four are one effect engine inside the
 > controller, shared by all of its channels: set the rainbow on a single header and every header
 > of that controller runs it. The window still offers all nine with a single channel selected, but
@@ -285,16 +285,16 @@ names work too. An unknown name prints the list.
   addressable RGB headers have one, going back several chipset generations)
 
 Developed and verified on an **ASUS Z790 mainboard**. The controller is found by talking to it
-directly, not by a model list, so it either works or reports no controller found — see
+directly, not by a model list, so it either works or reports no controller found, see
 [Troubleshooting](#-troubleshooting).
 
 ## 🛠️ Troubleshooting
 
-**"No AURA LED controller found"**
+**"No Aura LED controller found"**
 No Aura USB controller on the board, or lighting is off in the BIOS.
 
-**"The AURA LED controller is in use by another program"**
-Armoury Crate, OpenRGB or SignalRGB holds it open. Close them — two programs cannot drive the
+**"The Aura LED controller is in use by another program"**
+Armoury Crate, OpenRGB or SignalRGB holds it open. Close them, two programs cannot drive the
 same controller.
 
 **The lighting comes back looking different**
@@ -302,7 +302,7 @@ The controller cannot report which effect is running, so the tool remembers what
 On the very first switch-on it falls back to the ASUS rainbow. Reboot, or just pick the effect
 you want.
 
-**Still stuck — where the log is**
+**Still stuck: where the log is**
 Start-up, version and every error land in a plain text file:
 
 ```
@@ -310,7 +310,7 @@ Start-up, version and every error land in a plain text file:
 ```
 
 Paste that path into the Explorer address bar or into Win+R. It rolls over to `log.old.txt` past
-200 KB, holds no personal data — your user name is replaced with `%USERPROFILE%` — and the last
+200 KB, holds no personal data (your user name is replaced with `%USERPROFILE%`) and the last
 few lines are usually enough to say why a controller could not be reached. Attach them to a bug
 report.
 
@@ -350,13 +350,13 @@ dotnet publish AuraToggle.csproj -c Release -r win-x64 --self-contained false -p
 For the Inno Setup installer, pack `installer\aura.iss` with `ISCC.exe` (needs
 [Inno Setup 6](https://jrsoftware.org/isinfo.php)).
 
-Regression suite — it switches the lighting while it runs and leaves it on afterwards:
+Regression suite: it switches the lighting while it runs and leaves it on afterwards:
 
 ```bat
 powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 ```
 
-Static checks — no controller needed, they only read the source tree. Resource keys in step across
+Static checks: no controller needed, they only read the source tree. Resource keys in step across
 all ten languages, placeholders included, no hardcoded interface text, no fixed pixel sizes that
 skip the display scaling, one version across project, installer and changelog:
 
@@ -367,7 +367,7 @@ powershell -ExecutionPolicy Bypass -File tests\static-checks.ps1
 ## ⚙️ How it works
 
 The controller is a USB HID device. Aura Toggle enumerates the HID interfaces, asks each
-candidate for its firmware string and configuration table, and keeps the ones that answer —
+candidate for its firmware string and configuration table, and keeps the ones that answer,
 which is why no interface number is hardcoded, and why more than one controller is found on
 boards that have them. The configuration table gives each controller's channel layout; one
 effect command per channel does the rest.
@@ -393,13 +393,13 @@ and restarts; an installed copy runs the new setup.
 
 State lives in `%LOCALAPPDATA%\aura-toggle`:
 
-- `state.json` — the last effect and brightness
-- `settings.json` — your preferences
-- `presets.json` — custom presets
-- `channel-state.json` — what each channel was last set to, including its own brightness
-- `channel-names.json` — channels you renamed
-- `log.txt` (rotated to `log.old.txt` past 200 KB) — start-up, version and error entries
-- `reset-backup.zip` — written only when you reset everything in the gear, holding copies of the
+- `state.json`: the last effect and brightness
+- `settings.json`: your preferences
+- `presets.json`: custom presets
+- `channel-state.json`: what each channel was last set to, including its own brightness
+- `channel-names.json`: channels you renamed
+- `log.txt` (rotated to `log.old.txt` past 200 KB): start-up, version and error entries
+- `reset-backup.zip`: written only when you reset everything in the gear, holding copies of the
   files that reset is about to delete, so nothing is lost by accident. Delete it whenever you
   like; nothing reads it
 
