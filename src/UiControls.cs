@@ -91,8 +91,21 @@ internal sealed class EffectButton : FlatControl
     public EffectButton()
     {
         Radius = 16;
-        AccessibleRole = AccessibleRole.PushButton;
+        AccessibleRole = AccessibleRole.CheckButton;
         _timer.Tick += (_, _) => Invalidate();
+    }
+
+    /// <summary>The button is a switch: a screen reader should hear "checked" while the lighting is on.</summary>
+    protected override AccessibleObject CreateAccessibilityInstance() => new ButtonAccessibleObject(this);
+
+    private sealed class ButtonAccessibleObject : ControlAccessibleObject
+    {
+        public ButtonAccessibleObject(EffectButton owner) : base(owner)
+        {
+        }
+
+        public override AccessibleStates State =>
+            base.State | (((EffectButton)Owner!)._on ? AccessibleStates.Checked : AccessibleStates.None);
     }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -115,10 +128,16 @@ internal sealed class EffectButton : FlatControl
 
     public void Show(bool on, byte mode, Color colour)
     {
+        bool changed = _on != on;
         _on = on;
         _mode = mode;
         _colour = colour;
         UpdateAnimation();
+
+        if (changed)
+        {
+            AccessibilityNotifyClients(AccessibleEvents.StateChange, -1);
+        }
     }
 
     /// <summary>Turns the animation off entirely, from the settings.</summary>
@@ -343,6 +362,74 @@ internal sealed class Select : FlatControl
         AccessibleRole = AccessibleRole.ComboBox;
     }
 
+    /// <summary>The closed control paints its choice by hand, so it has to hand the text over as its value.</summary>
+    protected override AccessibleObject CreateAccessibilityInstance() => new SelectAccessibleObject(this);
+
+    private sealed class SelectAccessibleObject : ControlAccessibleObject
+    {
+        public SelectAccessibleObject(Select owner) : base(owner)
+        {
+        }
+
+        public override string? Value
+        {
+            get => ((Select)Owner!).Selected?.Text;
+            set { }
+        }
+    }
+
+    protected override bool IsInputKey(Keys keyData) =>
+        (keyData & Keys.KeyCode) is Keys.Up or Keys.Down or Keys.F4 || base.IsInputKey(keyData);
+
+    /// <summary>
+    /// Alt+Down and F4 open the list, as on a system combo box; Up and Down step the choice
+    /// without opening it. Enter and Space already open it (<see cref="FlatControl"/>).
+    /// </summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        bool open = e.KeyCode == Keys.F4 || (e.KeyCode == Keys.Down && e.Alt);
+        if (open)
+        {
+            OnClick(EventArgs.Empty);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.KeyCode is Keys.Up or Keys.Down && !e.Alt)
+        {
+            StepSelection(e.KeyCode == Keys.Down ? 1 : -1);
+            e.Handled = true;
+            return;
+        }
+
+        base.OnKeyDown(e);
+    }
+
+    /// <summary>Moves the choice to the next entry that can be picked, as a click on it would.</summary>
+    private void StepSelection(int direction)
+    {
+        if (!Enabled)
+        {
+            return;
+        }
+
+        int current = Selected == null ? -1 : _items.IndexOf(Selected);
+        for (int i = current + direction; i >= 0 && i < _items.Count; i += direction)
+        {
+            SelectItem candidate = _items[i];
+            if (candidate.IsHint || candidate.IsAction)
+            {
+                continue;
+            }
+
+            Selected = candidate;
+            Invalidate();
+            AccessibilityNotifyClients(AccessibleEvents.ValueChange, -1);
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+    }
+
     public event EventHandler? SelectionChanged;
 
     /// <summary>Raised around the drop down, so a hosting popup can stay open meanwhile.</summary>
@@ -446,6 +533,7 @@ internal sealed class Select : FlatControl
     {
         Selected = _items.FirstOrDefault(item => item.Key == key) ?? _items.FirstOrDefault();
         Invalidate();
+        AccessibilityNotifyClients(AccessibleEvents.ValueChange, -1);
     }
 
     /// <summary>
@@ -503,6 +591,7 @@ internal sealed class Select : FlatControl
 
             Selected = item;
             Invalidate();
+            AccessibilityNotifyClients(AccessibleEvents.ValueChange, -1);
             SelectionChanged?.Invoke(this, EventArgs.Empty);
         };
 
@@ -2458,6 +2547,7 @@ internal sealed class Slider : FlatControl
     public Slider()
     {
         DesignHeight = 24;
+        AccessibleRole = AccessibleRole.Slider;
 
         // Arrow keys would otherwise fire one switch at the controller per keypress, and
         // ToggleForm drops every request that arrives while the previous one is still running -
@@ -2509,7 +2599,24 @@ internal sealed class Slider : FlatControl
 
             _value = clamped;
             Invalidate();
+            AccessibilityNotifyClients(AccessibleEvents.ValueChange, -1);
             ValueChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>A bare custom control has no value to read out; this one is a percentage.</summary>
+    protected override AccessibleObject CreateAccessibilityInstance() => new SliderAccessibleObject(this);
+
+    private sealed class SliderAccessibleObject : ControlAccessibleObject
+    {
+        public SliderAccessibleObject(Slider owner) : base(owner)
+        {
+        }
+
+        public override string? Value
+        {
+            get => string.Format(System.Globalization.CultureInfo.CurrentCulture, Strings.BrightnessValue, ((Slider)Owner!).Value);
+            set { }
         }
     }
 
@@ -2566,8 +2673,8 @@ internal sealed class Slider : FlatControl
     }
 
     protected override bool IsInputKey(Keys keyData) =>
-        keyData is Keys.Left or Keys.Right or Keys.Home or Keys.End or Keys.PageUp or Keys.PageDown
-            || base.IsInputKey(keyData);
+        keyData is Keys.Left or Keys.Right or Keys.Up or Keys.Down or Keys.Home or Keys.End
+            or Keys.PageUp or Keys.PageDown || base.IsInputKey(keyData);
 
     /// <summary>Wheel movement not yet worth a whole notch - precision touchpads report small deltas.</summary>
     private int _wheelRemainder;
@@ -2593,8 +2700,8 @@ internal sealed class Slider : FlatControl
         int before = _value;
         Value = e.KeyCode switch
         {
-            Keys.Left => _value - 5,
-            Keys.Right => _value + 5,
+            Keys.Left or Keys.Down => _value - 5,
+            Keys.Right or Keys.Up => _value + 5,
             Keys.PageDown => _value - 20,
             Keys.PageUp => _value + 20,
             Keys.Home => Minimum,
