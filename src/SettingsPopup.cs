@@ -23,6 +23,7 @@ internal sealed class SettingsPopup : PopupForm
     private readonly ToggleSwitch _autoStart = new();
     private readonly Select _startAction = new();
     private readonly ToggleSwitch _closeAfterStart = new();
+    private readonly ToggleSwitch _checkUpdates = new();
     private readonly Select _language = new();
     private readonly PillButton _reset = new();
     private readonly ArmedButton _resetArm;
@@ -33,6 +34,7 @@ internal sealed class SettingsPopup : PopupForm
     private readonly Label _autoStartLabel;
     private readonly Label _startActionLabel;
     private readonly Label _closeAfterStartLabel;
+    private readonly Label _checkUpdatesLabel;
     private readonly Label _languageLabel;
     private readonly Layout _layout;
 
@@ -89,7 +91,7 @@ internal sealed class SettingsPopup : PopupForm
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 13,
+            RowCount = 14,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -120,10 +122,12 @@ internal sealed class SettingsPopup : PopupForm
         _closeAfterStartLabel = AddSwitch(9, Strings.SettingCloseAfterStart, _closeAfterStart, settings.CloseAfterStart);
         UpdateStartActionVisibility();
 
-        _languageLabel = AddLabel(10, Strings.SettingLanguage);
-        AddSelect(11, _language, Strings.SettingLanguage, Languages(), settings.Language);
+        _checkUpdatesLabel = AddSwitch(10, Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
 
-        AddButton(12, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
+        _languageLabel = AddLabel(11, Strings.SettingLanguage);
+        AddSelect(12, _language, Strings.SettingLanguage, Languages(), settings.Language);
+
+        AddButton(13, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
 
@@ -135,6 +139,7 @@ internal sealed class SettingsPopup : PopupForm
         _animate.CheckedChanged += (_, _) => Apply();
         _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
         _closeAfterStart.CheckedChanged += (_, _) => Apply();
+        _checkUpdates.CheckedChanged += (_, _) => Apply();
         _startAction.SelectionChanged += (_, _) =>
         {
             UpdateStartActionVisibility();
@@ -449,6 +454,7 @@ internal sealed class SettingsPopup : PopupForm
                 AlwaysOnTop = _alwaysOnTop.Checked,
                 StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
                 CloseAfterStart = _closeAfterStart.Checked,
+                CheckUpdates = _checkUpdates.Checked,
                 Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
                 HotkeyEnabled = _hotkeyEnabled.Checked,
                 Hotkey = _pendingHotkey,
@@ -483,6 +489,8 @@ internal sealed class SettingsPopup : PopupForm
         _startAction.AccessibleName = Strings.SettingStartAction;
         _closeAfterStartLabel.Text = Strings.SettingCloseAfterStart;
         _closeAfterStart.AccessibleName = Strings.SettingCloseAfterStart;
+        _checkUpdatesLabel.Text = Strings.SettingCheckUpdates;
+        _checkUpdates.AccessibleName = Strings.SettingCheckUpdates;
         _languageLabel.Text = Strings.SettingLanguage;
         _language.AccessibleName = Strings.SettingLanguage;
         _hotkeyHint.Text = Strings.SettingHotkeyConflict;

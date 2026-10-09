@@ -22,8 +22,9 @@ internal static partial class Program
     /// <summary>
     /// Shows one surface standalone: "settings" (the gear panel, hotkey row forced visible
     /// regardless of the real setting), "error" (a sample <see cref="ErrorDialog"/>, no real
-    /// exception involved), "gear" (the real window and its settings panel together, to measure
-    /// how the panel sits against the gear and the toggle button it opened from), or "tip" (the
+    /// exception involved), "update" (the update notice for a made-up version), "gear" (the real
+    /// window and its settings panel together, to measure how the panel sits against the gear and
+    /// the toggle button it opened from), or "tip" (the
     /// real effect list with its first hinted row's tooltip already showing, since the review
     /// harness cannot reliably hover this control). Interacting with the settings panel still
     /// saves to the real settings.json, same as it would from the main window - this is a shortcut
@@ -31,9 +32,10 @@ internal static partial class Program
     /// </summary>
     private static int RunReview(string surface, string argument)
     {
-        if (surface is not ("settings" or "error" or "editor" or "layout" or "gear" or "tip" or "preview"))
+        if (surface is not ("settings" or "error" or "editor" or "layout" or "update" or "gear" or "tip"
+            or "preview"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|layout|gear|tip|preview|ids [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip|preview|ids [scale%]");
             return 2;
         }
 
@@ -81,6 +83,14 @@ internal static partial class Program
             shown = ErrorDialog.Report(
                 new IOException("Sample error for review - the LED controller did not answer in time."),
                 "Review", owner: null, onClosed: Application.Exit, requireMessageLoop: false);
+        }
+        else if (surface == "update")
+        {
+            // A made-up version, no network access - this is the review surface, not a real check.
+            var popup = new UpdatePopup("9.9.9", installed: true);
+            popup.FormClosed += (_, _) => Application.Exit();
+            popup.Open(owner: null);
+            shown = popup;
         }
         else if (surface == "tip")
         {
@@ -499,12 +509,13 @@ internal static partial class Program
         ("effects", "effect list, opened from the main window"),
         ("editor", "new custom preset, opened from the main window"),
         ("error", "error dialog"),
+        ("update", "update notice"),
     };
 
     private static readonly Dictionary<string, string[]> ShotGroups = new()
     {
         ["all"] = ShotSurfaces.Select(s => s.Id).ToArray(),
-        ["popups"] = new[] { "settings", "settings-start", "effects", "editor", "error" },
+        ["popups"] = new[] { "settings", "settings-start", "effects", "editor", "error", "update" },
     };
 
     private static int RunSurfaceTool(string[] args)
@@ -834,6 +845,20 @@ internal static partial class Program
                 await Settle(dialog);
                 await Capture();
             };
+            Application.Run();
+            return result;
+        }
+
+        if (id == "update")
+        {
+            // A made-up version, no network access - the popup alone, the way the error dialog is.
+            var notice = new UpdatePopup("9.9.9", installed: true);
+            notice.Shown += async (_, _) =>
+            {
+                await Settle(notice);
+                await Capture();
+            };
+            notice.Open(owner: null);
             Application.Run();
             return result;
         }
