@@ -40,6 +40,7 @@ internal sealed class SettingsPopup : PopupForm
 
     private bool _childOpen;
     private bool _recordingHotkey;
+    private bool _syncingAutoStart;
     private int _pendingHotkey;
 
     /// <summary>
@@ -148,8 +149,30 @@ internal sealed class SettingsPopup : PopupForm
         _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
         _autoStart.CheckedChanged += (_, _) =>
         {
+            if (_syncingAutoStart)
+            {
+                return;
+            }
+
             _appliedAt = Environment.TickCount64;
             AuraSettings.AutoStart = _autoStart.Checked;
+
+            // A locked down machine can refuse the Run key without a word; show what is really
+            // stored rather than the click, so the switch never claims an autostart that is not there.
+            bool actual = AuraSettings.AutoStart;
+            if (actual != _autoStart.Checked)
+            {
+                _syncingAutoStart = true;
+                try
+                {
+                    _autoStart.Checked = actual;
+                }
+                finally
+                {
+                    _syncingAutoStart = false;
+                }
+            }
+
             UpdateStartActionVisibility();
             FitToContent();
         };
