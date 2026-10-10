@@ -305,9 +305,8 @@ internal sealed class HidStream : IDisposable
         // Disposed exactly once, whenever the write itself finally settles - the normal case
         // (already scheduled here, runs almost immediately) and the abandoned-on-timeout case
         // (runs later, whenever the controller's answer or the cancellation actually lands) alike.
-        // A second, conditional dispose used to sit in a finally below for the normal case, which
-        // could race this same continuation for the rare write that completes at the exact moment
-        // the timeout below gives up on it.
+        // A second, conditional dispose in a finally below would race this same continuation for
+        // the rare write that completes at the exact moment the timeout below gives up on it.
         _ = write.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
 
         try
@@ -347,8 +346,7 @@ internal sealed class HidStream : IDisposable
         Task<int> read = _stream.ReadAsync(buffer, 0, buffer.Length, cancel.Token);
 
         // Disposed exactly once, whenever the read itself finally settles - see the identical
-        // comment in Write() above for why this replaced a second, conditional dispose that used
-        // to sit in a finally below.
+        // comment in Write() above.
         _ = read.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
 
         try

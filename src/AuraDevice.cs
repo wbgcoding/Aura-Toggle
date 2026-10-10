@@ -267,8 +267,8 @@ internal sealed class AuraDevice : IDisposable
 
     /// <summary>
     /// Same as <see cref="ListDevices()"/>, but <paramref name="errorExitCode"/> carries why the
-    /// list came back empty - 3 (not found), 4 (busy) or 5 (would not answer) - so callers can report the real cause
-    /// instead of collapsing both into "not found".
+    /// list came back empty - 3 (not found), 4 (busy) or 5 (would not answer) - so callers can
+    /// report the real cause instead of collapsing all of them into "not found".
     /// </summary>
     public static List<AuraDeviceSummary> ListDevices(out int errorExitCode)
     {
@@ -423,7 +423,7 @@ internal sealed class AuraDevice : IDisposable
     /// Whether a colour command is worth sending for this mode. Only the four the firmware colours
     /// itself (spectrum cycle, rainbow, rainbow breathing, wave) say no. "Off" and any mode this
     /// build does not know keep their colour command, so the paths that matter most - switching
-    /// the board off above all - send exactly the same reports as before.
+    /// the board off above all - still send the full set of reports.
     /// </summary>
     private static bool CarriesColour(byte mode) => AuraPresets.ByMode(mode)?.UsesColour != false;
 
