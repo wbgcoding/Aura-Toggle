@@ -1,14 +1,14 @@
 <div align="center">
 
-# 💡 Aura Toggle
+<h1><img src="docs/icon.png" alt="" width="48" height="48" align="center"> Aura Toggle</h1>
 
 **Turn off ASUS RGB without Armoury Crate.**
 
 [![Latest release](https://img.shields.io/github/v/release/wbgcoding/Aura-Toggle)](https://github.com/wbgcoding/Aura-Toggle/releases/latest)
 [![License](https://img.shields.io/github/license/wbgcoding/Aura-Toggle)](LICENSE)
 
-[Download](#-download) · [Command line](#-command-line) · [Effects](#-effects) ·
-[Troubleshooting](#-troubleshooting) · [Privacy](#-privacy) · [Changelog](CHANGELOG.md)
+[Download](#download) · [Command line](#command-line) · [Effects](#effects) ·
+[Troubleshooting](#troubleshooting) · [Privacy](#privacy) · [Changelog](CHANGELOG.md)
 
 <img src="docs/preview-dark.webp" alt="The Aura Toggle window" width="444">
 
@@ -24,19 +24,20 @@
 | Effects | 9 built-in, plus your own presets | ASUS's own effect set | Large effect libraries, often per-LED |
 
 OpenRGB and SignalRGB genuinely do more: more devices, more effects, per-LED control on
-hardware that supports it. Aura Toggle needs no service and no background process. It does its job and gets out of the way.
+hardware that supports it. Aura Toggle needs no service and no background process: it does its
+job and gets out of the way.
 
 **Quickstart:**
 
-1. Download `AuraToggle.exe` below (or the installer)
-2. Run it: no admin rights needed. The portable exe needs the
+1. Download `AuraToggle.exe` or the installer from the [latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)
+2. Run it, no admin rights needed. The portable exe needs the
    [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0); the installer
    fetches it for you
-3. Click the button
+3. Click the big button
 
 ---
 
-## 🌙 The problem
+## The problem
 
 RGB lighting on a mainboard is usually all-or-nothing: it either runs whatever effect the BIOS
 left it in, or it runs whatever the vendor's control suite last set. Turning it off for a while
@@ -51,27 +52,27 @@ of two routes:
 
 Aura Toggle exists for the case where none of that is worth it for flipping one switch.
 
-## ✨ What it does
+## What it does
 
-- 🔌 Switches **every** channel the board reports: the onboard zone and all addressable ARGB headers
-- 🎯 Or **one channel at a time**: the onboard zone steady white while an ARGB header breathes red
-- 🎨 Nine built-in effects with a colour picker, applied instantly
-- 🔆 **Brightness** for the colour effects, 10 to 100%, per channel or for the whole board
-- 🧩 **Custom presets**: a name, one effect and colour per channel, saved and reusable
-- 🖥️ One window: a button that animates the running effect and switches it
-- 📌 Lives in the notification area, left-click for on/off
-- ⌨️ Full command line with exit codes: **Stream Deck**, scheduled tasks, scripts, shortcuts
-- 🔥 A global hotkey (Ctrl+Alt+L by default, configurable) switches the whole board from anywhere
-- 🏷️ **Name your channels**: "Desk strip" rather than "ARGB 1". While you pick a name, that one
+- Switches **every** channel the board reports: the onboard zone and all addressable ARGB headers
+- Or **one channel at a time**: the onboard zone steady white while an ARGB header breathes red
+- Nine built-in effects with a colour picker, applied instantly
+- **Brightness** for the colour effects, 10 to 100%, per channel or for the whole board
+- **Custom presets**: a name, one effect and colour per channel, saved and reusable
+- One window: a button that animates the running effect and switches it
+- Lives in the notification area, left-click for on/off
+- Full command line with exit codes: **Stream Deck**, scheduled tasks, scripts, shortcuts
+- A global hotkey (Ctrl+Alt+L by default, configurable) switches the whole board from anywhere
+- **Name your channels**: "Desk strip" rather than "ARGB 1". While you pick a name, that one
   header lights up white and the rest of the board goes dark, so there is nothing to guess
-- 🌍 **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
+- **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
   Italian, Dutch, Polish, Turkish, Japanese and Chinese
-- 🔒 No admin rights, no driver, no telemetry. The program asks GitHub at most once a day whether
+- No admin rights, no driver, no telemetry. The program asks GitHub at most once a day whether
   a newer version exists (one switch in the gear turns that off) and installs one only when it
   carries the project's signature; the setup also fetches the .NET runtime from Microsoft if
   your PC has none
 
-## 🚫 What it can't do
+## What it can't do
 
 - No individual LED control: an effect and colour apply to a whole channel, not one LED
 - Only one dynamic effect per controller: spectrum cycle, rainbow, rainbow breathing and wave
@@ -91,16 +92,16 @@ in the BIOS itself. Switch on "Apply and close the app" below it and the tool on
 lighting at logon and quits again, with no window and nothing left running in the notification
 area (the global hotkey then only works while you have the tool open).
 
-## 📥 Download
+## Download
 
-**➡️ [Latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)**: both files are
+**[Latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)**: both files are
 attached there, along with `SHA256SUMS.txt` to check them against and a `.sig` file per exe, the
 signature the program's own updater checks.
 
 | | Size | Needs |
 |---|---|---|
 | **Portable** `AuraToggle.exe` | ~700 KB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| **Installer** `AuraToggle-Setup-<version>.exe` | ~2.3 MB | Nothing, it fetches the runtime if you lack it |
+| **Installer** `AuraToggle-Setup-<version>.exe` | ~2.4 MB | Nothing, it fetches the runtime if you lack it |
 
 Portable: download, double-click, done. Installer: for everyone or just for you, optional
 autostart and desktop shortcut, clean uninstall. If the .NET 10 Desktop Runtime is missing it
@@ -133,7 +134,7 @@ The setup speaks the same ten languages as the program and picks the one Windows
 never opens with a language question in front of the wizard. `/LANG=` overrides that with any of
 `en de es pt it nl pl tr ja zh`.
 
-## 🚀 Using it
+## Using it
 
 <img src="docs/preview-light.webp" alt="Light mode" width="333" align="right">
 
@@ -144,8 +145,8 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    each preset of your own carries icons to duplicate it, edit it, or delete it (which asks once
    more before it does). F2, Ctrl+D and Delete edit, duplicate and delete from the keyboard.
 3. **Channel selector**: all channels, or a single one, meaning the onboard zone, one ARGB header, or
-   one whole controller on boards that have several. Hover a channel for a ✏️ to give it a name
-   of your own. While the name box is open that header is lit white and every other channel on
+   one whole controller on boards that have several. Hover a channel for a pencil icon to give it
+   a name of your own. While the name box is open that header is lit white and every other channel on
    the board is taken dark, which is the quickest way to find out which header is which.
 4. **Colour chips**: appear for effects that use a colour, including a custom colour picker.
 5. **Brightness**: appears with the chips, 10 to 100%, and follows the channel selector: dim
@@ -153,11 +154,11 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    board-wide value. The big button dims along while you drag, so the setting can be judged
    before it is committed. Effects the controller generates itself cannot be dimmed, so the
    slider is not shown for those rather than sitting there doing nothing.
-6. **⚙️ Gear**: minimise instead of close, always on top, animate switch, a global hotkey,
+6. **Gear**: minimise instead of close, always on top, animate switch, a global hotkey,
    autostart, lighting at start (off, any effect or one of your own presets, optionally set
-   without the tool staying open), language, reset everything back to first-run defaults -
-   including your own custom presets - after first zipping every file it is about to delete into
-   `reset-backup.zip`, right next to them.
+   without the tool staying open), update check, language, and a reset back to first-run
+   defaults (your own custom presets included). Before a reset deletes anything it zips every
+   file it is about to remove into `reset-backup.zip`, right next to them.
 
 Minimising sends the window to the notification area. Left click the icon there to toggle the
 lighting, double-click to reopen the window, right-click for the same options in a menu.
@@ -183,7 +184,7 @@ different machine has no way to have the same one. Import takes the file as it f
 larger than 256 KB is refused outright, and a name longer than the 40 characters the editor allows
 is shortened to fit.
 
-## ⌨️ Command line
+## Command line
 
 ```bat
 AuraToggle.exe                            :: opens the window
@@ -204,7 +205,7 @@ AuraToggle.exe -help                      :: every command, explained
 
 `-on`, `--on`, `/on`, `on`: all accepted, any casing. Same for `off`, `toggle`, `preset`,
 `brightness`, `custom`, `list`, `status`, `version` and `help` (also `-h` and `/?`). Creating a
-custom preset still only happens in the window - applying an existing one does not.
+custom preset only happens in the window; applying an existing one works from here too.
 
 **One channel or controller**, with `-on`, `-off`, `-toggle`, `-preset` and `-brightness`:
 
@@ -217,16 +218,16 @@ AuraToggle.exe -toggle -channel 2                  :: only that channel's own on
 ```
 
 `-channel` accepts a flat number from `-list`, the `<controller>.<channel>` form, the default
-name in any of the ten interface languages, or a name given in the window - matched the same
-forgiving way as preset names (casing, spaces and hyphens ignored). An unknown or ambiguous target exits
-`2` and lists the possible targets on stderr. `-list` and `-status` are always in English, regardless of the window's
-language, so a script reading them does not break when someone switches it; error messages stay
-translated.
+name in any of the ten interface languages, or a name given in the window, matched the same
+forgiving way as preset names (casing, spaces and hyphens ignored). An unknown or ambiguous
+target exits `2` and lists the possible targets on stderr. `-list` and `-status` are always in
+English, whatever the window's language, so a script reading them does not break when someone
+switches it; error messages stay translated.
 
 **Exit codes:** `0` ok · `2` bad argument · `3` no controller · `4` controller busy ·
 `5` communication error. Errors go to stderr.
 
-> ⚠️ **PowerShell** does not wait for windowed apps. For the exit code use
+> **PowerShell** does not wait for windowed apps. For the exit code use
 > `Start-Process AuraToggle.exe -ArgumentList "-off" -Wait -NoNewWindow`.
 
 **Lights out at night, automatically:**
@@ -252,25 +253,25 @@ A Multi Action chains several of them into one key, and the same calls work from
 Voicemeeter macro buttons, a game launcher's pre/post-launch command, Home Assistant, or a `.bat`
 on the desktop. `-status --json` reads the current state back if the macro needs to know it.
 
-## 🎨 Effects
+## Effects
 
 | Name | Looks like | Colour |
 |---|---|---|
-| `static` | One steady colour | ✅ |
-| `breathing` | Fades in and out | ✅ |
-| `flashing` | Blinks | ✅ |
-| `spectrum-cycle` | All LEDs cycle the spectrum together | - |
-| `rainbow` | Gradient travelling across the LEDs *(ASUS default)* | - |
-| `rainbow-breathing` | Spectrum cycle that fades | - |
-| `chase-fade` | Running light with a fading tail | ✅ |
-| `chase` | Running light | ✅ |
-| `wave` | Slow spectrum drifting across the strip | - |
+| `static` | One steady colour | yes |
+| `breathing` | Fades in and out | yes |
+| `flashing` | Blinks | yes |
+| `spectrum-cycle` | All LEDs cycle the spectrum together | no |
+| `rainbow` | Gradient travelling across the LEDs *(ASUS default)* | no |
+| `rainbow-breathing` | Spectrum cycle that fades | no |
+| `chase-fade` | Running light with a fading tail | yes |
+| `chase` | Running light | yes |
+| `wave` | Slow spectrum drifting across the strip | no |
 
 Names are forgiving: casing, spaces, hyphens and underscores are ignored, and the translated
 names work too. An unknown name prints the list.
 
 > **Brightness** works by scaling the colour that is sent, so it applies to the five effects
-> marked ✅ above. The other four are generated inside the controller's own firmware, which
+> marked "yes" above. The other four are generated inside the controller's own firmware, which
 > takes no colour and no brightness, nothing can dim those short of switching them off, and
 > the window hides the slider while one of them is running.
 >
@@ -280,7 +281,7 @@ names work too. An unknown name prints the list.
 > of that controller runs it. The window still offers all nine with a single channel selected, but
 > flags it with a hint rather than letting the choice quietly spread.
 
-## 💻 Requirements
+## Requirements
 
 - Windows 10 or 11, 64 bit
 - An ASUS mainboard with an onboard Aura USB controller (most ASUS boards with Aura Sync or
@@ -290,7 +291,7 @@ Developed and verified on an **ASUS Z790 mainboard**. The controller is found by
 directly, not by a model list, so it either works or reports no controller found, see
 [Troubleshooting](#-troubleshooting).
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 **"No Aura LED controller found"**
 No Aura USB controller on the board, or lighting is off in the BIOS.
@@ -316,7 +317,7 @@ Paste that path into the Explorer address bar or into Win+R. It rolls over to `l
 few lines are usually enough to say why a controller could not be reached. Attach them to a
 [bug report](https://github.com/wbgcoding/Aura-Toggle/issues).
 
-## 🔨 Building
+## Building
 
 Needs the .NET 10 SDK. The installer additionally needs
 [Inno Setup 6](https://jrsoftware.org/isinfo.php).
@@ -337,10 +338,11 @@ several display scales and languages with `-shot`; nothing in your own settings,
 lighting is touched.
 
 A full build empties `dist\` first, so what is left there afterwards is exactly the release:
-`AuraToggle.exe`, the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe` and
-`SHA256SUMS.txt`. A single-target run adds to `dist\` instead of clearing it, so a portable build
-does not throw away the setup a full build made. The
-version comes from the project file, not from anything typed twice. Set `NOPAUSE=1` to run it
+`AuraToggle.exe`, the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe`, a
+`.sig` signature next to each exe and `SHA256SUMS.txt`. Without the signing key the build says
+`Unsigned build`, and the in-app updater refuses such a release. A single-target run adds to `dist\` instead of clearing it, so a portable build
+does not throw away the setup a full build made. The version comes from the project file, not
+from anything typed twice. Set `NOPAUSE=1` to run it
 from a script without the closing keypress.
 
 The single command behind the portable build, if you would rather not use the script:
@@ -352,21 +354,22 @@ dotnet publish AuraToggle.csproj -c Release -r win-x64 --self-contained false -p
 For the Inno Setup installer, pack `installer\aura.iss` with `ISCC.exe` (needs
 [Inno Setup 6](https://jrsoftware.org/isinfo.php)).
 
-Regression suite: it switches the lighting while it runs and leaves it on afterwards:
+Regression suite, on a machine with the controller. It switches the lighting while it runs and
+leaves it on afterwards:
 
 ```bat
 powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 ```
 
-Static checks: no controller needed, they only read the source tree. Resource keys in step across
-all ten languages, placeholders included, no hardcoded interface text, no fixed pixel sizes that
+Static checks, no controller needed, they only read the source tree: resource keys in step across
+all ten languages (placeholders included), no hardcoded interface text, no fixed pixel sizes that
 skip the display scaling, one version across project, installer and changelog:
 
 ```bat
 powershell -ExecutionPolicy Bypass -File tests\static-checks.ps1
 ```
 
-## ⚙️ How it works
+## How it works
 
 The controller is a USB HID device. Aura Toggle enumerates the HID interfaces, asks each
 candidate for its firmware string and configuration table, and keeps the ones that answer,
@@ -378,7 +381,7 @@ Commands are paced and the sequence is sent twice: the controller silently drops
 arrive while it is still busy, which otherwise left the ARGB headers running after the onboard
 zone had already switched.
 
-## 🔒 Privacy
+## Privacy
 
 No account, no telemetry, no analytics, no advertising, nothing profiled and nothing shared. The
 tool has no server of its own to send anything to.
@@ -405,13 +408,12 @@ State lives in `%LOCALAPPDATA%\aura-toggle`:
   files that reset is about to delete, so nothing is lost by accident. Delete it whenever you
   like; nothing reads it
 
-The per-channel files are keyed by the controller's device path, so the entries
-survive a reboot. Portable and installed builds share the folder, every write goes through a
+The per-channel files are keyed by the controller's device path, so the entries survive a reboot. Portable and installed builds share the folder, every write goes through a
 temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete it.
 Nothing in there is ever sent anywhere, and your user name is replaced with `%USERPROFILE%` in
 anything the log or the error dialog writes out.
 
-## 📄 Licence and trademarks
+## Licence and trademarks
 
 [MIT](LICENSE): free to use privately or commercially, pass on and change, no strings attached
 beyond keeping the copyright notice with it. The software comes **without any warranty**, and
