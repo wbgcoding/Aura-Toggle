@@ -67,10 +67,8 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
   header lights up white and the rest of the board goes dark, so there is nothing to guess
 - **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
   Italian, Dutch, Polish, Turkish, Japanese and Chinese
-- No admin rights, no driver, no telemetry. The program asks GitHub at most once a day whether
-  a newer version exists (one switch in the gear turns that off) and installs one only when it
-  carries the project's signature; the setup also fetches the .NET runtime from Microsoft if
-  your PC has none
+- No admin rights, no driver, no telemetry. The program itself makes no network connections at
+  all; only the setup fetches the .NET runtime from Microsoft if your PC has none
 
 ## What it can't do
 
@@ -100,8 +98,7 @@ where it stays in the notification area, the hotkey works the whole time.
 ## Download
 
 **[Latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)**: both files are
-attached there, along with `SHA256SUMS.txt` to check them against and a `.sig` file per exe, the
-signature the program's own updater checks.
+attached there, along with `SHA256SUMS.txt` to check them against.
 
 | | Size | Needs |
 |---|---|---|
@@ -164,7 +161,7 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    slider is not shown for those rather than sitting there doing nothing.
 6. **Gear**: minimise instead of close, always on top, animate switch, a global hotkey,
    autostart, lighting at start (off, any effect or one of your own presets, optionally set
-   without the tool staying open), update check, language, and a reset back to first-run
+   without the tool staying open), language, and a reset back to first-run
    defaults (your own custom presets included). Before a reset deletes anything it zips every
    file it is about to remove into `reset-backup.zip`, right next to them.
 
@@ -348,9 +345,8 @@ several display scales and languages with `-shot`; nothing in your own settings,
 lighting is touched.
 
 A full build empties `dist\` first, so what is left there afterwards is exactly the release:
-`AuraToggle.exe`, the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe`, a
-`.sig` signature next to each exe and `SHA256SUMS.txt`. Without the signing key the build says
-`Unsigned build`, and the in-app updater refuses such a release. A single-target run adds to `dist\` instead of clearing it, so a portable build
+`AuraToggle.exe`, the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe` and
+`SHA256SUMS.txt`. A single-target run adds to `dist\` instead of clearing it, so a portable build
 does not throw away the setup a full build made. The version comes from the project file, not
 from anything typed twice. Set `NOPAUSE=1` to run it
 from a script without the closing keypress.
@@ -396,16 +392,9 @@ zone had already switched.
 No account, no telemetry, no analytics, no advertising, nothing profiled and nothing shared. The
 tool has no server of its own to send anything to.
 
-The one thing it does over the network: at most once every 24 hours it asks `api.github.com` for
-the latest release of this project, with nothing but the program name and version in the request
-(no machine identifier, no usage data). The switch "Check for updates" in the gear turns that off;
-the check happens at start, never right when you switch it on. If a newer version exists you get a
-notice, and nothing is downloaded until you click install. The download is installed only when it
-matches the release's `SHA256SUMS.txt` and carries a valid signature (`.sig` next to each exe) made
-with the project's own key, whose public half is built into the program, and names the release's own
-version inside the file, so an older build cannot come back as an update. A file that fails that is
-never installed; you get a link to the release page instead. A portable copy replaces its own exe
-and restarts; an installed copy runs the new setup.
+The tool makes no network connections at all. It does not check for updates; new versions are on
+the [releases page](https://github.com/wbgcoding/Aura-Toggle/releases/latest). The only download
+involved is the setup's offer to fetch the .NET runtime from Microsoft when your PC has none.
 
 State lives in `%LOCALAPPDATA%\aura-toggle`:
 

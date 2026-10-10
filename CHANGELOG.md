@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- The update check and in-app updates. The tool no longer connects to the internet at all; new versions are on the releases page. Releases no longer carry `.sig` files, only the exes and `SHA256SUMS.txt`
+
 ## [1.4.1] - 2026-10-10
 
 A steadier window: no more flashing when other programs open or close, while a preset is edited
