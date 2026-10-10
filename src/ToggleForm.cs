@@ -466,7 +466,7 @@ internal sealed partial class ToggleForm : Form
         // The whole board, never the selector's target: this entry sits next to a label that
         // reads the board state, and there is no channel selector in the notification area to
         // make a per-channel switch mean anything. Same reasoning as the hotkey.
-        _trayLighting.Click += (_, _) => _ = Run(() => Program.Switch(!_state.On));
+        _trayLighting.Click += (_, _) => _ = Run(() => Program.Switch(!BoardIsOn()));
         menu.Items.Add(_trayLighting);
 
         _trayEffects.Text = Strings.TrayEffects;
@@ -497,10 +497,13 @@ internal sealed partial class ToggleForm : Form
         _tray.Text = Strings.WindowTitle;
         _tray.ContextMenuStrip = menu;
 
+        // A shortcut or script may have switched the board since the menu last showed it.
+        menu.Opening += (_, _) => RefreshFromDisk();
+
         _trayClickTimer.Tick += (_, _) =>
         {
             _trayClickTimer.Stop();
-            _ = Run(() => Program.Switch(!_state.On));
+            _ = Run(() => Program.Switch(!BoardIsOn()));
         };
 
         _tray.MouseClick += (_, e) =>
@@ -1353,50 +1356,10 @@ internal sealed partial class ToggleForm : Form
         get
         {
             (string? deviceKey, int channel) = Target;
-            if (deviceKey == null)
-            {
-                return (_state.Mode, CurrentColour, _state.On, _state.Brightness);
-            }
-
-            Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
-
-            if (channel >= 0)
-            {
-                return AuraChannelStates.Get(remembered, deviceKey, channel) is ChannelLighting one
-                    ? Look(one)
-                    : (_state.Mode, CurrentColour, _state.On, _state.Brightness);
-            }
-
-            // A whole controller counts as on while any of its channels is, and shows the look of
-            // the first channel that has one of its own.
-            ChannelLighting? first = null;
-            var anyOn = false;
-
-            foreach (AuraChannel own in _devices.Find(d => d.Key == deviceKey)?.Channels ?? new List<AuraChannel>())
-            {
-                if (AuraChannelStates.Get(remembered, deviceKey, own.Index) is not ChannelLighting look)
-                {
-                    // Never set on its own, so it is following the board - which is lit.
-                    anyOn = true;
-                    continue;
-                }
-
-                first ??= look;
-                anyOn |= look.On;
-            }
-
-            return first == null
-                ? (_state.Mode, CurrentColour, _state.On, _state.Brightness)
-                : Look(first with { On = anyOn });
+            return DisplayedFor(
+                _state, deviceKey == null ? new() : AuraChannelStates.All(), deviceKey, channel);
         }
     }
-
-    /// <summary>One channel's record as the window shows it, brightness resolved.</summary>
-    private (byte Mode, Color Colour, bool On, byte Brightness) Look(ChannelLighting look) => (
-        look.Mode,
-        Color.FromArgb(look.Red, look.Green, look.Blue),
-        look.On,
-        look.Brightness == 0 ? _state.Brightness : look.Brightness);
 
     /// <summary>
     /// <see cref="Displayed"/> as of the last <see cref="Render"/>, which every click handler
@@ -1427,9 +1390,15 @@ internal sealed partial class ToggleForm : Form
     {
         // Switches whatever the button is showing, which for a single channel is that channel
         // rather than the whole board.
-        bool target = !_displayed.On;
+        // What the button shows can be one command-line switch behind, so the decision is made
+        // again from disk once the work is on its way.
         (string? deviceKey, int channel) = Target;
-        _ = Run(() => Program.Switch(target, deviceKey, channel));
+        _ = Run(() =>
+        {
+            AuraState fresh = AuraState.Load();
+            Dictionary<string, ChannelLighting> remembered = deviceKey == null ? new() : AuraChannelStates.All();
+            return Program.Switch(!DisplayedFor(fresh, remembered, deviceKey, channel).On, deviceKey, channel);
+        });
     }
 
     private void OnEffectChosen(object? sender, EventArgs e)
@@ -1926,7 +1895,7 @@ internal sealed partial class ToggleForm : Form
         // blunt "make it dark" switch, not a stand-in for the channel selector.
         if (HotKey.IsHotKeyMessage(m.Msg, m.WParam) && !IsDisposed)
         {
-            _ = Run(() => Program.Switch(!_state.On));
+            _ = Run(() => Program.Switch(!BoardIsOn()));
         }
 
         // The window is being dragged or resized by hand. Repositioning it while it is still
@@ -2023,6 +1992,7 @@ internal sealed partial class ToggleForm : Form
         Show();
         WindowState = FormWindowState.Normal;
         Activate();
+        RefreshFromDisk();
         _tray.Visible = _updatePending;
         _toggle.Paused = false;
 
