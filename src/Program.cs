@@ -928,6 +928,145 @@ internal static partial class Program
     private static byte Brightness(ChannelLighting? look, AuraState state) =>
         look is { Brightness: not 0 } own ? own.Brightness : state.Brightness;
 
+    /// <summary>One header of a controller as the engine sharing sees it.</summary>
+    /// <param name="Channel">The channel index.</param>
+    /// <param name="Chosen">The caller named this channel.</param>
+    /// <param name="Record">What the channel was last set to, or null when it never was.</param>
+    internal readonly record struct EngineChannel(int Channel, bool Chosen, ChannelLighting? Record);
+
+    /// <summary>What goes out to one controller, and the records that have to follow it.</summary>
+    internal sealed record EngineShare(List<ChannelLook> Looks, List<(int Channel, ChannelLighting Look)> Records);
+
+    /// <summary>
+    /// The controller has one engine for the firmware-generated modes: a second channel of the
+    /// same burst in a different one would be sent after the chosen channel and win, so the choice
+    /// would silently be lost. The first chosen channel (lowest index) on one of those modes
+    /// therefore decides, and every other channel of the burst on a firmware mode takes it.
+    /// </summary>
+    /// <param name="spreadToAll">
+    /// A mode was picked: the channels that are on a colour mode, switched off or without a record
+    /// follow too. A dark channel stays dark but its record carries the mode; a channel with no
+    /// record gets a look from <paramref name="boardWide"/>, the one place channels the user never
+    /// set are written, since the hardware runs the engine on them anyway. Off, only the channels
+    /// already on a firmware mode follow (a preset, a replay, a brightness change).
+    /// </param>
+    /// <returns>The looks to send and the records of every channel whose mode was changed.</returns>
+    internal static EngineShare ShareEngine(IReadOnlyList<EngineChannel> channels, IReadOnlyList<ChannelLook> looks,
+        bool spreadToAll, ChannelLighting boardWide, byte boardBrightness)
+    {
+        var sent = looks.ToList();
+        var records = new List<(int Channel, ChannelLighting Look)>();
+        var chosen = channels.Where(c => c.Chosen).Select(c => c.Channel).ToHashSet();
+
+        int engine = -1;
+        for (int i = 0; i < sent.Count; i++)
+        {
+            if (chosen.Contains(sent[i].Channel) && AuraPresets.IsFirmwareMode(sent[i].Mode) &&
+                (engine < 0 || sent[i].Channel < sent[engine].Channel))
+            {
+                engine = i;
+            }
+        }
+
+        if (engine < 0)
+        {
+            return new EngineShare(sent, records);
+        }
+
+        byte engineMode = sent[engine].Mode;
+
+        for (int i = 0; i < sent.Count; i++)
+        {
+            ChannelLook current = sent[i];
+            if (current.Mode == engineMode || (!spreadToAll && !AuraPresets.IsFirmwareMode(current.Mode)))
+            {
+                continue;
+            }
+
+            // A dark channel is not lit by the engine, but its record still carries the mode so
+            // switching it back on joins the others.
+            if (current.Mode != AuraState.ModeOff)
+            {
+                sent[i] = current with { Mode = engineMode };
+            }
+
+            ChannelLighting? own = channels.FirstOrDefault(c => c.Channel == current.Channel).Record;
+            records.Add((current.Channel, (own ?? boardWide) with { Mode = engineMode }));
+        }
+
+        if (spreadToAll)
+        {
+            foreach (EngineChannel channel in channels)
+            {
+                if (channel.Record != null || sent.Any(l => l.Channel == channel.Channel))
+                {
+                    continue;
+                }
+
+                (byte red, byte green, byte blue) =
+                    AuraState.Dim(boardWide.Red, boardWide.Green, boardWide.Blue, boardBrightness);
+                sent.Add(new ChannelLook(channel.Channel, engineMode, red, green, blue));
+                records.Add((channel.Channel, boardWide with { Mode = engineMode }));
+            }
+        }
+
+        return new EngineShare(sent, records);
+    }
+
+    /// <summary>What <see cref="MixDevice"/> works out for one controller.</summary>
+    internal sealed record DeviceMix(List<ChannelLook> Looks, List<int> Named,
+        List<(int Channel, ChannelLighting Look)> Records);
+
+    /// <summary>
+    /// The pure half of <see cref="ApplyMix"/> for one controller: the looks to send, the channels
+    /// that were named, and the records that follow from sharing the firmware engine. No hardware,
+    /// no files, so the review build can run fixed cases against it.
+    /// </summary>
+    internal static DeviceMix MixDevice(IReadOnlyList<int> channels, Func<int, ChannelLighting?> recordOf,
+        int channel, AuraState state, ChannelLighting? look, byte? brightness, bool keepPower)
+    {
+        var looks = new List<ChannelLook>();
+        var named = new List<int>();
+        var infos = new List<EngineChannel>();
+
+        foreach (int index in channels)
+        {
+            ChannelLighting? own = recordOf(index);
+            bool chosen = channel < 0 || index == channel;
+            infos.Add(new EngineChannel(index, chosen, own));
+
+            ChannelLighting? apply = chosen ? look ?? own ?? BoardWide(state) : own;
+            if (apply == null)
+            {
+                continue;
+            }
+
+            // A new effect or colour carries no brightness, so the one this channel was given
+            // keeps applying - the same rule the stored record follows.
+            (byte red, byte green, byte blue) = AuraState.Dim(apply.Red, apply.Green, apply.Blue,
+                chosen && brightness.HasValue ? brightness.Value : Brightness(apply.Brightness != 0 ? apply : own, state));
+
+            // A named channel takes the mode it was given, even when its record says it was
+            // off - being named is what switches it back on. An untouched one keeps its own
+            // state, off included. A caller that only changes how bright a channel is
+            // (keepPower) is not asking for it to come on, so there the record decides for
+            // named channels too.
+            byte mode = (chosen && !keepPower) || apply.On ? apply.Mode : AuraState.ModeOff;
+            looks.Add(new ChannelLook(index, mode, red, green, blue));
+
+            if (chosen)
+            {
+                named.Add(index);
+            }
+        }
+
+        // Picking a firmware mode switches the whole controller to it; anything else only keeps
+        // the firmware channels in line with each other.
+        EngineShare shared = ShareEngine(infos, looks, spreadToAll: look != null, BoardWide(state),
+            Brightness(null, state));
+        return new DeviceMix(shared.Looks, named, shared.Records);
+    }
+
     /// <summary>
     /// Writes a controller's channels in one go: the channels the caller named get
     /// <paramref name="look"/> - or their own record, when it is null - and every other channel
@@ -938,7 +1077,9 @@ internal static partial class Program
     /// new effect across its channels unless every one of them is named in the same burst, which
     /// is why a static header next to an animated one used to end up running the same effect as
     /// its neighbour. Channels that have never been set on their own are left alone, since there
-    /// is nothing to re-assert and guessing would overwrite the BIOS lighting.
+    /// is nothing to re-assert and guessing would overwrite the BIOS lighting - except when a
+    /// firmware mode is picked, which the hardware runs on every channel anyway
+    /// (<see cref="ShareEngine"/>).
     /// </remarks>
     /// <param name="keepPower">
     /// Named channels keep the power their record has instead of being switched on by the naming.
@@ -959,66 +1100,12 @@ internal static partial class Program
 
         foreach (AuraDevice device in targets)
         {
-            var looks = new List<ChannelLook>();
-            var deviceNamed = new List<(string, int)>();
-            var chosenChannels = new HashSet<int>();
-
-            foreach (AuraChannel affected in device.Channels)
-            {
-                ChannelLighting? own = AuraChannelStates.Get(remembered, device.Key, affected.Index);
-                bool chosen = channel < 0 || affected.Index == channel;
-
-                ChannelLighting? apply = chosen ? look ?? own ?? BoardWide(state) : own;
-                if (apply == null)
-                {
-                    continue;
-                }
-
-                // A new effect or colour carries no brightness, so the one this channel was given
-                // keeps applying - the same rule the stored record follows.
-                (byte red, byte green, byte blue) = AuraState.Dim(apply.Red, apply.Green, apply.Blue,
-                    chosen && brightness.HasValue ? brightness.Value : Brightness(apply.Brightness != 0 ? apply : own, state));
-
-                // A named channel takes the mode it was given, even when its record says it was
-                // off - being named is what switches it back on. An untouched one keeps its own
-                // state, off included. A caller that only changes how bright a channel is
-                // (keepPower) is not asking for it to come on, so there the record decides for
-                // named channels too.
-                byte mode = (chosen && !keepPower) || apply.On ? apply.Mode : AuraState.ModeOff;
-                looks.Add(new ChannelLook(affected.Index, mode, red, green, blue));
-
-                if (chosen)
-                {
-                    deviceNamed.Add((device.Key, affected.Index));
-                    chosenChannels.Add(affected.Index);
-                }
-            }
-
-            // The controller has one engine for the firmware-generated modes: a second channel of
-            // the same burst in a different one would be sent after the chosen channel and win,
-            // so the choice would silently be lost. Any chosen channel on one of those modes
-            // therefore takes every other channel that is on a firmware mode of its own along,
-            // and their records say so too.
-            var unified = new List<(string DeviceKey, int Channel, ChannelLighting Look)>();
-            int engine = looks.FindIndex(l => chosenChannels.Contains(l.Channel) && AuraPresets.IsFirmwareMode(l.Mode));
-
-            if (engine >= 0)
-            {
-                byte engineMode = looks[engine].Mode;
-
-                for (int i = 0; i < looks.Count; i++)
-                {
-                    if (looks[i].Mode == engineMode || !AuraPresets.IsFirmwareMode(looks[i].Mode))
-                    {
-                        continue;
-                    }
-
-                    int index = looks[i].Channel;
-                    looks[i] = looks[i] with { Mode = engineMode };
-                    unified.Add((device.Key, index,
-                        (AuraChannelStates.Get(remembered, device.Key, index) ?? BoardWide(state)) with { Mode = engineMode }));
-                }
-            }
+            DeviceMix mix = MixDevice(device.Channels.Select(c => c.Index).ToList(),
+                index => AuraChannelStates.Get(remembered, device.Key, index), channel, state, look, brightness,
+                keepPower);
+            List<ChannelLook> looks = mix.Looks;
+            var deviceNamed = mix.Named.Select(index => (device.Key, index)).ToList();
+            var unified = mix.Records.Select(r => (device.Key, r.Channel, r.Look)).ToList();
 
             try
             {
@@ -1392,41 +1479,34 @@ internal static partial class Program
                 }
 
                 // One engine for the firmware-generated modes per controller, same rule as
-                // ApplyMix: the first entry on this controller that carries one of those modes
-                // decides, and every other channel of the burst that is on a firmware mode of its
-                // own takes it - the later of two such entries would otherwise win on the board
-                // while the first one's record claims otherwise. The records follow what is sent.
-                int engine = looks.FindIndex(l => named.Contains((device.Key, l.Channel)) &&
-                    AuraPresets.IsFirmwareMode(l.Mode));
+                // ApplyMix: within one controller the first entry (lowest channel index) that
+                // carries one of those modes decides, and every other channel of the burst that is
+                // on a firmware mode of its own takes it - the later of two such entries would
+                // otherwise win on the board while the first one's record claims otherwise. Colour
+                // entries stay as they are, and the records follow what is sent.
+                var infos = device.Channels.Select(c => new EngineChannel(c.Index,
+                    named.Contains((device.Key, c.Index)),
+                    applied.FindLast(a => a.DeviceKey == device.Key && a.Channel == c.Index).Look ??
+                        AuraChannelStates.Get(remembered, device.Key, c.Index))).ToList();
+                EngineShare shared = ShareEngine(infos, looks, spreadToAll: false, BoardWide(state),
+                    Brightness(null, state));
+                looks = shared.Looks;
 
-                if (engine >= 0)
+                foreach ((int index, ChannelLighting follow) in shared.Records)
                 {
-                    byte engineMode = looks[engine].Mode;
-
-                    for (int i = 0; i < looks.Count; i++)
+                    bool recorded = false;
+                    for (int r = 0; r < applied.Count; r++)
                     {
-                        if (looks[i].Mode == engineMode || !AuraPresets.IsFirmwareMode(looks[i].Mode))
+                        if (applied[r].DeviceKey == device.Key && applied[r].Channel == index)
                         {
-                            continue;
+                            applied[r] = (device.Key, index, applied[r].Look with { Mode = follow.Mode });
+                            recorded = true;
                         }
+                    }
 
-                        int index = looks[i].Channel;
-                        looks[i] = looks[i] with { Mode = engineMode };
-
-                        bool recorded = false;
-                        for (int r = 0; r < applied.Count; r++)
-                        {
-                            if (applied[r].DeviceKey == device.Key && applied[r].Channel == index)
-                            {
-                                applied[r] = (device.Key, index, applied[r].Look with { Mode = engineMode });
-                                recorded = true;
-                            }
-                        }
-
-                        if (!recorded && AuraChannelStates.Get(remembered, device.Key, index) is ChannelLighting own)
-                        {
-                            applied.Add((device.Key, index, own with { Mode = engineMode }));
-                        }
+                    if (!recorded)
+                    {
+                        applied.Add((device.Key, index, follow));
                     }
                 }
 
@@ -1652,7 +1732,10 @@ internal static partial class Program
                     looks.Add(new ChannelLook(channel.Index, entry.Mode, red, green, blue));
                 }
 
-                device.Apply(looks);
+                // Shown the way Save would apply it: one firmware engine per controller, the
+                // lowest channel on one of those modes decides.
+                var infos = device.Channels.Select(c => new EngineChannel(c.Index, true, null)).ToList();
+                device.Apply(ShareEngine(infos, looks, spreadToAll: false, BoardWide(state), Brightness(null, state)).Looks);
             }
         }
         finally
@@ -1701,7 +1784,10 @@ internal static partial class Program
             looks.Add(new ChannelLook(affected.Index, look.On ? look.Mode : AuraState.ModeOff, red, green, blue));
         }
 
-        device.Apply(looks);
+        // Records written before the engine was shared can disagree; the board runs one.
+        var infos = device.Channels.Select(c => new EngineChannel(c.Index, true,
+            AuraChannelStates.Get(remembered, device.Key, c.Index))).ToList();
+        device.Apply(ShareEngine(infos, looks, spreadToAll: false, BoardWide(state), Brightness(null, state)).Looks);
     }
 
     private static bool _consoleAttached;
