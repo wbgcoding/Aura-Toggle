@@ -392,7 +392,8 @@ the latest release of this project, with nothing but the program name and versio
 the check happens at start, never right when you switch it on. If a newer version exists you get a
 notice, and nothing is downloaded until you click install. The download is installed only when it
 matches the release's `SHA256SUMS.txt` and carries a valid signature (`.sig` next to each exe) made
-with the project's own key, whose public half is built into the program. A file that fails that is
+with the project's own key, whose public half is built into the program, and names the release's own
+version inside the file, so an older build cannot come back as an update. A file that fails that is
 never installed; you get a link to the release page instead. A portable copy replaces its own exe
 and restarts; an installed copy runs the new setup.
 
