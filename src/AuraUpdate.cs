@@ -423,6 +423,55 @@ internal static class AuraUpdate
             TryDelete(exe + ".old");
             TryDelete(exe + ".new");
         }
+
+        DeleteTempLeftovers();
+    }
+
+    /// <summary>
+    /// An installed copy's update runs the setup out of a folder of its own under the temp path,
+    /// and the version check writes a scratch file there; neither can be removed by the process
+    /// that made it (the setup replaces that very process). Anything of ours older than a day is
+    /// stale by then, so it goes at the next start. Best effort: a locked or foreign-owned entry
+    /// stays for the next time, and a link is never followed, so a planted junction cannot point
+    /// the cleanup somewhere else.
+    /// </summary>
+    private static void DeleteTempLeftovers()
+    {
+        DateTime cutoff = DateTime.UtcNow.AddDays(-1);
+
+        try
+        {
+            var temp = new DirectoryInfo(Path.GetTempPath());
+
+            foreach (DirectoryInfo folder in temp.EnumerateDirectories("AuraToggle-*"))
+            {
+                if (folder.Attributes.HasFlag(FileAttributes.ReparsePoint) || folder.LastWriteTimeUtc > cutoff)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    folder.Delete(recursive: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // In use or not ours to remove; the next start tries again.
+                }
+            }
+
+            foreach (FileInfo file in temp.EnumerateFiles("AuraToggle-*.tmp"))
+            {
+                if (!file.Attributes.HasFlag(FileAttributes.ReparsePoint) && file.LastWriteTimeUtc <= cutoff)
+                {
+                    TryDelete(file.FullName);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The temp folder itself could not be listed; nothing to clean up then.
+        }
     }
 
     private static void TryDelete(string path)
