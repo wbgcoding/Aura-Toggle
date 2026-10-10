@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea
+    url: https://github.com/wbgcoding/Aura-Toggle/discussions
+    about: Ask a question or suggest a feature in Discussions

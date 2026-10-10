@@ -1,0 +1,45 @@
+name: Bug report
+description: Something does not switch, looks wrong or crashes
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `AuraToggle.exe --version`
+      placeholder: 1.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Portable or installed
+      options:
+        - Portable exe
+        - Installed with the setup
+    validations:
+      required: true
+  - type: input
+    id: board
+    attributes:
+      label: Mainboard
+      description: Exact model, for example ROG STRIX Z790-E
+    validations:
+      required: true
+  - type: textarea
+    id: list
+    attributes:
+      label: Output of `AuraToggle.exe -list`
+      render: text
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Last lines of the log
+      description: From `%LOCALAPPDATA%\aura-toggle\log.txt`. User names are already replaced with `%USERPROFILE%`.
+      render: text
