@@ -933,9 +933,13 @@ internal static partial class Program
     /// its neighbour. Channels that have never been set on their own are left alone, since there
     /// is nothing to re-assert and guessing would overwrite the BIOS lighting.
     /// </remarks>
+    /// <param name="keepPower">
+    /// Named channels keep the power their record has instead of being switched on by the naming.
+    /// Only the brightness path sets it: a dimmer must never light a header the user switched off.
+    /// </param>
     /// <returns>The channels that were named, for the caller to record.</returns>
     private static List<(string DeviceKey, int Channel)> ApplyMix(List<AuraDevice> devices, string? deviceKey,
-        int channel, AuraState state, ChannelLighting? look, byte? brightness = null)
+        int channel, AuraState state, ChannelLighting? look, byte? brightness = null, bool keepPower = false)
     {
         List<AuraDevice> targets = ResolveDevices(devices, deviceKey);
 
@@ -970,8 +974,10 @@ internal static partial class Program
 
                 // A named channel takes the mode it was given, even when its record says it was
                 // off - being named is what switches it back on. An untouched one keeps its own
-                // state, off included.
-                byte mode = chosen || apply.On ? apply.Mode : AuraState.ModeOff;
+                // state, off included. A caller that only changes how bright a channel is
+                // (keepPower) is not asking for it to come on, so there the record decides for
+                // named channels too.
+                byte mode = (chosen && !keepPower) || apply.On ? apply.Mode : AuraState.ModeOff;
                 looks.Add(new ChannelLook(affected.Index, mode, red, green, blue));
 
                 if (chosen)
@@ -1179,7 +1185,7 @@ internal static partial class Program
             // pinned to what it was given individually.
             if (state.On)
             {
-                ApplyMix(devices, deviceKey, channel, state, look: null, brightness: percent);
+                ApplyMix(devices, deviceKey, channel, state, look: null, brightness: percent, keepPower: true);
             }
 
             AuraChannelStates.SetBrightness(Channels(devices, deviceKey, channel), wholeBoard ? (byte)0 : percent,

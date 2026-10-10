@@ -2375,8 +2375,10 @@ internal sealed partial class ToggleForm : Form
         // firmware-generated effects cannot be dimmed at all and the slider would be a control
         // that visibly does nothing. It follows the effect the button is actually animating,
         // which under a custom preset is that preset's most-used channel rather than the
-        // board-wide mode the preset replaced - the same test PreviewBrightness makes.
-        bool showBrightness = AuraPresets.ByMode(_paintedMode)?.UsesColour ?? false;
+        // board-wide mode the preset replaced - the same test PreviewBrightness makes. Also hidden
+        // while what the selector points at is off: a dimmer for lights that are dark has nothing
+        // to show, and a stored value is not worth a control that looks live but does nothing.
+        bool showBrightness = on && (AuraPresets.ByMode(_paintedMode)?.UsesColour ?? false);
 
         _settingBrightnessFromRender = true;
         _brightness.Value = brightness;
