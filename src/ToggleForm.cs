@@ -165,6 +165,7 @@ internal sealed partial class ToggleForm : Form
     private SettingsPopup? _settingsPopup;
     private List<AuraDeviceSummary> _devices = new();
     private bool _busy;
+    private bool _busyQuiet;
     private bool _exiting;
     private bool _dark = Theme.Dark;
     private long _themeEchoUntil;
@@ -1327,7 +1328,10 @@ internal sealed partial class ToggleForm : Form
         Task identify = Task.Run(() => Program.Identify(deviceKey, channelIndex, cts.Token));
         _identifyTask = identify;
 
-        SetBusy(true);
+        // Quiet: while the name box is open the window keeps showing the lighting as it is.
+        // Dimming the big button for the length of the blink made it look as if the rename
+        // had changed the lighting itself.
+        SetBusy(true, quiet: true);
         try
         {
             await identify;
@@ -2291,7 +2295,9 @@ internal sealed partial class ToggleForm : Form
     {
         if (_busy)
         {
-            if (!queue)
+            // A quiet hold shows nothing, so a click that lands during it has nothing telling
+            // the user it was refused: it waits its turn instead.
+            if (!queue && !_busyQuiet)
             {
                 // Dropped, but the control that asked for it (a slider, a picked chip) is already
                 // showing the value that was refused - painted again from the real state.
@@ -2368,6 +2374,7 @@ internal sealed partial class ToggleForm : Form
         // Dropping a request that arrives while one is already in flight must not wait for the
         // delay below - only the *visible* grey-out does.
         _busy = busy;
+        _busyQuiet = busy && quiet;
 
         if (busy && quiet)
         {
