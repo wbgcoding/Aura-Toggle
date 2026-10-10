@@ -45,8 +45,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [1.3.0] - 2026-08-22
 
-A quieter window - the brightness slider previews itself and steps aside for the effects it
-cannot reach - a new icon, a setup that no longer trips over a per-user uninstall, and no
+A quieter window (the brightness slider previews itself and steps aside for the effects it
+cannot reach), a new icon, a setup that no longer trips over a per-user uninstall, and no
 network code left in the tool at all.
 
 ### Added
@@ -116,7 +116,7 @@ looking at, and a round of fixes to the window's sizing, its safety checks and i
 - The setup no longer opens its own "Select Setup Language" dialog. That window is put on screen
   before the setup can run a line of its own code, which is why it could end up behind whatever
   the user was looking at, making the setup look like it never started. The language now comes
-  from Windows, and the first window is the wizard - which the setup does raise to the front.
+  from Windows, and the first window is the wizard, which the setup does raise to the front.
 - The licence page no longer claims the application makes no network connections of its own. It
   says what actually happens instead: a daily update check against the project's release page that
   can be switched off, nothing downloaded without being asked for, and everything the tool
@@ -132,7 +132,7 @@ looking at, and a round of fixes to the window's sizing, its safety checks and i
   ones for each.
 - Resetting a channel to its default name now asks first: the button arms on one click and
   only resets on the second, like every other action here that throws something away.
-- `-custom` takes a preset name the way `-preset` already takes an effect name - casing,
+- `-custom` takes a preset name the way `-preset` already takes an effect name: casing,
   spaces, hyphens and underscores no longer have to match, while an exact name still wins.
 - Four German texts now say what the rest of the interface says: `Presets` instead of
   `Voreinstellungen`, `An/Aus` beside the hotkey instead of `Ein/Aus`, a delete confirmation that
@@ -148,17 +148,17 @@ looking at, and a round of fixes to the window's sizing, its safety checks and i
   GitHub's. The published checksum cannot catch this on its own: a setup and a checksum file
   served by the same foreign host agree with each other perfectly.
 - A damaged or hand-edited `settings.json` could put a hotkey nobody can press into the settings
-  panel - a mouse button, or a code no keyboard has. Such an entry falls back to Ctrl+Alt+L, as a
+  panel: a mouse button, or a code no keyboard has. Such an entry falls back to Ctrl+Alt+L, as a
   missing modifier already did.
 - Looking for controllers no longer leaves the window greyed out for good when the search itself
   fails, and a preview that fails unexpectedly reports it instead of ending the process.
 - The release page a new-version notice links to is opened only when the address really is
-  GitHub's - the same check the download beside it already had.
+  GitHub's, the same check the download beside it already had.
 - A stored file that damage or hand-editing has blown up to megabytes is ignored like an
   unreadable one instead of being read into memory whole, and the update check turns down an
   oversized answer for the same reason.
 - The preset editor's Save and Delete buttons keep the width their own label needs after the
-  window is moved to a screen with a different scale - the longer German labels could be cut off -
+  window is moved to a screen with a different scale (the longer German labels could be cut off),
   and the room the editor reserves for its scrollbar now follows that screen as well.
 - The preset editor keeps its heading, its close button and its Save/Delete row in place while
   only the channel rows scroll, so both stay reachable on a board with many channels.
