@@ -597,7 +597,7 @@ internal sealed class CustomPresetEditor : PopupForm
     /// </summary>
     private void FitToContent(Rectangle? workingArea = null)
     {
-        // The header and button row are pinned outside _scroll now, so their preferred height -
+        // The header and button row are pinned outside _scroll, so their preferred height -
         // plus the margin that separates each from the scrolling rows - has to be added by hand;
         // only _root's height still follows from AutoSize.
         int pinned = _header.PreferredSize.Height + _header.Margin.Vertical +
@@ -625,6 +625,7 @@ internal sealed class CustomPresetEditor : PopupForm
         KeepOnScreen();
     }
 
+#if REVIEW
     /// <summary>
     /// Proves the header and button row actually stay pinned outside <see cref="_scroll"/> instead
     /// of it covering the whole client area with them drawn across it - a wrong Controls.Add order
@@ -650,6 +651,7 @@ internal sealed class CustomPresetEditor : PopupForm
             + $"buttons       {_buttons.Bounds}" + Environment.NewLine
             + $"verdict       {(issues.Count > 0 ? string.Join(", ", issues) : "pinned ok")}";
     }
+#endif
 
     /// <summary>Fills every field from an existing preset, so it can be edited.</summary>
     private void Fill(CustomPreset preset)
@@ -975,7 +977,7 @@ internal sealed class CustomPresetEditor : PopupForm
         }
     }
 
-    /// <summary>The arm/confirm timing and text swap live in <see cref="ArmedButton"/> now; this
+    /// <summary>The arm/confirm timing and text swap live in <see cref="ArmedButton"/>; this
     /// is just the action itself, run once the second click confirms it.</summary>
     private void OnDeleteConfirmed()
     {

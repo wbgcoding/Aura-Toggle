@@ -64,9 +64,11 @@ internal sealed class SettingsPopup : PopupForm
 
     private bool _anchored;
 
+#if REVIEW
     /// <summary>Review mode only: the percentage of its measured width the panel is fitted to,
     /// standing in for the resize a move to a differently scaled monitor triggers.</summary>
     private int _reviewWidthPercent = 100;
+#endif
 
     public SettingsPopup(AuraSettings settings)
     {
@@ -192,14 +194,16 @@ internal sealed class SettingsPopup : PopupForm
     {
         int width = Math.Max(this.Scaled(276), _layout.PreferredSize.Width + Padding.Horizontal);
 
-        ClientSize = new Size(
-            width * _reviewWidthPercent / 100,
-            _layout.PreferredSize.Height + Padding.Vertical);
+#if REVIEW
+        width = width * _reviewWidthPercent / 100;
+#endif
+
+        ClientSize = new Size(width, _layout.PreferredSize.Height + Padding.Vertical);
 
         // Every re-fit puts the right edge back where Open() asked for it, rather than leaving the
         // left one where a differently sized panel had been placed. Two things resize the panel
         // after it was placed: switching the hotkey on adds a whole row (near the bottom of the
-        // screen that used to push Reset under the taskbar), and being shown on a monitor at
+        // screen that pushes Reset under the taskbar), and being shown on a monitor at
         // another scale than the one it was created on re-fits it at that scale. The second one is
         // what left the panel roughly centred under the gear on a second monitor - it was placed at
         // its old, narrower width and then grew rightwards past the window. Before the first Open
@@ -373,7 +377,7 @@ internal sealed class SettingsPopup : PopupForm
         _layout.SetColumnSpan(button, 2);
     }
 
-    /// <summary>The arm/confirm timing and text swap live in <see cref="ArmedButton"/> now; this
+    /// <summary>The arm/confirm timing and text swap live in <see cref="ArmedButton"/>; this
     /// is just the action itself, run once the second click confirms it.</summary>
     private void OnResetConfirmed()
     {
@@ -594,7 +598,6 @@ internal sealed class SettingsPopup : PopupForm
 #if REVIEW
     /// <summary>Surface tool only: the start lighting list, opened the way a click does.</summary>
     internal void OpenStartActionsForReview() => _startAction.OpenForReview();
-#endif
 
     /// <summary>
     /// Review mode only: re-fits the panel at <paramref name="percent"/> of its measured width, the
@@ -615,6 +618,7 @@ internal sealed class SettingsPopup : PopupForm
     /// </summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool KeepOpenOnDeactivate { private get; set; }
+#endif
 
     /// <summary>Dragged onto a display with a different scale: the size this was fitted to
     /// belongs to the one it came from.</summary>
@@ -653,7 +657,14 @@ internal sealed class SettingsPopup : PopupForm
 
         // A child popup (an effect list, the preset editor) is a window of its own; opening
         // one must not dismiss this panel.
-        if (_childOpen || KeepOpenOnDeactivate)
+#if REVIEW
+        if (KeepOpenOnDeactivate)
+        {
+            return;
+        }
+#endif
+
+        if (_childOpen)
         {
             return;
         }

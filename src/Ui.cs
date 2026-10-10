@@ -318,6 +318,7 @@ internal static class Theme
     /// </summary>
     private static int DpiOf(Control control) => (control.TopLevelControl ?? control).DeviceDpi;
 
+#if REVIEW
     /// <summary>
     /// The dpi GDI measures text at, which is the process-wide system dpi and does not follow a
     /// window onto a differently scaled monitor. Fixed for the life of the process (changing it
@@ -333,6 +334,7 @@ internal static class Theme
         using var screen = Graphics.FromHwnd(IntPtr.Zero);
         return (int)screen.DpiX;
     }
+#endif
 
     /// <summary>
     /// Width of <paramref name="text"/> as it will actually be drawn on the display this control

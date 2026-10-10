@@ -95,7 +95,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// True between those two. <see cref="KeepOnScreen"/> checks this and does nothing while it
     /// holds, so nothing here repositions a window the user is still holding on to - but
-    /// <see cref="SettleAfterDpiChange"/> does not check it any more: <c>WM_DPICHANGED</c> only
+    /// <see cref="SettleAfterDpiChange"/> does not check it: <c>WM_DPICHANGED</c> only
     /// arrives once Windows has already put the window on its new monitor and knows the new
     /// scale, so a re-measure at that point is not guessing between two displays, it is reading
     /// the one Windows just said this window is on.
@@ -249,7 +249,6 @@ internal sealed partial class ToggleForm : Form
         _channel.AccessibleName = Strings.ChannelAccessibleName;
         _channel.Width = this.Scaled(112); // "Alle Kanäle" has to fit without being cut off
         _channel.PopupWidth = this.Scaled(210);
-        _channelShown = false;
         _channel.Visible = false; // shown once the board has more than one switchable channel
         _channel.SelectionChanged += (_, _) =>
         {
@@ -505,7 +504,7 @@ internal sealed partial class ToggleForm : Form
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var open =new ToolStripMenuItem(Strings.TrayOpen) { Tag = "open" };
+        var open = new ToolStripMenuItem(Strings.TrayOpen) { Tag = "open" };
         open.Click += (_, _) => RestoreFromTray();
         menu.Items.Add(open);
 
@@ -859,11 +858,11 @@ internal sealed partial class ToggleForm : Form
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpNoZOrder = 0x0004;
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [DllImport("user32.dll")]
     private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y,
         int width, int height, uint flags);
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [DllImport("user32.dll")]
     private static extern uint InSendMessageEx(IntPtr reserved);
 
     /// <summary>Where <c>flags</c> sits in WINDOWPOS: after two handles and four ints.</summary>
@@ -894,15 +893,6 @@ internal sealed partial class ToggleForm : Form
                 (flags & ~SwpFrameChanged) | SwpNoRedraw);
             Trace("  foreign frame refresh dropped");
         }
-    }
-
-    private void ShowBalloon(string text, ToolTipIcon icon)
-    {
-        _tray.Visible = true;
-        _tray.BalloonTipTitle = Strings.WindowTitle;
-        _tray.BalloonTipText = text;
-        _tray.BalloonTipIcon = icon;
-        _tray.ShowBalloonTip(10000);
     }
 
     /// <summary>
@@ -1011,8 +1001,8 @@ internal sealed partial class ToggleForm : Form
 
         // Re-measured now that the selector is there: the width worked out in the constructor was
         // for a row without it, and the selector is the widest thing that ever joins that row.
-        // Every other caller of SetUpChannelSelector already renders afterwards; this one did not,
-        // which left the window at its 380 px minimum with the gear pushed off the right edge.
+        // Without this the window would stay at its 380 px minimum, with the gear pushed off the
+        // right edge.
         Render();
     }
 
@@ -1057,7 +1047,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Every switchable target: all channels together, then - on machines with more than one
     /// controller - each controller as a whole, then every single channel. One controller with
-    /// four channels is exactly the case the old per-controller list had nothing to offer.
+    /// four channels is exactly the case a per-controller list has nothing to offer.
     /// </summary>
     private void SetUpChannelSelector()
     {
@@ -1165,7 +1155,7 @@ internal sealed partial class ToggleForm : Form
 
         // Created here rather than inside RunIdentify: that method may sit waiting for another
         // hardware call to finish before it ever reaches its own assignment, and closing the popup
-        // during that wait used to cancel a field that was still null. The identify then started
+        // during that wait would cancel a field that was still null. The identify then started
         // anyway with nothing left able to stop it, parked on an infinite wait, and held the busy
         // flag - and with it every control - for the rest of the session.
         var cts = new CancellationTokenSource();
@@ -1231,10 +1221,11 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Blinks the channel being renamed so its header is easy to find, holding the controller
+    /// Lights the channel being renamed so its header is easy to find, holding the controller
     /// quietly for as long as it runs - nothing else may write to it at the same time, and a
-    /// switch asked for meanwhile waits until the name box closes. Stopped by cancelling <see cref="_identifyCts"/>, which <see cref="Program.Identify"/>
-    /// answers by putting every channel of that controller back to its own record before returning.
+    /// switch asked for meanwhile waits until the name box closes. Stopped by cancelling
+    /// <see cref="_identifyCts"/>, which <see cref="Program.Identify"/> answers by putting every
+    /// channel of that controller back to its own record before returning.
     /// </summary>
     private async Task RunIdentify(string deviceKey, int channelIndex, CancellationTokenSource cts)
     {
@@ -1271,7 +1262,7 @@ internal sealed partial class ToggleForm : Form
             catch (Exception ex)
             {
                 // Same widened catch as the one below, and for the same reason - a refused
-                // command throws InvalidOperationException, which used to fall through here
+                // command throws InvalidOperationException, which would fall through here
                 // uncaught and take the newly requested rename down with the previous run's own
                 // failure. Every awaiter of the same Task sees this independently, so it is
                 // logged again even though the failing run's own RunIdentify call already logged
@@ -1310,8 +1301,8 @@ internal sealed partial class ToggleForm : Form
         _identifyTask = identify;
 
         // Quiet: while the name box is open the window keeps showing the lighting as it is.
-        // Dimming the big button for the length of the blink made it look as if the rename
-        // had changed the lighting itself.
+        // Dimming the big button for as long as the channel is lit would make it look as if the
+        // rename had changed the lighting itself.
         SetBusy(true, quiet: true);
         try
         {
@@ -1324,7 +1315,7 @@ internal sealed partial class ToggleForm : Form
             // reaching the user or the log - the same reasoning ToggleForm.Run already follows
             // for its own fire-and-forget switches. Catching every exception rather than only the
             // two expected ones for exactly that reason: a refused command throws
-            // InvalidOperationException, which used to disappear without a trace.
+            // InvalidOperationException, which would disappear without a trace.
             AuraLog.Error("Identify", ex);
         }
         finally
@@ -1623,6 +1614,7 @@ internal sealed partial class ToggleForm : Form
         popup.Open(anchor, this);
     }
 
+#if REVIEW
     /// <summary>
     /// Review mode only: opens the settings panel the same way a real gear click does, then keeps
     /// it open past the deactivation that would otherwise close it immediately - with nothing else
@@ -1638,7 +1630,6 @@ internal sealed partial class ToggleForm : Form
         }
     }
 
-#if REVIEW
     /// <summary>Surface tool only: the effect list, opened the way a click on it does.</summary>
     internal void OpenEffectsForReview() => _effects.OpenForReview();
 
@@ -1685,7 +1676,6 @@ internal sealed partial class ToggleForm : Form
         OpenSettingsForReview();
         _settingsPopup?.OpenStartActionsForReview();
     }
-#endif
 
     /// <summary>Review mode only: see <see cref="SettingsPopup.RefitForReview"/>.</summary>
     internal void RefitSettingsForReview(int percent) => _settingsPopup?.RefitForReview(percent);
@@ -1701,13 +1691,15 @@ internal sealed partial class ToggleForm : Form
     {
         _settingsPopup?.Close();
     }
+#endif
 
+#if REVIEW
     /// <summary>
     /// The settings panel's placement against the window edge, the gear and the big toggle button
     /// it opened from - the regression proof for two complaints: a strip of the button left visible
     /// next to the panel (anything but a positive <c>panel.Right - toggle.Right</c>), and the panel
     /// landing nowhere near the gear at all (the multi-monitor case where
-    /// <see cref="SettingsPopup.Open"/> used to clamp against the wrong monitor's bounds - a gap far
+    /// <see cref="SettingsPopup.Open"/> clamped against the wrong monitor's bounds - a gap far
     /// wider than <see cref="SettingsEdgeGap"/> is that, not rounding).
     /// </summary>
     internal string DescribeSettingsAnchor()
@@ -1761,6 +1753,7 @@ internal sealed partial class ToggleForm : Form
 
         return string.Join(Environment.NewLine, lines);
     }
+#endif
 
     /// <summary>
     /// (Re-)registers the hotkey to match <see cref="_settings"/>, called on startup and every
@@ -1805,8 +1798,8 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// How many times <see cref="SettleAfterDpiChange"/> re-measures before it gives up. The
-    /// measurement it repeats is now right on the first pass (the stale layout it used to read is
-    /// refreshed in <see cref="ResizeToContent"/>), so this is a backstop rather than the fix:
+    /// measurement it repeats is right on the first pass (the stale layout is refreshed in
+    /// <see cref="ResizeToContent"/>), so this is a backstop rather than the fix:
     /// a few spaced-out attempts cost nothing, and the log says so if one is ever needed.
     /// </summary>
     private const int MaxDpiSettleAttempts = 5;
@@ -2358,7 +2351,7 @@ internal sealed partial class ToggleForm : Form
     /// <param name="quiet">
     /// Holds the controller without any visible busy state, and with every control left live:
     /// a request made meanwhile is parked by <see cref="Run"/> rather than refused. For the preset
-    /// editor's live preview and the rename blink - the preview runs once per change made in the
+    /// editor's live preview and the rename highlight - the preview runs once per change made in the
     /// editor, often longer than the delay above on a board with several channels, so every edit
     /// dimmed the big button and greyed the window out and back in.
     /// </param>
@@ -2413,9 +2406,9 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Nothing that talks to the controller comes back on while there is no controller to talk
-    /// to. Releasing it used to re-enable all of it unconditionally, so a global hotkey press on a
-    /// machine with no board left the effect list, chips and slider live behind a greyed-out
-    /// button, each click raising another error.
+    /// to. Releasing it must not re-enable all of it unconditionally: a global hotkey press on a
+    /// machine with no board would leave the effect list, chips and slider live behind a
+    /// greyed-out button, each click raising another error.
     /// </summary>
     private void ApplyBusyVisuals(bool busy)
     {
@@ -2786,6 +2779,7 @@ internal sealed partial class ToggleForm : Form
         _brightnessValue.Margin = new Padding(0, 0, inset, inset);
     }
 
+#if REVIEW
     /// <summary>
     /// Every measurement the window's width depends on, as text - the regression proof for a
     /// layout complaint that can only be judged at a real display scale. Reports the room the top
@@ -2853,12 +2847,12 @@ internal sealed partial class ToggleForm : Form
 
         return string.Join(Environment.NewLine, lines);
     }
+#endif
 
     /// <summary>
-    /// Wide enough for the top row to show its longest entry. The width used to be fixed, which
-    /// English fitted into and German did not: with the channel selector shown, the effect list
-    /// had barely 196 px left and cut off both "Lauflicht mit Ausblenden" and any preset name past
-    /// about twenty characters. Capped, because a preset may be named up to forty characters and
+    /// Wide enough for the top row to show its longest entry. A fixed width fits English but not
+    /// German: with the channel selector shown, the effect list had barely 196 px left and cut off
+    /// both "Lauflicht mit Ausblenden" and any preset name past about twenty characters. Capped, because a preset may be named up to forty characters and
     /// a window that grows to match would be absurd - past the cap the list ellipsises again.
     /// </summary>
     private int WantedWidth

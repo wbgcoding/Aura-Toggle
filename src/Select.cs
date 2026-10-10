@@ -737,7 +737,6 @@ internal sealed class SelectPopup : PopupForm
     {
         Theme.PaintToolTip(new DrawToolTipEventArgs(g, this, this, bounds, text, Theme.Surface, Theme.Text, Font));
     }
-#endif
 
     /// <summary>
     /// Set only by <see cref="Program"/>'s review mode: with nothing else on screen to hold focus
@@ -747,15 +746,20 @@ internal sealed class SelectPopup : PopupForm
     /// </summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal bool KeepOpenOnDeactivate { private get; set; }
+#endif
 
     protected override void OnDeactivate(EventArgs e)
     {
         base.OnDeactivate(e);
 
-        if (!KeepOpenOnDeactivate)
+#if REVIEW
+        if (KeepOpenOnDeactivate)
         {
-            Close();
+            return;
         }
+#endif
+
+        Close();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
