@@ -217,6 +217,7 @@ $textFiles = @(
     Join-Path $root "build.bat"
     Join-Path $root "README.md"
     Join-Path $root "CHANGELOG.md"
+    Get-ChildItem (Join-Path $root "installer") -Filter *.txt | ForEach-Object { $_.FullName }
 )
 
 foreach ($line in Get-SourceLines $textFiles) {
@@ -248,6 +249,13 @@ foreach ($line in Get-SourceLines $textFiles) {
     # this file does not trip its own check.
     if ($line.Text.Contains([char]0x2014) -or $line.Text.Contains([char]0x2013)) {
         Add-Finding "$($line.File):$($line.Number)" "em or en dash: use a colon, comma or full stop"
+    }
+    # A spaced hyphen between words is the same dash typed on a keyboard. Only reader-facing text
+    # counts; "{0} - {1}" is a title separator and "## [1.0.0] - <date>" the changelog format.
+    $readerText = $line.File -match "\.(resx|md|txt)$" -and $line.Text -notmatch "^## \["
+    if ($readerText -and $line.Text -match "[^\s{}|\-] - [^\s{}|\-]" -and
+        ($line.File -notmatch "\.resx$" -or $line.Text -match "<value>")) {
+        Add-Finding "$($line.File):$($line.Number)" "hyphen used as a dash: use a colon, comma or full stop"
     }
     # Pascal's "external 'Name@user32.dll'" reads like a mail address to any simple pattern.
     if ($line.Text -match "[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" -and
