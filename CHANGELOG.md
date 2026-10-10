@@ -9,9 +9,11 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 
 - On a second monitor at a different display scale than the main one, the channel rename popup showed its text field half covered by its buttons and the start of the name scrolled out of view. The colour picker's hex field had the same fault. Every popup now lays itself out again when it opens on such a monitor
+- The window, the big button most of all, could flash when another program opened or closed. Many programs announce a theme change as they do, even when nothing changed, and Windows answered each one by redrawing the window; such an empty announcement is now ignored
 
 ### Changed
 
+- The channel list opens only as wide as its longest name, instead of at a fixed minimum width
 - Picking one of the four dynamic effects (spectrum cycle, rainbow, rainbow breathing, wave) on a single channel now switches every channel of that controller to it, in the window too, instead of only the channels already running one; a channel that is off stays dark and joins the effect when it comes back on. A colour effect still changes only its own channel, and that channel keeps its colour while the others keep the dynamic effect
 - The preset editor does the same: choosing a dynamic effect on one row sets every row of that controller to it, and a saved or imported preset with different dynamic effects on one controller opens showing the first channel's effect on all of them
 
