@@ -178,15 +178,24 @@ internal sealed partial class ToggleForm
 
         if (download.Result == UpdateResult.Verified)
         {
-            if (AuraUpdate.IsInstalled ? AuraUpdate.InstallVerified(download) : AuraUpdate.SwapPortable(download))
+            bool declined = false;
+            if (AuraUpdate.IsInstalled ? AuraUpdate.InstallVerified(download, out declined) : AuraUpdate.SwapPortable(download))
             {
                 _exiting = true;
                 Close();
                 return;
             }
 
+            // A declined UAC prompt is the user's own choice, not a failure; the tray entry stays
+            // and offers the install again.
+            if (declined)
+            {
+                _trayUpdate.Enabled = true;
+                return;
+            }
+
             // The portable swap failed on disk (a read-only or protected folder): the release page
-            // is the way left. An installer that did not start (UAC declined) can simply be retried.
+            // is the way left. An installer that did not start can simply be retried.
             if (!AuraUpdate.IsInstalled && info.HtmlUrl.Length > 0)
             {
                 SetTrayUpdate(string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateOpenPage, info.Version),

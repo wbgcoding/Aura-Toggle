@@ -60,6 +60,9 @@ internal static class AuraUpdate
     /// </summary>
     private const int MaxMetadataBytes = 4 * 1024 * 1024;
 
+    // ERROR_CANCELLED: what starting a process with "runas" throws when the UAC prompt is declined.
+    private const int ErrorCancelled = 1223;
+
     /// <summary>
     /// Whether this process runs from an installed copy rather than a portable one - the
     /// installer always drops its uninstaller, <c>unins000.exe</c>, next to the exe; a portable
@@ -265,6 +268,15 @@ internal static class AuraUpdate
                 return Rejected(fileName);
             }
 
+            // The signature covers the bytes, not the release they hang on. The version written into
+            // the signed file itself has to be the one the release claims, so an older signed build
+            // re-published under a newer tag is refused rather than installed as a downgrade.
+            if (!CarriesVersion(data, info.Version))
+            {
+                AuraLog.Warn($"UpdateDownload: the signed file is not version {info.Version}, download rejected");
+                return Rejected(fileName);
+            }
+
             return new UpdateDownload(UpdateResult.Verified, data, fileName);
         }
         catch (Exception ex) when (IsExpected(ex) || ex is UnauthorizedAccessException)
@@ -275,16 +287,31 @@ internal static class AuraUpdate
     }
 
     /// <summary>
+    /// Whether the setup registered this copy for the current user only. Inno Setup writes the
+    /// uninstall entry under HKCU for a per-user install and under HKLM for one for all users, and
+    /// that holds wherever the user chose to put the folder.
+    /// </summary>
+    private static bool InstalledForCurrentUser()
+    {
+        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(UninstallKey);
+        return key != null;
+    }
+
+    private const string UninstallKey =
+        @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E5C1F42-6A1D-4A0B-9C3F-2B7E4D9A1C55}_is1";
+
+    /// <summary>
     /// Writes the verified setup to a fresh folder under the temp directory and runs it silently;
     /// the caller then lets this process close - the installer replaces the running exe, which
-    /// cannot happen while it is still open. The setup's own manifest is asInvoker and it raises
-    /// its UAC prompt itself, after this call has returned, so declining that prompt cannot be seen
-    /// from here: the app is closed by then and the user starts it again by hand, where the update
-    /// is offered once more. <c>/update=1</c> tells the setup to start the app again after a silent
-    /// install, which its ordinary finish-page launch skips.
+    /// cannot happen while it is still open. An install for all users starts the setup elevated
+    /// from here, so the UAC prompt belongs to this call: declining it sets
+    /// <paramref name="declined"/> and the app simply stays open. <c>/update=1</c> tells the setup
+    /// to start the app again after a silent install, which its ordinary finish-page launch skips.
     /// </summary>
-    public static bool InstallVerified(UpdateDownload verified)
+    public static bool InstallVerified(UpdateDownload verified, out bool declined)
     {
+        declined = false;
+
         if (verified.Result != UpdateResult.Verified || verified.Data == null || verified.FileName.Length == 0)
         {
             return false;
@@ -301,8 +328,9 @@ internal static class AuraUpdate
             // swap the file between the write and the elevated run. Reopened for reading with no
             // write or delete sharing, what is on disk is hashed through that very handle and the
             // handle is kept until the process has started, and Process.Start still opens it for
-            // execution with the handle held. The setup reopens itself from here when it elevates,
-            // after this handle is gone; that last step stays open to the same user.
+            // execution with the handle held. An install for all users is started elevated right
+            // here rather than letting the setup reopen itself for elevation from the same path
+            // after this handle is gone; once the process runs, its image cannot be replaced.
             using var hold = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             if (!CryptographicOperations.FixedTimeEquals(SHA256.HashData(hold), SHA256.HashData(verified.Data)))
             {
@@ -310,11 +338,20 @@ internal static class AuraUpdate
                 return false;
             }
 
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path, "/SILENT /update=1")
+            bool perUser = InstalledForCurrentUser();
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path,
+                perUser ? "/SILENT /CURRENTUSER /update=1" : "/SILENT /ALLUSERS /update=1")
             {
                 UseShellExecute = true,
+                Verb = perUser ? "" : "runas",
             });
             return true;
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
+        {
+            AuraLog.Info("UpdateInstall: the UAC prompt was declined, the app stays open.");
+            declined = true;
+            return false;
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException
             or IOException or UnauthorizedAccessException)
@@ -409,6 +446,39 @@ internal static class AuraUpdate
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             AuraLog.Warn($"UpdateSwap: could not put the original back: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Whether the file version resource of <paramref name="data"/> names
+    /// <paramref name="version"/> (major.minor.build). Both the exe and the setup carry one, written
+    /// from the same project version the release tag is made from.
+    /// </summary>
+    internal static bool CarriesVersion(byte[] data, string version)
+    {
+        if (!Version.TryParse(version, out Version? wanted))
+        {
+            return false;
+        }
+
+        string path = Path.Combine(Path.GetTempPath(), "AuraToggle-" + Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            File.WriteAllBytes(path, data);
+            var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(path);
+            return info.FileMajorPart == wanted.Major && info.FileMinorPart == wanted.Minor &&
+                info.FileBuildPart == Math.Max(wanted.Build, 0);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A scanner holding the file a moment longer leaves a stray temp file, nothing more.
+            }
         }
     }
 

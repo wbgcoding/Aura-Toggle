@@ -545,6 +545,22 @@ internal static partial class Program
             return args.Length >= 3 ? ReviewSwap(args[2]) : 2;
         }
 
+        if (surface == "install")
+        {
+            return args.Length >= 3 ? ReviewInstall(args[2]) : 2;
+        }
+
+        // The downgrade gate on its own: does <file> carry <version>? Printed and written to
+        // %TEMP%\aura-carries.txt; exit 0 yes, 1 no.
+        if (surface == "carries" && args.Length >= 4)
+        {
+            bool carries = AuraUpdate.CarriesVersion(File.ReadAllBytes(args[2]), args[3]);
+            string line = (carries ? "carries " : "does not carry ") + args[3];
+            File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-carries.txt"), line + Environment.NewLine);
+            WriteLine(line);
+            return carries ? 0 : 1;
+        }
+
         Strings.Override = AuraSettings.Load().Language;
         return RunReview(surface, args.Length >= 3 ? args[2] : "");
     }
@@ -619,10 +635,54 @@ internal static partial class Program
         return code;
     }
 
+    /// <summary>
+    /// The installed copy's update without GitHub: verifies a local setup against its <c>.sig</c>
+    /// with the same gate the download uses, then hands it to the same start as the real update,
+    /// elevated for an install for all users. Run from the installed folder. The result goes to
+    /// <c>%TEMP%\aura-install.txt</c> as well, since this is a WinExe.
+    /// </summary>
+    private static int ReviewInstall(string file)
+    {
+        string result;
+        int code;
+
+        try
+        {
+            byte[] data = File.ReadAllBytes(file);
+            string signature = File.Exists(file + ".sig") ? File.ReadAllText(file + ".sig") : "";
+
+            if (!AuraUpdate.IsInstalled)
+            {
+                (result, code) = ("not an installed copy, nothing started", 3);
+            }
+            else if (!UpdateSignature.Verify(data, signature, UpdatePublicKey.Value))
+            {
+                (result, code) = ("not verified, nothing started", 1);
+            }
+            else if (AuraUpdate.InstallVerified(new UpdateDownload(UpdateResult.Verified, data, Path.GetFileName(file)),
+                out bool declined))
+            {
+                (result, code) = ("verified, setup started", 0);
+            }
+            else
+            {
+                (result, code) = (declined ? "verified, UAC declined, app stays open" : "verified, setup did not start", 4);
+            }
+        }
+        catch (IOException ex)
+        {
+            (result, code) = ("cannot read " + file + ": " + ex.Message, 2);
+        }
+
+        File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-install.txt"), result + Environment.NewLine);
+        WriteLine(result);
+        return code;
+    }
+
     private static int PrintSurfaceIds()
     {
         WriteLine("Review surfaces (-review <id> [scale%]):");
-        WriteLine("  settings  error  editor  layout  gear  tip  preview  follow  swap <signed exe>");
+        WriteLine("  settings  error  editor  layout  gear  tip  preview  follow  swap <signed exe>  install <signed setup>  carries <file> <version>");
         WriteLine("");
         WriteLine("Shot surfaces (-shot [id|group ...] [scale=100,150] [lang=en,de] [out=<folder>]):");
         foreach ((string id, string description) in ShotSurfaces)
