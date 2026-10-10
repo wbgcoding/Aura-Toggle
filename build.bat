@@ -320,7 +320,7 @@ exit /b 0
 :payloadmissing
 echo.
 echo INSTALLER FAILED: a build is missing from dist.
-echo Most likely antivirus quarantined the single file bundle - check its log and exclude the
+echo Most likely antivirus quarantined the single file bundle; check its log and exclude the
 echo dist folder, then build again.
 goto :installerfailed
 

@@ -3,7 +3,7 @@ Aura Toggle - License Agreement
 
 SUMMARY
 
-Aura Toggle is free, open-source software licensed under the MIT License. Use it privately or commercially, redistribute it, modify it - all free of charge.
+Aura Toggle is free, open-source software licensed under the MIT License. Use it privately or commercially, redistribute it, modify it, all free of charge.
 
 The sole condition: the copyright notice and this license text stay with the software if you redistribute it.
 

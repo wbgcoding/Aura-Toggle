@@ -3,7 +3,7 @@ Aura Toggle - Lizenzvereinbarung
 
 ZUSAMMENFASSUNG
 
-Aura Toggle ist freie Open-Source-Software und steht unter der MIT-Lizenz. Nutzen Sie die Software privat oder gewerblich, geben Sie sie weiter, verändern Sie sie - unentgeltlich.
+Aura Toggle ist freie Open-Source-Software und steht unter der MIT-Lizenz. Nutzen Sie die Software privat oder gewerblich, geben Sie sie weiter, verändern Sie sie, alles unentgeltlich.
 
 Einzige Bedingung: Der Copyright-Hinweis und dieser Lizenztext bleiben bei einer Weitergabe erhalten.
 
