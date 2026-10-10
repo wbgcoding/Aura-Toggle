@@ -35,7 +35,7 @@ internal static partial class Program
         if (surface is not ("settings" or "error" or "editor" or "layout" or "update" or "gear" or "tip"
             or "preview"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip|preview|ids [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip|preview|engine|ids [scale%]");
             return 2;
         }
 
@@ -540,6 +540,11 @@ internal static partial class Program
             return ReviewFollow();
         }
 
+        if (surface == "engine")
+        {
+            return ReviewEngine();
+        }
+
         if (surface == "swap")
         {
             return args.Length >= 3 ? ReviewSwap(args[2]) : 2;
@@ -679,10 +684,150 @@ internal static partial class Program
         return code;
     }
 
+    /// <summary>
+    /// "engine": fixed cases against the pure half of the firmware-engine sharing (what
+    /// <see cref="MixDevice"/> and <see cref="ShareEngine"/> work out) and against the preset
+    /// editor's row sync. No controller is touched and no window is shown. PASS/FAIL per case,
+    /// also written to %TEMP%\aura-engine.txt; exit 0 when all pass, 1 otherwise.
+    /// </summary>
+    private static int ReviewEngine()
+    {
+        ApplicationConfiguration.Initialize();
+
+        var lines = new List<string>();
+        int failed = 0;
+
+        void Check(string name, string expected, string actual)
+        {
+            bool ok = expected == actual;
+            failed += ok ? 0 : 1;
+            lines.Add(ok ? $"PASS {name}" : $"FAIL {name}: expected {expected}, got {actual}");
+        }
+
+        const byte Static = 1, Chase = 9, Rainbow = 5, Wave = 11;
+        var state = new AuraState(On: true, Static, 255, 255, 255, "", 100);
+        IReadOnlyList<int> channels = new[] { 0, 1, 2 };
+
+        // Modes sent, in channel order, e.g. "5,5,5".
+        static string Sent(DeviceMix mix) => string.Join(",", mix.Looks.OrderBy(l => l.Channel).Select(l => l.Mode));
+        // Records to write, e.g. "0:5 1:5" (channel:mode, plus "off" for a record that stays off).
+        static string Recorded(DeviceMix mix) => string.Join(" ", mix.Records.OrderBy(r => r.Channel)
+            .Select(r => $"{r.Channel}:{r.Look.Mode}{(r.Look.On ? "" : "off")}"));
+
+        ChannelLighting Colour(byte mode, bool on = true) => new(mode, 0, 0, 255, on);
+        var pickRainbow = new ChannelLighting(Rainbow, 255, 255, 255);
+
+        // Static channels, rainbow picked on channel 2: every channel takes it.
+        var statics = new Dictionary<int, ChannelLighting>
+        {
+            [0] = Colour(Static), [1] = Colour(Static), [2] = Colour(Static),
+        };
+        DeviceMix mix = MixDevice(channels, i => statics.GetValueOrDefault(i), 2, state, pickRainbow, null, false);
+        Check("rainbow on 2 takes every channel: sent", "5,5,5", Sent(mix));
+        Check("rainbow on 2 takes every channel: records", "0:5 1:5", Recorded(mix));
+        Check("rainbow on 2: named", "2", string.Join(",", mix.Named));
+
+        // A record that is off stays dark, its record carries the mode and stays off.
+        var withOff = new Dictionary<int, ChannelLighting>
+        {
+            [0] = Colour(Static, on: false), [1] = Colour(Static), [2] = Colour(Static),
+        };
+        mix = MixDevice(channels, i => withOff.GetValueOrDefault(i), 2, state, pickRainbow, null, false);
+        Check("off channel stays dark: sent", "0,5,5", Sent(mix));
+        Check("off channel stays dark: records", "0:5off 1:5", Recorded(mix));
+
+        // A channel with no record is written too and gets a record.
+        var noRecord = new Dictionary<int, ChannelLighting> { [1] = Colour(Static), [2] = Colour(Static) };
+        mix = MixDevice(channels, i => noRecord.GetValueOrDefault(i), 2, state, pickRainbow, null, false);
+        Check("no-record channel joins: sent", "5,5,5", Sent(mix));
+        Check("no-record channel joins: records", "0:5 1:5", Recorded(mix));
+
+        // Without a firmware pick a channel with no record is left alone.
+        mix = MixDevice(channels, i => noRecord.GetValueOrDefault(i), 2, state, Colour(Chase), null, false);
+        Check("colour pick leaves a no-record channel alone: sent", "1,9", Sent(mix));
+
+        // Then static on channel 1 changes only channel 1.
+        var rainbows = new Dictionary<int, ChannelLighting>
+        {
+            [0] = Colour(Rainbow), [1] = Colour(Rainbow), [2] = Colour(Rainbow),
+        };
+        mix = MixDevice(channels, i => rainbows.GetValueOrDefault(i), 1, state, Colour(Static), null, false);
+        Check("static on 1 only changes channel 1: sent", "5,1,5", Sent(mix));
+        Check("static on 1 only changes channel 1: records", "", Recorded(mix));
+
+        // A brightness change must not turn colour channels into the engine's mode.
+        var mixed = new Dictionary<int, ChannelLighting>
+        {
+            [0] = Colour(Rainbow), [1] = Colour(Static), [2] = Colour(Static),
+        };
+        mix = MixDevice(channels, i => mixed.GetValueOrDefault(i), -1, state, null, 50, keepPower: true);
+        Check("brightness change keeps colour channels: sent", "5,1,1", Sent(mix));
+
+        // Preset: wave on channel 0 and rainbow on channel 2 -> both wave, static channel 1 stays.
+        var entries = new[]
+        {
+            new EngineChannel(0, true, null), new EngineChannel(1, true, null), new EngineChannel(2, true, null),
+        };
+        var looks = new[]
+        {
+            new ChannelLook(0, Wave, 0, 0, 0), new ChannelLook(1, Static, 0, 0, 255),
+            new ChannelLook(2, Rainbow, 0, 0, 0),
+        };
+        EngineShare share = ShareEngine(entries, looks, spreadToAll: false, new ChannelLighting(Static, 255, 255, 255), 100);
+        Check("preset wave on 0, rainbow on 2: sent", "11,1,11", string.Join(",", share.Looks.Select(l => l.Mode)));
+        Check("preset wave on 0, rainbow on 2: records", "2:11", string.Join(" ", share.Records.Select(r => $"{r.Channel}:{r.Look.Mode}")));
+
+        // Lowest channel decides, not the order the entries came in.
+        var reversed = new[] { looks[2], looks[1], looks[0] };
+        share = ShareEngine(entries, reversed, spreadToAll: false, new ChannelLighting(Static, 255, 255, 255), 100);
+        Check("preset order does not matter: sent", "11,1,11", string.Join(",", share.Looks.Select(l => l.Mode)));
+
+        // Editor: a firmware pick takes the same controller along, the other controller stays.
+        var editor = new CustomPresetEditor(null, ReviewControllers(), AuraState.Load());
+        string Rows() => string.Join(" ", editor.ReviewRows().Select(r => $"{r.DeviceKey}/{r.Channel}={r.Effect}"));
+        for (int i = 0; i < 5; i++)
+        {
+            editor.ReviewPick(i, "static");
+        }
+
+        editor.ReviewPick(1, "rainbow");
+        Check("editor: rainbow row takes its controller",
+            "review-1/0=rainbow review-1/1=rainbow review-1/2=rainbow review-2/0=static review-2/1=static", Rows());
+
+        editor.ReviewPick(2, "chase");
+        Check("editor: colour pick changes only its row",
+            "review-1/0=rainbow review-1/1=rainbow review-1/2=chase review-2/0=static review-2/1=static", Rows());
+        editor.Dispose();
+
+        // Editor opened on a preset whose rows carry differing firmware modes: shown normalised.
+        var saved = new CustomPreset("engine-review", new List<CustomPresetEntry>
+        {
+            new("review-1", 0, "Onboard", Wave, 0, 0, 0),
+            new("review-1", 1, "ARGB 1", Static, 0, 0, 255, 100),
+            new("review-1", 2, "ARGB 2", Rainbow, 0, 0, 0),
+            new("review-2", 0, "Onboard", Rainbow, 0, 0, 0),
+            new("review-2", 1, "ARGB 1", Wave, 0, 0, 0),
+        });
+        editor = new CustomPresetEditor(saved, ReviewControllers(), AuraState.Load());
+        Check("editor: opened preset is normalised",
+            "review-1/0=wave review-1/1=static review-1/2=wave review-2/0=rainbow review-2/1=rainbow",
+            string.Join(" ", editor.ReviewRows().Select(r => $"{r.DeviceKey}/{r.Channel}={r.Effect}")));
+        editor.Dispose();
+
+        lines.Add(failed == 0 ? "engine: all passed" : $"engine: {failed} failed");
+        File.WriteAllLines(Path.Combine(Path.GetTempPath(), "aura-engine.txt"), lines);
+        foreach (string line in lines)
+        {
+            WriteLine(line);
+        }
+
+        return failed == 0 ? 0 : 1;
+    }
+
     private static int PrintSurfaceIds()
     {
         WriteLine("Review surfaces (-review <id> [scale%]):");
-        WriteLine("  settings  error  editor  layout  gear  tip  preview  follow  swap <signed exe>  install <signed setup>  carries <file> <version>");
+        WriteLine("  settings  error  editor  layout  gear  tip  preview  follow  engine  swap <signed exe>  install <signed setup>  carries <file> <version>");
         WriteLine("");
         WriteLine("Shot surfaces (-shot [id|group ...] [scale=100,150] [lang=en,de] [out=<folder>]):");
         foreach ((string id, string description) in ShotSurfaces)

@@ -501,16 +501,77 @@ internal sealed class CustomPresetEditor : PopupForm
             RaisePreview();
         };
 
-        effect.SelectionChanged += (_, _) =>
-        {
-            ShowColours(row);
-            FitToContent();
-            RaisePreview();
-        };
+        effect.SelectionChanged += (_, _) => EffectChosen(row);
 
         ShowColours(row);
         return row;
     }
+
+    /// <summary>
+    /// One row's effect was picked. A firmware mode takes every other row of the same controller
+    /// along, because the controller has one engine for those; a colour mode changes only its own
+    /// row. The other rows are set with <see cref="Select.ShowSelection"/>, which raises nothing,
+    /// so this cannot re-enter itself.
+    /// </summary>
+    private void EffectChosen(ChannelRow row)
+    {
+        ShowColours(row);
+
+        if (row.Effect.Selected is { } picked && AuraPresets.Find(picked.Key) is { UsesColour: false })
+        {
+            foreach (ChannelRow other in _rows)
+            {
+                if (other != row && other.DeviceKey == row.DeviceKey)
+                {
+                    other.Effect.ShowSelection(picked.Key);
+                    ShowColours(other);
+                }
+            }
+        }
+
+        FitToContent();
+        RaisePreview();
+    }
+
+    /// <summary>
+    /// Rows filled from a saved or imported preset can carry different firmware modes on one
+    /// controller. The lowest channel on one of those modes decides and the other firmware rows
+    /// take it; colour rows stay.
+    /// </summary>
+    private void NormaliseEngine()
+    {
+        foreach (string deviceKey in _rows.Select(r => r.DeviceKey).Distinct())
+        {
+            List<ChannelRow> rows = _rows.Where(r => r.DeviceKey == deviceKey).ToList();
+            ChannelRow? first = rows.Where(r => IsFirmware(r)).OrderBy(r => r.Channel).FirstOrDefault();
+            if (first?.Effect.Selected == null)
+            {
+                continue;
+            }
+
+            foreach (ChannelRow row in rows.Where(r => r != first && IsFirmware(r)))
+            {
+                row.Effect.ShowSelection(first.Effect.Selected.Key);
+                ShowColours(row);
+            }
+        }
+    }
+
+    private static bool IsFirmware(ChannelRow row) =>
+        row.Effect.Selected is { } picked && AuraPresets.Find(picked.Key) is { UsesColour: false };
+
+#if REVIEW
+    /// <summary>Review build: picks an effect on one row the way the list would.</summary>
+    internal void ReviewPick(int rowIndex, string key)
+    {
+        _rows[rowIndex].Effect.ShowSelection(key);
+        EffectChosen(_rows[rowIndex]);
+    }
+
+    /// <summary>Review build: every row's controller, channel and effect key.</summary>
+    internal List<(string DeviceKey, int Channel, string Effect)> ReviewRows() =>
+        _rows.Select(r => (r.DeviceKey, r.Channel, r.Effect.Selected?.Key ?? "")).ToList();
+#endif
 
     /// <summary>
     /// The chips and the brightness only make sense for the effects that actually carry a colour -
@@ -617,6 +678,7 @@ internal sealed class CustomPresetEditor : PopupForm
             ShowColours(row);
         }
 
+        NormaliseEngine();
         FitToContent();
     }
 
@@ -888,6 +950,8 @@ internal sealed class CustomPresetEditor : PopupForm
 
             ShowColours(row);
         }
+
+        NormaliseEngine();
     }
 
     private void ShowTransferHint(string text)
