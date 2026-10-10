@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- On a second monitor at a different display scale than the main one, the channel rename popup showed its text field half covered by its buttons and the start of the name scrolled out of view. The colour picker's hex field had the same fault. Every popup now lays itself out again when it opens on such a monitor
+
 ### Changed
 
 - Picking one of the four dynamic effects (spectrum cycle, rainbow, rainbow breathing, wave) on a single channel now switches every channel of that controller to it, in the window too, instead of only the channels already running one; a channel that is off stays dark and joins the effect when it comes back on. A colour effect still changes only its own channel, and that channel keeps its colour while the others keep the dynamic effect
