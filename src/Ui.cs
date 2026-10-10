@@ -107,8 +107,8 @@ internal static class Theme
     private static bool? _dark;
 
     /// <summary>
-    /// The fonts this window uses, shared rather than created per control. Every popup used to
-    /// build its own and none of them were ever released.
+    /// The fonts this window uses, shared rather than created per control - a font per popup
+    /// would never be released.
     /// </summary>
     public static readonly Font Ui = new("Segoe UI", 9F);
 
@@ -350,7 +350,7 @@ internal static class Theme
     /// to fill the extra room. The fixed distances around the text still go through
     /// <see cref="Scaled"/>; that is the one place the display scale belongs.
     /// </remarks>
-    public static int MeasuredWidth(this Control control, string text, Font font) =>
+    public static int MeasuredWidth(string text, Font font) =>
         TextRenderer.MeasureText(text, font).Width;
 
     /// <summary>The drawing quality every custom control in this window paints with.</summary>
@@ -508,13 +508,13 @@ internal static class EffectPainter
         Color.FromArgb(190, 60, 255), Color.FromArgb(255, 0, 160), Color.FromArgb(255, 0, 0),
     };
 
-    // Built once: a fresh ColorBlend was previously allocated on every single animation
-    // frame, which was the main cost behind the animation feeling laggy.
+    // Built once: allocating a fresh ColorBlend on every animation frame was the main cost
+    // behind the animation feeling laggy.
     private static readonly ColorBlend SpectrumBlend = Blend(SpectrumStops);
 
-    // The brush wrapping that blend was left allocating a fresh LinearGradientBrush every frame
-    // regardless - one per paint size, so the big button and the small effect icons, which paint
-    // at different sizes in the same frame, stop evicting each other's brush.
+    // The brush wrapping that blend is cached too, one per paint size, so the big button and the
+    // small effect icons, which paint at different sizes in the same frame, do not evict each
+    // other's brush.
     private static readonly Dictionary<SizeF, LinearGradientBrush> SpectrumBrushes = new();
 
     /// <summary>More sizes than a window ever paints at once (button, icons, a monitor change);
@@ -531,10 +531,9 @@ internal static class EffectPainter
     /// </summary>
     /// <remarks>
     /// Deliberately unclipped. Rounding is applied once, by <see cref="EffectSurface"/>, which
-    /// masks the finished frame through an anti-aliased path. Clipping here instead - as this
-    /// used to - meant a <see cref="Graphics.SetClip(GraphicsPath)"/> region, and a region has
-    /// hard, unsmoothed edges: that was the stair-stepped rim on the button and on the effect
-    /// icons.
+    /// masks the finished frame through an anti-aliased path. Clipping here instead would mean a
+    /// <see cref="Graphics.SetClip(GraphicsPath)"/> region, and a region has hard, unsmoothed
+    /// edges: that is the stair-stepped rim on the button and on the effect icons.
     /// </remarks>
     public static void Render(Graphics g, RectangleF bounds, byte mode, Color colour,
         double seconds, bool animate = true)

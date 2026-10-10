@@ -252,9 +252,9 @@ internal static partial class Program
                     found.Add($"{Name(child)} scrolled although its text fits");
                 }
 
-                if (child is PillButton button && button.MeasuredWidth(button.Text, button.Font) > button.Width)
+                if (child is PillButton button && Theme.MeasuredWidth(button.Text, button.Font) > button.Width)
                 {
-                    found.Add($"{Name(child)} label {button.MeasuredWidth(button.Text, button.Font)} px "
+                    found.Add($"{Name(child)} label {Theme.MeasuredWidth(button.Text, button.Font)} px "
                         + $"in {button.Width} px");
                 }
 

@@ -1218,7 +1218,7 @@ internal sealed class PillButton : FlatControl
         // field is typed into) has to be able to shrink back, not just stay at its widest ever.
         // The padding is scaled because the measured text already is.
         _fitPadding = padding;
-        Width = this.MeasuredWidth(Text, Font) + (this.Scaled(padding) * 2);
+        Width = Theme.MeasuredWidth(Text, Font) + (this.Scaled(padding) * 2);
     }
 
     /// <summary>

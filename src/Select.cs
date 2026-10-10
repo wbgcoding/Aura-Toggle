@@ -191,7 +191,7 @@ internal sealed class Select : FlatControl
                 continue;
             }
 
-            widest = Math.Max(widest, this.MeasuredWidth(item.Text, Font));
+            widest = Math.Max(widest, Theme.MeasuredWidth(item.Text, Font));
         }
 
         // The measured text already grew with the display, so the fixed parts around it have to as
