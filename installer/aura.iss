@@ -239,9 +239,6 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 ; so the next normal start would find none of it.
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; \
     Flags: nowait postinstall skipifsilent runasoriginaluser
-; The in-app update runs the setup with /SILENT /update=1 after closing the app; the entry above
-; skips a silent run, so this one brings the app back, de-elevated for the same reason.
-Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: IsInAppUpdate
 ; Same reasoning as above, aimed at the [Registry] entry's blind spot: reg.exe run as the
 ; original user writes the value into the profile that will actually start the app.
 Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v AuraToggle /d ""\""{app}\{#AppExe}\"" -autostart"" /f"; \
@@ -401,12 +398,6 @@ end;
   it ships on every supported version of Windows, so this shells out to it instead of adding a
   third-party Inno Setup plugin DLL for one boolean answer.
   --------------------------------------------------------------------------------------------- }
-{ True for the silent run the in-app update starts (/update=1). }
-function IsInAppUpdate: Boolean;
-begin
-  Result := WizardSilent and (ExpandConstant('{param:update|0}') = '1');
-end;
-
 function IsAuthenticodeSigned(const FileName: String): Boolean;
 var
   ScriptPath: String;
@@ -665,7 +656,7 @@ end;
   have deleted. Asked to close it first, in a loop, so a click on OK without doing it asks again.
   Silent runs skip the question: nobody is there to answer it. Both mutex names are the ones the
   app takes, the machine-wide one and its per-session fallback. There is deliberately no AppMutex
-  in the script, which would also block the silent in-app update. }
+  in the script, which would also block a silent run while the app is open. }
 function InitializeUninstall(): Boolean;
 begin
   Result := True;
