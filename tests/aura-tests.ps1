@@ -1075,10 +1075,18 @@ Test-Case "the settings panel sits a few px inside the window edge and covers th
 
     $process = Start-Process $ReviewExe -ArgumentList "-review", "gear", "125,150,200" -PassThru
     try {
-        Start-Sleep -Seconds 8
+        # Four scales with a reopen each take about ten seconds; waiting a fixed time cut the
+        # report short on a busy machine, so this waits for all eight blocks instead.
+        $blocks = @()
+        $deadline = (Get-Date).AddSeconds(30)
+        while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Milliseconds 500
+            if (Test-Path $report) {
+                $blocks = @((Get-Content $report -Raw) -split "--- " | Where-Object { $_.Trim() })
+                if ($blocks.Count -ge 8) { break }
+            }
+        }
         if (-not (Test-Path $report)) { throw "no gear report was written" }
-
-        $blocks = @((Get-Content $report -Raw) -split "--- " | Where-Object { $_.Trim() })
         if ($blocks.Count -lt 8) {
             throw "expected 8 blocks (as opened, 125%, 150%, 200%, each also refitted), got $($blocks.Count):`n$($blocks -join "`n")"
         }
