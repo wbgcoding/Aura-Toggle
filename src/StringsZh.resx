@@ -246,7 +246,7 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>每个控制器只能使用一个动态效果</value>
+    <value>动态效果会应用于所有通道</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
     <value>保存</value>

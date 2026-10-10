@@ -246,7 +246,7 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>Denetleyici başına bir dinamik efekt</value>
+    <value>Dinamik bir efekt tüm kanalları kapsar</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
     <value>Kaydet</value>

@@ -1156,6 +1156,25 @@ Test-Case "the effect-list tooltip actually draws in the current theme" {
     }
 }
 
+# One effect engine per controller: picking a firmware mode switches every channel of it, a colour
+# mode only its own channel. "-review engine" runs fixed cases against the pure logic and the
+# preset editor's row sync - no controller involved - and exits 1 on the first failed case.
+Test-Case "picking a firmware effect shares it across the controller, a colour effect does not" {
+    $report = Join-Path $env:TEMP "aura-engine.txt"
+    Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "engine" -PassThru -WindowStyle Hidden
+    if (-not $process.WaitForExit(30000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        throw "-review engine still running after 30 s"
+    }
+    if (-not (Test-Path $report)) { throw "no aura-engine.txt was written" }
+
+    $failures = @(Get-Content $report | Where-Object { $_ -like "FAIL*" })
+    if ($failures.Count -gt 0) { throw ($failures -join "; ") }
+    Assert-Equal 0 $process.ExitCode "-review engine exit code"
+}
+
 }
 finally {
     # Runs even when a test throws or the run is interrupted: leave the machine on the default

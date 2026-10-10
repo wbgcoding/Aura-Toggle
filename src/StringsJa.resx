@@ -246,7 +246,7 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>コントローラーごとに動的効果は1つのみ</value>
+    <value>動的効果はすべてのチャンネルに適用されます</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
     <value>保存</value>

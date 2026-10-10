@@ -246,7 +246,7 @@
     <value>{0} - {1}</value>
   </data>
   <data name="ChannelEffectHint" xml:space="preserve">
-    <value>Um efeito dinâmico por controlador</value>
+    <value>Um efeito dinâmico vale para todos os canais</value>
   </data>
   <data name="ChannelRenameSave" xml:space="preserve">
     <value>Salvar</value>
