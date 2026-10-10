@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-10
+
+Aura Toggle now works entirely offline. The update check is gone; new versions are announced
+on the releases page.
+
 ### Removed
 
 - The update check and in-app updates. The tool no longer connects to the internet at all; new versions are on the releases page. Releases no longer carry `.sig` files, only the exes and `SHA256SUMS.txt`
@@ -329,7 +334,8 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only 
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
-[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.4.0
 [1.3.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.3.0
