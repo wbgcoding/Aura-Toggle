@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-10
+
+Updates are back, this time signed: the tool checks GitHub at most once a day and installs a
+new version on one click, only when it carries the project's signature. Your own presets can now
+be the lighting at start, autostart can set it and quit again, and the window keeps up with
+anything the command line switched behind its back.
+
 ### Added
 
 - Signed automatic updates: the program checks GitHub for a newer release at most once a day and installs it on one click, only when the download carries the project's signature; a "Check for updates" switch in the gear turns the check off
@@ -16,6 +23,7 @@ All notable changes to this project are documented here. The format follows
 - With no controller the window now says why (not found, in use by another program, or not answering) and offers a "Try again" button
 - Screen readers: the big button reads as a switch that is on or off, the brightness slider and the drop downs report their value; drop downs open on Alt+Down and F4 and step with Up and Down
 - The notification area menu has an "Effects" submenu with the built-in effects and your custom presets
+- Uninstalling while the tool is still running asks you to close it first, so the settings folder you chose to delete does not come back
 
 ### Changed
 
@@ -23,6 +31,7 @@ All notable changes to this project are documented here. The format follows
 - The big button no longer repaints 30 times a second while a static colour is showing
 - The big button and the effect icons no longer take turns rebuilding the same gradient brush
 - Looking for the controller no longer opens every keyboard, mouse and headset on the machine
+- Update notice and effect names reworded in several languages
 
 ### Fixed
 
@@ -42,6 +51,14 @@ All notable changes to this project are documented here. The format follows
 - Resetting everything keeps the lighting the board is running, so the window and the board stay in step
 - A hand-edited start lighting that names nothing known is read as "leave the lighting alone"
 - The update setup is checked again right before it runs, so it cannot be swapped in the temp folder in between
+- An installed copy for all users asks for administrator rights itself before the update setup starts; saying no keeps the tool open instead of closing it
+- An update is only installed when the signed file carries the version of its release, so an older build cannot come back as an update
+- The window, the tray icon and the hotkey follow what a shortcut or script switched in the meantime, instead of switching the old state again
+- Moving the brightness slider no longer lights up a channel you switched off, and the slider is hidden while the selected channels are off
+- `-toggle -device N` switches a dark controller back on even while another controller is lit
+- A window and a command line talking to the controller at the same moment wait for each other longer, so neither reports a missing controller
+- A custom preset whose controller has a new device path is reported in the log at logon instead of being retried for a minute
+- Update setups left in the temp folder are cleaned up after a day
 
 ## [1.3.0] - 2026-08-22
 
@@ -286,7 +303,8 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only 
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
-[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.4.0
 [1.3.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.3.0
 [1.2.1]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.1
 [1.2.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.0
