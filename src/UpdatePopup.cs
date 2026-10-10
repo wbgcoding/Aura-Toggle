@@ -115,6 +115,8 @@ internal sealed class UpdatePopup : PopupForm
         });
     }
 
+    protected override void OnOpenedAtOtherScale() => Reflow();
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Escape)

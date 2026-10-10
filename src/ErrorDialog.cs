@@ -120,6 +120,8 @@ internal sealed class ErrorDialog : PopupForm
         });
     }
 
+    protected override void OnOpenedAtOtherScale() => Reflow();
+
     /// <summary>
     /// Logs the exception and, only when a message loop is actually running (or is guaranteed to
     /// start right after, see <paramref name="requireMessageLoop"/>) to show it on, displays this

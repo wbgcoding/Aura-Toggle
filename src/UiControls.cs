@@ -1638,6 +1638,11 @@ internal sealed class ColourStrip : FlatControl
         Choose(_hoveredChip);
     }
 
+#if REVIEW
+    /// <summary>Surface tool only: the colour picker, as a click on the custom chip opens it.</summary>
+    internal void OpenPickerForReview() => Choose(Palette.Length);
+#endif
+
     /// <summary>Picks one chip, whether the mouse or the keyboard got there.</summary>
     private void Choose(int index)
     {
@@ -1841,8 +1846,21 @@ internal sealed class TextField : FlatControl
         // its own caret height on a scaled display.
         int inset = this.Scaled(SidePadding);
         int height = Math.Min(_box.PreferredHeight, Math.Max(1, Height - this.Scaled(6)));
-        _box.SetBounds(inset, Math.Max(0, (Height - height) / 2),
-            Math.Max(1, Width - (inset * 2)), height);
+        int width = Math.Max(1, Width - (inset * 2));
+        bool wider = width > _box.Width;
+        _box.SetBounds(inset, Math.Max(0, (Height - height) / 2), width, height);
+
+        // A box that just got wider keeps the scroll offset it needed while it was narrow, which
+        // hid the start of a name that now fits whole - the rename field selects all its text
+        // before a popup opened on a scaled display has grown it to size.
+        if (wider && _box.IsHandleCreated)
+        {
+            int start = _box.SelectionStart;
+            int length = _box.SelectionLength;
+            _box.Select(0, 0);
+            _box.ScrollToCaret();
+            _box.Select(start, length);
+        }
     }
 
     protected override void OnClick(EventArgs e)
@@ -2076,6 +2094,12 @@ internal sealed class ColourPickerPopup : PopupForm
                 Invalidate();
             }
         });
+    }
+
+    protected override void OnOpenedAtOtherScale()
+    {
+        Reflow();
+        Invalidate();
     }
 
     public event EventHandler<Color>? ColourChanged;
@@ -2400,6 +2424,18 @@ internal sealed class PillButton : FlatControl
     protected override void OnDpiChangedAfterParent(EventArgs e)
     {
         base.OnDpiChangedAfterParent(e);
+
+        if (_fitPadding is int padding)
+        {
+            FitToText(padding);
+        }
+    }
+
+    /// <summary>The same for a window created straight onto a display at another scale, which
+    /// sends no change notification at all.</summary>
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
 
         if (_fitPadding is int padding)
         {
@@ -2969,6 +3005,12 @@ internal sealed class RenamePopup : PopupForm
                 Invalidate();
             }
         });
+    }
+
+    protected override void OnOpenedAtOtherScale()
+    {
+        Reflow();
+        Invalidate();
     }
 
     /// <summary>Raised with the new name, or an empty one when Reset was chosen.</summary>

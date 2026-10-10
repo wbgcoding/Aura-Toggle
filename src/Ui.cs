@@ -950,8 +950,15 @@ internal sealed class Layout : TableLayoutPanel
 /// </summary>
 internal abstract class PopupForm : Form
 {
+    /// <summary>
+    /// The dpi every constructor here lays out against: the process's own, since a window without
+    /// a handle has no display yet.
+    /// </summary>
+    private readonly int _builtAtDpi;
+
     protected PopupForm()
     {
+        _builtAtDpi = DeviceDpi;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
@@ -974,6 +981,31 @@ internal abstract class PopupForm : Form
     {
         base.OnHandleCreated(e);
         Theme.RoundWindowCorners(Handle);
+
+        // Opened on a display at another scale than the one the process started on: the window is
+        // created at that display's dpi straight away, so no WM_DPICHANGED ever arrives, yet every
+        // size the constructor computed belongs to the start scale. That left the rename field half
+        // covered by its own buttons on a 150 % second monitor beside a 100 % main one. Posted, so
+        // the children have their handles and their rescaled fonts by the time it runs.
+        if (DeviceDpi != _builtAtDpi)
+        {
+            BeginInvoke(() =>
+            {
+                if (!IsDisposed)
+                {
+                    OnOpenedAtOtherScale();
+                }
+            });
+        }
+    }
+
+    /// <summary>
+    /// Runs once when this opened on a display whose scale differs from the one its constructor
+    /// measured against. A popup that places its controls by hand lays itself out again here, the
+    /// same way it does for a move to another display.
+    /// </summary>
+    protected virtual void OnOpenedAtOtherScale()
+    {
     }
 
     /// <summary>
@@ -1125,6 +1157,17 @@ internal abstract class FlatControl : Control
         base.OnDpiChangedAfterParent(e);
         ApplyDesignSize();
         Invalidate();
+    }
+
+    /// <summary>
+    /// The size was first applied before there was a window to read a dpi from, so against the
+    /// scale the process started at. A window created straight onto a display at another scale
+    /// never sends the change notification above, so the size is applied again once it is known.
+    /// </summary>
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDesignSize();
     }
 
     protected override void OnMouseEnter(EventArgs e)
