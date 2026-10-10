@@ -21,6 +21,15 @@ internal static class AuraFiles
     /// </summary>
     private const int LockTimeoutMs = 2000;
 
+    /// <summary>
+    /// What a caller that talks to the controller waits for the lock. The same lock keeps two
+    /// sweeps from answering each other's handshakes, and one discovery can legitimately hold it
+    /// for several seconds (a reply timeout per silent candidate interface, a stuck write on top).
+    /// Giving up after the file wait would send the second caller into the controller at the
+    /// same time, which is exactly the crossed handshake the lock exists to prevent.
+    /// </summary>
+    public const int HardwareLockTimeoutMs = 15000;
+
     public static string Folder { get; private set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "aura-toggle");
 
@@ -386,14 +395,21 @@ internal static class AuraFiles
     /// Held around a read-modify-write, so the window and a command line invocation running at
     /// the same time cannot each read, change and save a different copy of the same file.
     /// </summary>
-    public static IDisposable Lock() => new FileLock();
+    public static IDisposable Lock() => new FileLock(LockTimeoutMs);
+
+    /// <summary>
+    /// <see cref="Lock()"/> with a wait of the caller's choosing, for a burst that outlasts the
+    /// short wait file access needs (<see cref="HardwareLockTimeoutMs"/>). A wait that runs out
+    /// still carries on without the lock, as the short one does.
+    /// </summary>
+    public static IDisposable Lock(int timeoutMs) => new FileLock(timeoutMs);
 
     private sealed class FileLock : IDisposable
     {
         private readonly Mutex? _mutex;
         private readonly bool _held;
 
-        public FileLock()
+        public FileLock(int timeoutMs)
         {
             // "Global\" rather than a plain name: %LOCALAPPDATA% is the same folder for every
             // session the same account is logged into (a physical logon plus a Remote Desktop
@@ -401,19 +417,20 @@ internal static class AuraFiles
             // session - two sessions would each get their own lock and race the same files.
             // Falls back to the old session-local name if the Global one is denied outright
             // (rare, locked-down policy) rather than running with no lock at all.
-            (Mutex, bool)? acquired = TryAcquire(@"Global\AuraToggle.Files") ?? TryAcquire("AuraToggle.Files");
+            (Mutex, bool)? acquired = TryAcquire(@"Global\AuraToggle.Files", timeoutMs)
+                ?? TryAcquire("AuraToggle.Files", timeoutMs);
             _mutex = acquired?.Item1;
             _held = acquired?.Item2 ?? false;
         }
 
-        private static (Mutex, bool)? TryAcquire(string name)
+        private static (Mutex, bool)? TryAcquire(string name, int timeoutMs)
         {
             Mutex? mutex = null;
 
             try
             {
                 mutex = new Mutex(initiallyOwned: false, name);
-                return (mutex, mutex.WaitOne(LockTimeoutMs));
+                return (mutex, mutex.WaitOne(timeoutMs));
             }
             catch (AbandonedMutexException)
             {

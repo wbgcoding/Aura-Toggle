@@ -10,12 +10,21 @@ namespace AuraToggle;
 /// <summary>The controller was not found on this machine.</summary>
 internal sealed class AuraNotFoundException : Exception
 {
-    public AuraNotFoundException(string message, int exitCode) : base(message)
+    public AuraNotFoundException(string message, int exitCode, bool worthRetrying = true) : base(message)
     {
         ExitCode = exitCode;
+        WorthRetrying = worthRetrying;
     }
 
     public int ExitCode { get; }
+
+    /// <summary>
+    /// False when waiting cannot change the outcome: a controller is there, the thing asked for
+    /// just does not match it (a saved preset naming controllers that are no longer attached).
+    /// The headless autostart retries a missing controller for a minute; it must not spend that
+    /// minute on this.
+    /// </summary>
+    public bool WorthRetrying { get; }
 }
 
 /// <summary>
@@ -269,7 +278,7 @@ internal sealed class AuraDevice : IDisposable
         {
             // Two sweeps at once answer each other's handshakes, so listing waits for whoever
             // else is talking to the controller.
-            using IDisposable guard = AuraFiles.Lock();
+            using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
             devices = DiscoverAll();
         }
         catch (AuraNotFoundException ex)

@@ -188,6 +188,11 @@ internal static partial class Program
                 AuraLog.Info($"Start action \"{action}\" applied, exiting without a window.");
                 return 0;
             }
+            catch (AuraNotFoundException ex) when (!ex.WorthRetrying)
+            {
+                // The reason is already in the log, from where it was found out.
+                return ex.ExitCode;
+            }
             catch (Exception ex) when (ex is AuraNotFoundException or IOException)
             {
                 if (attempt == attempts)
@@ -865,7 +870,7 @@ internal static partial class Program
         // state.json and one change would vanish - the same reasoning AuraChannelStates and
         // AuraChannelNames already lock for. Re-entrant on the same thread, so the calls this
         // makes into those (which take the same lock) do not deadlock.
-        using IDisposable guard = AuraFiles.Lock();
+        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
 
         AuraState state = AuraState.Load();
 
@@ -1141,7 +1146,7 @@ internal static partial class Program
     public static AuraState ApplyPreset(AuraPreset preset, Color? colour = null, string? deviceKey = null,
         int channel = -1)
     {
-        using IDisposable guard = AuraFiles.Lock();
+        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
 
         AuraState state = AuraState.Load();
         bool wholeBoard = string.IsNullOrEmpty(deviceKey) && channel < 0;
@@ -1179,7 +1184,7 @@ internal static partial class Program
     /// </remarks>
     public static AuraState SetBrightness(byte percent, string? deviceKey = null, int channel = -1)
     {
-        using IDisposable guard = AuraFiles.Lock();
+        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
 
         percent = Math.Clamp(percent, AuraState.MinBrightness, AuraState.MaxBrightness);
 
@@ -1271,7 +1276,7 @@ internal static partial class Program
             throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3);
         }
 
-        using IDisposable guard = AuraFiles.Lock();
+        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
 
         AuraState state = AuraState.Load();
         var devices = AuraDevice.DiscoverAll();
@@ -1454,9 +1459,12 @@ internal static partial class Program
 
         if (applied.Count == 0)
         {
-            // Every controller the preset names has gone. Saying so beats reporting a look that
-            // never reached any hardware.
-            throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3);
+            // Every controller the preset names has gone, although others are attached (none at
+            // all has already thrown above). A controller's key is its device path, which can
+            // change when the header lands on another port, so the preset needs saving again and
+            // no amount of waiting at logon will fix that.
+            AuraLog.Warn($"Custom preset \"{preset.Name}\" names no attached controller, re-save it in the window.");
+            throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3, worthRetrying: false);
         }
 
         // A preset sets each channel individually, so each one remembers its own look - written
@@ -1545,7 +1553,7 @@ internal static partial class Program
         // below each hold the files lock, the open-ended wait between them deliberately does not
         // - a rename popup can stay open for minutes, and nothing else may be shut out for that.
         List<AuraDevice> devices;
-        using (AuraFiles.Lock())
+        using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
         {
             devices = AuraDevice.DiscoverAll();
         }
@@ -1568,7 +1576,7 @@ internal static partial class Program
 
             try
             {
-                using (AuraFiles.Lock())
+                using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
                 {
                     foreach (AuraDevice device in devices)
                     {
@@ -1593,7 +1601,7 @@ internal static partial class Program
                 // Even when lighting the target channel itself failed, whatever this did turn dark
                 // still needs to go back to its own record - a failure here must not leave a
                 // controller stuck dark with channel-state.json still describing it as lit.
-                using (AuraFiles.Lock())
+                using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
                 {
                     foreach (AuraDevice device in touched)
                     {
@@ -1616,7 +1624,7 @@ internal static partial class Program
     /// </summary>
     public static void Preview(CustomPreset preset)
     {
-        using IDisposable guard = AuraFiles.Lock();
+        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
 
         var devices = AuraDevice.DiscoverAll();
 
@@ -1659,7 +1667,7 @@ internal static partial class Program
     /// </summary>
     public static void RestoreFromRecords()
     {
-        using IDisposable guard = AuraFiles.Lock();
+        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
 
         var devices = AuraDevice.DiscoverAll();
 
