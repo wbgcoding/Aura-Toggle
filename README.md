@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1><img src="docs/icon.png" alt="" width="48" height="48" align="center"> Aura Toggle</h1>
+<h1><img src="docs/icon.png" alt="" width="48" height="48" align="texttop"> Aura Toggle</h1>
 
 **Turn off ASUS RGB without Armoury Crate.**
 
