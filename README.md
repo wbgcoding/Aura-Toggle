@@ -90,7 +90,8 @@ a restart always brings the BIOS lighting back, on purpose. If you want lighting
 without this tool running, set autostart with "lighting at start: off" in the gear, or turn it off
 in the BIOS itself. Switch on "Apply and close the app" below it and the tool only sets that
 lighting at logon and quits again, with no window and nothing left running in the notification
-area (the global hotkey then only works while you have the tool open).
+area. The global hotkey then only works once you start the tool yourself; in the normal autostart,
+where it stays in the notification area, the hotkey works the whole time.
 
 ## Download
 

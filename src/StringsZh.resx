@@ -168,7 +168,7 @@
     <value>应用后关闭应用</value>
   </data>
   <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
-    <value>热键仅在应用打开时有效。</value>
+    <value>热键仅在应用运行时有效。</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>打开</value>

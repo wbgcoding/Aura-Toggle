@@ -168,7 +168,7 @@
     <value>Toepassen en app sluiten</value>
   </data>
   <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
-    <value>De sneltoets werkt alleen terwijl de app open is.</value>
+    <value>De sneltoets werkt alleen terwijl de app actief is.</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Openen</value>

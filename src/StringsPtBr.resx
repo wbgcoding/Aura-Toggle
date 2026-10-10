@@ -168,7 +168,7 @@
     <value>Aplicar e fechar o app</value>
   </data>
   <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
-    <value>O atalho só funciona enquanto o app está aberto.</value>
+    <value>O atalho só funciona enquanto o app está em execução.</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Abrir</value>

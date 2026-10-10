@@ -168,7 +168,7 @@
     <value>Uygula ve uygulamayı kapat</value>
   </data>
   <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
-    <value>Kısayol tuşu yalnızca uygulama açıkken çalışır.</value>
+    <value>Kısayol tuşu yalnızca uygulama çalışırken kullanılabilir.</value>
   </data>
   <data name="TrayOpen" xml:space="preserve">
     <value>Aç</value>
