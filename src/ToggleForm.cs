@@ -2193,7 +2193,7 @@ internal sealed partial class ToggleForm : Form
                     break;
                 }
 
-                SetBusy(true);
+                SetBusy(true, quiet: true);
                 try
                 {
                     _previewTask = Task.Run(next);
@@ -2315,11 +2315,23 @@ internal sealed partial class ToggleForm : Form
     /// </summary>
     private const int BusyFlashDelayMs = 180;
 
-    private void SetBusy(bool busy)
+    /// <param name="quiet">
+    /// Holds the controller without any visible busy state. For the preset editor's live
+    /// preview: it runs once per change made in the editor, often longer than the delay above
+    /// on a board with several channels, so every edit dimmed the big button and greyed the
+    /// window out and back in - a flash on each click in a window the user is not even using.
+    /// </param>
+    private void SetBusy(bool busy, bool quiet = false)
     {
         // Dropping a request that arrives while one is already in flight must not wait for the
         // delay below - only the *visible* grey-out does.
         _busy = busy;
+
+        if (busy && quiet)
+        {
+            _busyTimer.Stop();
+            return;
+        }
 
         if (busy)
         {
