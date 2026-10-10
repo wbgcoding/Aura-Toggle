@@ -1133,6 +1133,14 @@ internal sealed partial class ToggleForm : Form
         };
         popup.Open(_channel.PointToScreen(new Point(0, _channel.Height + this.Scaled(4))), this);
 
+#if REVIEW
+        // Stand-in controllers: there is no channel on a board to light.
+        if (ReviewDevices != null)
+        {
+            return;
+        }
+#endif
+
         _ = RunIdentify(deviceKey, channelIndex, cts);
     }
 
@@ -1579,6 +1587,20 @@ internal sealed partial class ToggleForm : Form
     /// <summary>Surface tool only: the editor for a new preset, as its list row opens it.</summary>
     internal void OpenEditorForReview() => OpenPresetEditor(null);
 
+    /// <summary>Surface tool only: the colour picker, as the custom chip opens it.</summary>
+    internal void OpenColourPickerForReview() => _colours.OpenPickerForReview();
+
+    /// <summary>Surface tool only: the rename popup of the first channel, as its pencil opens it.</summary>
+    internal void OpenRenameForReview()
+    {
+        AuraDeviceSummary device = _devices[0];
+        AuraChannel channel = device.Channels[0];
+        OpenChannelRename(new SelectItem(
+            ChannelPrefix + AuraFiles.ChannelKey(device.Key, channel.Index),
+            ChannelLabels.For(device, channel, _devices.Count > 1, AuraChannelNames.All()),
+            null, Renamable: true));
+    }
+
     /// <summary>Surface tool only: the settings panel with its start lighting list open.</summary>
     internal void OpenStartActionsForReview()
     {
@@ -1638,6 +1660,13 @@ internal sealed partial class ToggleForm : Form
             $"panel.Left - toggle.Left    {panel.Left - toggle.Left}",
             $"panel.Top - gear.Bottom     {panel.Top - gear.Bottom}",
         };
+
+        // Only a fault while there was room for the whole panel below the gear: on a window low on
+        // a short display it has nowhere else to go than up over it.
+        if (panel.Top < gear.Bottom && gear.Bottom + panel.Height <= screen.Bottom)
+        {
+            lines.Add($"COVERS gear: panel starts {gear.Bottom - panel.Top} px above the gear's bottom edge");
+        }
 
         if (edge > 0)
         {

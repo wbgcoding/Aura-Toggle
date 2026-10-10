@@ -32,10 +32,10 @@ internal static partial class Program
     /// </summary>
     private static int RunReview(string surface, string argument)
     {
-        if (surface is not ("settings" or "error" or "editor" or "layout" or "update" or "gear" or "tip"
-            or "preview"))
+        if (surface is not ("settings" or "error" or "editor" or "rename" or "layout" or "update" or "gear"
+            or "tip" or "preview"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|layout|update|gear|tip|preview|ids [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|rename|layout|update|gear|tip|preview|ids [scale%]");
             return 2;
         }
 
@@ -77,6 +77,13 @@ internal static partial class Program
             editor.FormClosed += (_, _) => Application.Exit();
             editor.Open(new Point(60, 60), owner: null);
             shown = editor;
+        }
+        else if (surface == "rename")
+        {
+            var rename = new RenamePopup("Sample channel name");
+            rename.FormClosed += (_, _) => Application.Exit();
+            rename.Open(new Point(60, 60), owner: null);
+            shown = rename;
         }
         else if (surface == "error")
         {
@@ -190,6 +197,11 @@ internal static partial class Program
             + $"padding       {form.Padding.Left},{form.Padding.Top}" + Environment.NewLine
             + $"margins       {margins} px over {Tree(form).Count()} controls";
 
+        List<string> clipped = FindClipping(form);
+        body += Environment.NewLine + (clipped.Count == 0
+            ? "clipping      none"
+            : "clipping      " + string.Join(Environment.NewLine + "              ", clipped));
+
         // The editor's own pinned-header/pinned-buttons proof: spacing alone measures fine even
         // when a wrong Controls.Add order left the header drawn under the scrolling panel.
         if (form is CustomPresetEditor editor)
@@ -198,6 +210,81 @@ internal static partial class Program
         }
 
         return body;
+    }
+
+    /// <summary>
+    /// Every visible control that sticks out of the control it sits in or covers part of a visible
+    /// sibling, and every button narrower than its own label. A control sitting over the lower part
+    /// of a text field measures fine on every spacing total, which is how a rename field cut off
+    /// on a scaled display went unnoticed; this names it. Children of a scrolling panel are only
+    /// held to its width, since running past its bottom is what the scrolling is for.
+    /// </summary>
+    internal static List<string> FindClipping(Form form)
+    {
+        var found = new List<string>();
+
+        static string Name(Control control)
+        {
+            string label = control.AccessibleName ?? control.Text;
+            return label.Length == 0 ? control.GetType().Name
+                : $"{control.GetType().Name} \"{(label.Length > 24 ? label[..24] : label)}\"";
+        }
+
+        void Walk(Control parent)
+        {
+            List<Control> children = parent.Controls.Cast<Control>()
+                .Where(c => c.Visible && c.Width > 0 && c.Height > 0)
+                .ToList();
+            bool scrolls = parent is ScrollableControl { AutoScroll: true };
+            Rectangle room = parent.ClientRectangle;
+
+            foreach (Control child in children)
+            {
+                Rectangle bounds = child.Bounds;
+                bool outside = scrolls
+                    ? bounds.Left < 0 || bounds.Right > room.Width
+                    : !room.Contains(bounds);
+
+                if (outside)
+                {
+                    found.Add($"{Name(child)} {bounds.X},{bounds.Y} {bounds.Width}x{bounds.Height} "
+                        + $"outside {Name(parent)} {room.Width}x{room.Height}");
+                }
+
+                // EM_POSFROMCHAR for the first character: left of the box means the text is
+                // scrolled, and with the whole text fitting that only hides its start.
+                if (child is TextBox box && box.IsHandleCreated && box.TextLength > 0 &&
+                    TextRenderer.MeasureText(box.Text, box.Font).Width < box.ClientSize.Width &&
+                    (short)(SendMessage(box.Handle, 0x00D6, IntPtr.Zero, IntPtr.Zero).ToInt64() & 0xFFFF) < 0)
+                {
+                    found.Add($"{Name(child)} scrolled although its text fits");
+                }
+
+                if (child is PillButton button && button.MeasuredWidth(button.Text, button.Font) > button.Width)
+                {
+                    found.Add($"{Name(child)} label {button.MeasuredWidth(button.Text, button.Font)} px "
+                        + $"in {button.Width} px");
+                }
+
+                Walk(child);
+            }
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                for (int j = i + 1; j < children.Count; j++)
+                {
+                    Rectangle overlap = Rectangle.Intersect(children[i].Bounds, children[j].Bounds);
+                    if (overlap.Width > 0 && overlap.Height > 0)
+                    {
+                        found.Add($"{Name(children[i])} overlaps {Name(children[j])} by "
+                            + $"{overlap.Width}x{overlap.Height}");
+                    }
+                }
+            }
+        }
+
+        Walk(form);
+        return found;
     }
 
     /// <summary>
@@ -508,6 +595,8 @@ internal static partial class Program
         ("settings-start", "gear panel with its start lighting list open"),
         ("effects", "effect list, opened from the main window"),
         ("editor", "new custom preset, opened from the main window"),
+        ("rename", "channel rename, opened from the main window"),
+        ("colour", "colour picker, opened from the custom colour chip"),
         ("error", "error dialog"),
         ("update", "update notice"),
     };
@@ -515,7 +604,7 @@ internal static partial class Program
     private static readonly Dictionary<string, string[]> ShotGroups = new()
     {
         ["all"] = ShotSurfaces.Select(s => s.Id).ToArray(),
-        ["popups"] = new[] { "settings", "settings-start", "effects", "editor", "error", "update" },
+        ["popups"] = new[] { "settings", "settings-start", "effects", "editor", "rename", "colour", "error", "update" },
     };
 
     private static int RunSurfaceTool(string[] args)
@@ -682,7 +771,7 @@ internal static partial class Program
     private static int PrintSurfaceIds()
     {
         WriteLine("Review surfaces (-review <id> [scale%]):");
-        WriteLine("  settings  error  editor  layout  gear  tip  preview  follow  swap <signed exe>  install <signed setup>  carries <file> <version>");
+        WriteLine("  settings  error  editor  rename  layout  gear  tip  preview  follow  swap <signed exe>  install <signed setup>  carries <file> <version>");
         WriteLine("");
         WriteLine("Shot surfaces (-shot [id|group ...] [scale=100,150] [lang=en,de] [out=<folder>]):");
         foreach ((string id, string description) in ShotSurfaces)
@@ -884,8 +973,17 @@ internal static partial class Program
                         child.Kill(entireProcessTree: true);
                     }
 
+                    string clipFile = Path.ChangeExtension(file, ".clip.txt");
+                    string[] clipped = File.Exists(clipFile) ? File.ReadAllLines(clipFile) : Array.Empty<string>();
+                    File.Delete(clipFile);
+
                     string line;
-                    if (finished && child.ExitCode == 0 && File.Exists(file))
+                    if (finished && child.ExitCode == 0 && File.Exists(file) && clipped.Length > 0)
+                    {
+                        failures++;
+                        line = $"CLIP  {Path.GetFileName(file)}  " + string.Join(" | ", clipped);
+                    }
+                    else if (finished && child.ExitCode == 0 && File.Exists(file))
                     {
                         using var image = Image.FromFile(file);
                         line = $"ok    {Path.GetFileName(file)}  {image.Width}x{image.Height}";
@@ -947,7 +1045,13 @@ internal static partial class Program
 
         async Task Settle(Form scaled)
         {
-            await Task.Delay(1500);
+            // AURA_SHOT_WAIT holds the window this many seconds longer before the surface opens: time
+            // to change the display scale while the process runs, which leaves it measuring text at
+            // the scale it started with - the mixed state a second monitor at another scale puts a
+            // user in, and the one case the simulated move cannot produce for a freshly opened popup.
+            int wait = int.TryParse(Environment.GetEnvironmentVariable("AURA_SHOT_WAIT"), out int seconds)
+                ? Math.Clamp(seconds, 0, 120) * 1000 : 0;
+            await Task.Delay(1500 + wait);
             if (scale != scaled.DeviceDpi * 100 / 96)
             {
                 var settled = new TaskCompletionSource();
@@ -963,6 +1067,33 @@ internal static partial class Program
             {
                 using Bitmap shot = CaptureSurface();
                 shot.Save(file, ImageFormat.Png);
+
+                List<string> clipped = Application.OpenForms.Cast<Form>()
+                    .Where(f => f.Visible)
+                    .SelectMany(f => FindClipping(f).Select(line => $"{f.GetType().Name}: {line}"))
+                    .ToList();
+
+                // The settings panel's own placement proof: a panel that fits but sits over the
+                // gear it opened from measures clean above. Only where the panel and the window
+                // share a scale - after a simulated move the panel keeps the real display's, a
+                // mix no user ever sees, and its edge then follows the window's late re-measures.
+                if (id.StartsWith("settings", StringComparison.Ordinal) &&
+                    Application.OpenForms.OfType<ToggleForm>().FirstOrDefault() is ToggleForm owner &&
+                    Application.OpenForms.OfType<SettingsPopup>().FirstOrDefault()?.DeviceDpi == owner.DeviceDpi)
+                {
+                    clipped.AddRange(owner.DescribeSettingsAnchor()
+                        .Split(Environment.NewLine)
+                        .Where(line => line.StartsWith("COVERS", StringComparison.Ordinal) ||
+                            line.StartsWith("OVERFLOW", StringComparison.Ordinal) ||
+                            line.StartsWith("CLIPPED", StringComparison.Ordinal))
+                        .Select(line => "SettingsPopup: " + line));
+                    File.WriteAllText(Path.ChangeExtension(file, ".anchor.txt"), owner.DescribeSettingsAnchor());
+                }
+                if (clipped.Count > 0)
+                {
+                    File.WriteAllLines(Path.ChangeExtension(file, ".clip.txt"), clipped);
+                }
+
                 result = 0;
             }
             finally
@@ -971,34 +1102,59 @@ internal static partial class Program
             }
         }
 
-        if (id == "error")
+        if (id is "error" or "update")
         {
-            if (ErrorDialog.Report(
-                    new IOException("Sample error for review - the LED controller did not answer in time."),
-                    "Review", owner: null, onClosed: () => { }, requireMessageLoop: false) is not Form dialog)
+            void OpenAlone()
             {
-                return 1;
+                if (id == "error")
+                {
+                    if (ErrorDialog.Report(
+                            new IOException("Sample error for review - the LED controller did not answer in time."),
+                            "Review", owner: null, onClosed: () => { }, requireMessageLoop: false) is Form dialog)
+                    {
+                        dialog.Shown += async (_, _) =>
+                        {
+                            await Settle(dialog);
+                            await Capture();
+                        };
+                    }
+                    else
+                    {
+                        Application.Exit();
+                    }
+
+                    return;
+                }
+
+                // A made-up version, no network access - the popup alone, the way the error dialog is.
+                var notice = new UpdatePopup("9.9.9");
+                notice.Shown += async (_, _) =>
+                {
+                    await Settle(notice);
+                    await Capture();
+                };
+                notice.Open(owner: null);
             }
 
-            dialog.Shown += async (_, _) =>
+            // These two have no window to open from, so with AURA_SHOT_WAIT set they are created
+            // only once the wait is over - after the display scale changed, like an error raised
+            // while the main window sits on a second monitor.
+            if (int.TryParse(Environment.GetEnvironmentVariable("AURA_SHOT_WAIT"), out int held) && held > 0)
             {
-                await Settle(dialog);
-                await Capture();
-            };
-            Application.Run();
-            return result;
-        }
+                var later = new System.Windows.Forms.Timer { Interval = Math.Clamp(held, 1, 120) * 1000 };
+                later.Tick += (_, _) =>
+                {
+                    later.Stop();
+                    later.Dispose();
+                    OpenAlone();
+                };
+                later.Start();
+            }
+            else
+            {
+                OpenAlone();
+            }
 
-        if (id == "update")
-        {
-            // A made-up version, no network access - the popup alone, the way the error dialog is.
-            var notice = new UpdatePopup("9.9.9");
-            notice.Shown += async (_, _) =>
-            {
-                await Settle(notice);
-                await Capture();
-            };
-            notice.Open(owner: null);
             Application.Run();
             return result;
         }
@@ -1022,6 +1178,12 @@ internal static partial class Program
                     break;
                 case "editor":
                     form.OpenEditorForReview();
+                    break;
+                case "rename":
+                    form.OpenRenameForReview();
+                    break;
+                case "colour":
+                    form.OpenColourPickerForReview();
                     break;
             }
 
