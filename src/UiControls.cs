@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -19,7 +17,7 @@ namespace AuraToggle;
 internal sealed class EffectButton : FlatControl
 {
     // 30 fps: smooth for lighting effects that never move faster than about one cycle every
-    // two seconds, and roughly halves the GDI+ and GC cost of the 60 fps rate this had before.
+    // two seconds, and roughly halves the GDI+ and GC cost of 60 fps.
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 33 };
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly EffectSurface _surface = new();
@@ -285,9 +283,9 @@ internal sealed class EffectButton : FlatControl
 
     /// <summary>
     /// Works the label out once for a given text, font and letter gap. At 30 fps the state word is
-    /// the same three characters on every frame, and each one used to cost a
-    /// <see cref="TextRenderer.MeasureText"/> - a GDI call - plus a string per character per pass,
-    /// five passes deep for the shadow. Measured on this machine: 61 us and 275 bytes per frame
+    /// the same three characters on every frame, and each one would otherwise cost a
+    /// <see cref="TextRenderer.MeasureText(Graphics, string, Font, Size, TextFormatFlags)"/> - a
+    /// GDI call - plus a string per character per pass, five passes deep for the shadow. Measured on this machine: 61 us and 275 bytes per frame
     /// that this cache turns into nothing.
     /// </summary>
     private void MeasureLabel(Graphics g, int spacing)
@@ -801,8 +799,7 @@ internal sealed class ToggleSwitch : FlatControl
 
 /// <summary>
 /// A small, themed colour picker: a hue strip, a saturation/value square and a hex field.
-/// Opens where <see cref="ColourStrip"/>'s custom chip is clicked, replacing the plain
-/// Windows colour dialog that used to sit there.
+/// Opens where <see cref="ColourStrip"/>'s custom chip is clicked.
 /// </summary>
 internal sealed class ColourPickerPopup : PopupForm
 {
@@ -936,7 +933,7 @@ internal sealed class ColourPickerPopup : PopupForm
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         // The hex field applies its content when it loses focus, and closing does exactly that -
-        // which used to push the colour the user had just cancelled with Escape.
+        // which would push the colour the user had just cancelled with Escape.
         _closing = true;
         base.OnFormClosing(e);
     }
@@ -1205,12 +1202,12 @@ internal sealed class PillButton : FlatControl
         base.ApplyTheme();
     }
 
+    private int? _fitPadding;
+
     /// <summary>
     /// Wide enough for its own label plus padding, so a longer translation is never clipped -
     /// the button has no ellipsis and no auto-size of its own.
     /// </summary>
-    private int? _fitPadding;
-
     public void FitToText(int padding = 22)
     {
         // Measured and assigned outright rather than only grown: a button whose label is later
@@ -1223,7 +1220,7 @@ internal sealed class PillButton : FlatControl
 
     /// <summary>
     /// A button sized to its label keeps that size until something asks again, so a move to a
-    /// display at another scale left it as wide as the text used to be.
+    /// display at another scale would leave it as wide as the text was.
     /// </summary>
     protected override void OnDpiChangedAfterParent(EventArgs e)
     {
@@ -1272,8 +1269,7 @@ internal sealed class PillButton : FlatControl
 /// <summary>
 /// Arms a <see cref="PillButton"/> on the first click, swapping it to a confirmation label for a
 /// few seconds before a second click fires the real action - no separate confirmation dialog.
-/// Settings' Reset and the preset editor's Delete each used to hand-roll this same timer and
-/// text swap; this is the one copy.
+/// Settings' Reset and the preset editor's Delete share this one copy of the timer and text swap.
 /// </summary>
 internal sealed class ArmedButton : IDisposable
 {
