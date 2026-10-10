@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Picking one of the four dynamic effects (spectrum cycle, rainbow, rainbow breathing, wave) on a single channel now switches every channel of that controller to it, in the window too, instead of only the channels already running one; a channel that is off stays dark and joins the effect when it comes back on. A colour effect still changes only its own channel, and that channel keeps its colour while the others keep the dynamic effect
+- The preset editor does the same: choosing a dynamic effect on one row sets every row of that controller to it, and a saved or imported preset with different dynamic effects on one controller opens showing the first channel's effect on all of them
+
 ## [1.4.0] - 2026-10-10
 
 Updates are back, this time signed: the tool checks GitHub at most once a day and installs a

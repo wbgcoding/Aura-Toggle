@@ -76,7 +76,9 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
 
 - No individual LED control: an effect and colour apply to a whole channel, not one LED
 - Only one dynamic effect per controller: spectrum cycle, rainbow, rainbow breathing and wave
-  run across every channel of a controller at once, not one at a time
+  run across every channel of a controller at once, not one at a time. Picking one of them on a
+  single channel switches every channel of that controller to it, in the window too; a channel
+  set back to a colour effect keeps its colour while the others keep the dynamic effect
 - Only mainboard lighting: no GPU, RAM, fans or other Aura Sync devices
 - No channel of its own for a plain (non-addressable) 12 V RGB header: only what the board
   reports as its onboard zone is switched
@@ -278,9 +280,10 @@ names work too. An unknown name prints the list.
 >
 > Effects can be **mixed** across channels (one header steady red while the next one breathes)
 > but only for the five colour effects. The other four are one effect engine inside the
-> controller, shared by all of its channels: set the rainbow on a single header and every header
-> of that controller runs it. The window still offers all nine with a single channel selected, but
-> flags it with a hint rather than letting the choice quietly spread.
+> controller, shared by all of its channels: pick the rainbow on a single header and every header
+> of that controller switches to it, in the window too, with a hint under the list as a reminder.
+> A channel set back to a colour effect later changes only itself and finds its old colour again,
+> while the others keep the dynamic effect.
 
 ## Requirements
 
