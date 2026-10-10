@@ -74,6 +74,19 @@ internal sealed partial class ToggleForm : Form
     /// <summary>WM_SETTINGCHANGE, which is how a light or dark theme switch arrives.</summary>
     private const int SettingChange = 0x001A;
 
+    /// <summary>WM_WINDOWPOSCHANGING, and the flags it carries that matter for
+    /// <see cref="DropForeignFrameRefresh"/>.</summary>
+    private const int WindowPosChanging = 0x0046;
+    private const int SwpFrameChanged = 0x0020;
+    private const int SwpNoRedraw = 0x0008;
+
+    /// <summary>InSendMessageEx: the message came from another thread.</summary>
+    private const uint IsmexSend = 0x0001;
+
+    /// <summary>How long after an empty theme broadcast a frame refresh from outside counts as
+    /// its echo - it follows within a few milliseconds.</summary>
+    private const int ThemeEchoMs = 1000;
+
     /// <summary>WM_ENTERSIZEMOVE and WM_EXITSIZEMOVE: the window is following the mouse.</summary>
     private const int EnterSizeMove = 0x0231;
 
@@ -154,6 +167,7 @@ internal sealed partial class ToggleForm : Form
     private bool _busy;
     private bool _exiting;
     private bool _dark = Theme.Dark;
+    private long _themeEchoUntil;
     private CancellationTokenSource? _identifyCts;
 
     /// <summary>
@@ -841,6 +855,39 @@ internal sealed partial class ToggleForm : Form
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y,
         int width, int height, uint flags);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint InSendMessageEx(IntPtr reserved);
+
+    /// <summary>Where <c>flags</c> sits in WINDOWPOS: after two handles and four ints.</summary>
+    private static readonly int WindowPosFlagsOffset = IntPtr.Size * 2 + 16;
+
+    /// <summary>
+    /// Windows follows every "ImmersiveColorSet" broadcast with a frame refresh of its own,
+    /// sent from outside this thread, even when the theme did not change - and plenty of
+    /// programs send that broadcast as they open or close. The refresh redraws the frame and
+    /// erases the window's background twice over, which showed as the window, the animated
+    /// button most of all, flashing whenever another window came or went. Inside
+    /// the short echo of a broadcast already judged empty, such a refresh is turned into a
+    /// no-op; one this window asks for itself, or any after a real theme switch, goes through.
+    /// </summary>
+    private void DropForeignFrameRefresh(IntPtr windowPos)
+    {
+        if (Environment.TickCount64 >= _themeEchoUntil ||
+            (InSendMessageEx(IntPtr.Zero) & IsmexSend) == 0)
+        {
+            return;
+        }
+
+        int flags = Marshal.ReadInt32(windowPos, WindowPosFlagsOffset);
+        const int stays = (int)(SwpNoSize | SwpNoMove);
+        if ((flags & SwpFrameChanged) != 0 && (flags & stays) == stays)
+        {
+            Marshal.WriteInt32(windowPos, WindowPosFlagsOffset,
+                (flags & ~SwpFrameChanged) | SwpNoRedraw);
+            Trace("  foreign frame refresh dropped");
+        }
+    }
 
     private void ShowBalloon(string text, ToolTipIcon icon)
     {
@@ -1907,8 +1954,47 @@ internal sealed partial class ToggleForm : Form
         }
     }
 
+    /// <summary>
+    /// Review build only, and only with <c>AURA_TRACE</c> naming a file: every message that can
+    /// make the window repaint or move, plus each Render and resize, one timestamped line apiece -
+    /// how a flash that happens "sometimes, when another window opens" is caught on the VM.
+    /// </summary>
+    [System.Diagnostics.Conditional("REVIEW")]
+    private static void Trace(string line)
+    {
+        if (Environment.GetEnvironmentVariable("AURA_TRACE") is { Length: > 0 } file)
+        {
+            try
+            {
+                File.AppendAllText(file, $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
+            }
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
+            {
+                // A trace line that cannot be written is not worth disturbing the window for.
+            }
+        }
+    }
+
     protected override void WndProc(ref Message m)
     {
+#if REVIEW
+        if (m.Msg is 0x0005 or 0x0006 or 0x000F or 0x0014 or 0x0015 or 0x001A or 0x001C or 0x0046
+            or 0x0047 or 0x007E or 0x0086 or 0x02E0 or 0x031A or 0x0018)
+        {
+            Trace($"msg 0x{m.Msg:X4} w={m.WParam} bounds={Bounds} visible={Visible} opacity={Opacity}");
+            if (m.Msg is 0x0046 or 0x0047)
+            {
+                Trace($"  flags=0x{Marshal.ReadInt32(m.LParam, WindowPosFlagsOffset):X4} " +
+                      $"foreign={(InSendMessageEx(IntPtr.Zero) & IsmexSend) != 0}");
+            }
+        }
+#endif
+
+        if (m.Msg == WindowPosChanging)
+        {
+            DropForeignFrameRefresh(m.LParam);
+        }
+
         // A second start of the tool posts this, instead of opening another window.
         if (m.Msg == Program.ShowWindowMessage && !IsDisposed)
         {
@@ -1922,6 +2008,18 @@ internal sealed partial class ToggleForm : Form
             Marshal.PtrToStringUni(m.LParam) == "ImmersiveColorSet")
         {
             BeginInvoke(FollowSystemTheme);
+
+            // Plenty of programs send the same broadcast as they open or close, with the theme
+            // untouched. Such an empty one goes no further, and the frame refresh Windows sends
+            // after it is dropped - see DropForeignFrameRefresh. FollowSystemTheme above still
+            // looks again once the message loop is back, in case the setting lands late.
+            Theme.Forget();
+            if (Theme.Dark == _dark)
+            {
+                Trace("theme broadcast ignored, theme unchanged");
+                _themeEchoUntil = Environment.TickCount64 + ThemeEchoMs;
+                return;
+            }
         }
 
         // Always the whole board, regardless of what is selected in the window - the hotkey is a
@@ -2347,6 +2445,7 @@ internal sealed partial class ToggleForm : Form
 
     private void Render()
     {
+        Trace($"Render toggle={_toggle.RectangleToScreen(_toggle.ClientRectangle)}");
         _displayed = Displayed;
         (byte mode, Color colour, bool on, byte brightness) = _displayed;
         bool wholeBoard = Target.DeviceKey == null;
@@ -2511,6 +2610,7 @@ internal sealed partial class ToggleForm : Form
             wanted += _noticeRow.PreferredSize.Height + _noticeRow.Margin.Vertical;
         }
 
+        Trace($"ResizeToContent {ClientSize} -> {width}x{wanted}");
         if (ClientSize.Height != wanted || ClientSize.Width != width)
         {
             ClientSize = new Size(width, wanted);
