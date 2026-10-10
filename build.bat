@@ -2,8 +2,8 @@
 REM Builds "AuraToggle.exe" into dist\.
 REM
 REM   build.bat                      EVERYTHING: portable, installer, dist\release with checksums
-REM   build.bat portable             only the portable x64 exe (~700 KB), its signature and its two shortcuts
-REM   build.bat installer            only the x64 setup (needs Inno Setup), both exes signed
+REM   build.bat portable             only the portable x64 exe (~700 KB) and its two shortcuts
+REM   build.bat installer            only the x64 setup (needs Inno Setup)
 REM   build.bat all                  same as no argument at all
 REM   build.bat review               the review build with the surface tool, into bin\review-build\
 REM                                  (never into dist: it is for screenshots and layout checks)
@@ -18,15 +18,9 @@ REM
 REM A full build empties dist and leaves exactly this behind:
 REM
 REM   dist\AuraToggle.exe              the portable x64 build
-REM   dist\AuraToggle.exe.sig          its detached signature
 REM   dist\Aura On.lnk, Aura Off.lnk   the two shortcuts, with a relative path
 REM   dist\AuraToggle-Setup-X.exe      the setup, x64 only
-REM   dist\AuraToggle-Setup-X.exe.sig  its detached signature
 REM   dist\SHA256SUMS.txt              a checksum for the two exe files above, not the shortcuts
-REM
-REM The in-app update installs a file only when its .sig verifies against the public key built into
-REM the program. The private key stays in the gitignored .signing folder (or wherever
-REM AURA_SIGNING_KEY points); without it the build still succeeds, but unsigned.
 REM
 REM No .pdb: debug symbols belong to the build, not to what anybody downloads. They stay in
 REM bin\publish\<rid>\ for reading a stack trace from a crash.
@@ -53,19 +47,6 @@ call :maybepause
 exit /b 2
 
 :dispatch
-REM The signing key must never be committable: refuse to build when its default path is not
-REM ignored by git (skipped when git is not installed or this is not a checkout).
-where git >nul 2>nul
-if not errorlevel 1 if exist "%ROOT%.git" (
-    git -C "%ROOT%." check-ignore -q ".signing/aura-toggle-update.pem"
-    if errorlevel 1 (
-        echo.
-        echo ERROR: .signing/ is not in .gitignore, the signing key could be committed.
-        call :maybepause
-        exit /b 1
-    )
-)
-
 REM A running copy locks its own exe, which makes the publish step fail after ten retries -
 REM that failure aborts "all" before it ever reaches the installer, so the installer silently
 REM never appears. Closing it first is safe - but only this project's own build output: a plain
@@ -87,12 +68,6 @@ if /I "%MODE%"=="review" goto :review
 
 call :publish win-x64 "%ROOT%dist"
 if errorlevel 1 exit /b 1
-call :sign "%ROOT%dist\%EXE%"
-if errorlevel 1 (
-    call :maybepause
-    exit /b 1
-)
-
 echo.
 echo Done: %ROOT%dist\%EXE%
 call :maybepause
@@ -283,38 +258,7 @@ if errorlevel 1 (
 
 echo Installer: %ROOT%dist\AuraToggle-Setup-%APPVER%.exe
 
-call :sign "%ROOT%dist\%EXE%"
-if errorlevel 1 goto :installerfailed
-call :sign "%ROOT%dist\AuraToggle-Setup-%APPVER%.exe"
-if errorlevel 1 goto :installerfailed
-
 if /I not "%~1"=="noexit" call :maybepause
-exit /b 0
-
-REM Writes <file>.sig next to a release file with the UpdateSigner tool. The key is read only by
-REM that tool, from AURA_SIGNING_KEY or the default path in the gitignored .signing folder. A
-REM missing key is a warning, not a failure: the build is still usable, the in-app update just
-REM refuses it. A signature left over from an earlier build is removed first, so it can never sit
-REM next to a file it was not made for.
-:sign
-del /q "%~1.sig" >nul 2>nul
-set "SIGNKEY=%AURA_SIGNING_KEY%"
-if not defined SIGNKEY set "SIGNKEY=%ROOT%.signing\aura-toggle-update.pem"
-if not exist "%SIGNKEY%" (
-    echo WARNING: Unsigned build: the in-app update will refuse this release.
-    exit /b 0
-)
-dotnet run --project "%ROOT%tools\UpdateSigner\UpdateSigner.csproj" -c Release -- sign --key "%SIGNKEY%" "%~1"
-if errorlevel 1 (
-    echo.
-    echo BUILD FAILED: could not sign %~nx1
-    exit /b 1
-)
-if not exist "%~1.sig" (
-    echo.
-    echo BUILD FAILED: no signature was produced for %~nx1
-    exit /b 1
-)
 exit /b 0
 
 :payloadmissing
