@@ -189,7 +189,7 @@
     <value>バージョン {0} をインストール</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>バージョン {0} が利用可能です - リリースページを開く</value>
+    <value>バージョン {0} が利用可能です：リリースページを開く</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
     <value>バージョン {0} が利用可能です。トレイメニューをクリックしてインストールしてください。</value>
@@ -201,7 +201,7 @@
     <value>更新があります</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>バージョン {0} が公開されました - 現在のバージョンは {1} です。</value>
+    <value>バージョン {0} が公開されました。現在のバージョンは {1} です。</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
     <value>今すぐインストール</value>

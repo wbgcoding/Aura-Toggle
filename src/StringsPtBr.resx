@@ -99,7 +99,7 @@
     <value>Uma cor contínua, sem movimento.</value>
   </data>
   <data name="EffectHintBreathing" xml:space="preserve">
-    <value>A cor aumenta e diminui lentamente.</value>
+    <value>A cor aumenta e diminui de intensidade lentamente.</value>
   </data>
   <data name="EffectHintFlashing" xml:space="preserve">
     <value>A cor pisca de forma intensa.</value>
@@ -111,7 +111,7 @@
     <value>Um degradê de arco-íris percorre o canal. Não permite ajustar o brilho.</value>
   </data>
   <data name="EffectHintRainbowBreathing" xml:space="preserve">
-    <value>O degradê de arco-íris aumenta e diminui. Não permite ajustar o brilho.</value>
+    <value>O degradê de arco-íris aumenta e diminui de intensidade. Não permite ajustar o brilho.</value>
   </data>
   <data name="EffectHintChaseFade" xml:space="preserve">
     <value>Um ponto de luz percorre o canal com um rastro que se apaga.</value>
@@ -189,7 +189,7 @@
     <value>Instalar versão {0}</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Versão {0} disponível - abrir página de lançamento</value>
+    <value>Versão {0} disponível: abrir página de lançamento</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
     <value>A versão {0} está disponível. Clique no menu da bandeja para instalá-la.</value>
@@ -201,7 +201,7 @@
     <value>Atualização disponível</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>A versão {0} foi lançada - você está usando a {1}.</value>
+    <value>A versão {0} foi lançada, você está usando a {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
     <value>Instalar agora</value>

@@ -189,7 +189,7 @@
     <value>{0} sürümünü yükle</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>{0} sürümü mevcut - sürüm sayfasını aç</value>
+    <value>{0} sürümü mevcut: sürüm sayfasını aç</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
     <value>{0} sürümü mevcut. Yüklemek için sistem tepsisi menüsüne tıkla.</value>
@@ -201,7 +201,7 @@
     <value>Güncelleme mevcut</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>{0} sürümü çıktı - kullandığın sürüm {1}.</value>
+    <value>{0} sürümü çıktı, kullandığın sürüm {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
     <value>Şimdi yükle</value>

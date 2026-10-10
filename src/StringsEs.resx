@@ -189,7 +189,7 @@
     <value>Instalar versión {0}</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Versión {0} disponible - abrir página de lanzamiento</value>
+    <value>Versión {0} disponible: abrir página de la versión</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
     <value>La versión {0} está disponible. Haz clic en el menú de la bandeja para instalarla.</value>
@@ -207,7 +207,7 @@
     <value>Instalar ahora</value>
   </data>
   <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Abrir página de lanzamiento</value>
+    <value>Abrir página de la versión</value>
   </data>
   <data name="UpdateNoticeLater" xml:space="preserve">
     <value>Más tarde</value>

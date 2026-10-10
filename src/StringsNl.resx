@@ -84,7 +84,7 @@
     <value>Regenboog</value>
   </data>
   <data name="PresetRainbowBreathing" xml:space="preserve">
-    <value>Regenboog ademend</value>
+    <value>Ademende regenboog</value>
   </data>
   <data name="PresetChaseFade" xml:space="preserve">
     <value>Looplicht met vervaging</value>
@@ -189,7 +189,7 @@
     <value>Versie {0} installeren</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Versie {0} beschikbaar - releasepagina openen</value>
+    <value>Versie {0} beschikbaar: releasepagina openen</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
     <value>Versie {0} is beschikbaar. Klik op het systeemvakmenu om deze te installeren.</value>
@@ -201,7 +201,7 @@
     <value>Update beschikbaar</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Versie {0} is uit - u gebruikt {1}.</value>
+    <value>Versie {0} is uit, u gebruikt {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
     <value>Nu installeren</value>

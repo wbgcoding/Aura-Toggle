@@ -189,7 +189,7 @@
     <value>Install version {0}</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Version {0} available - open release page</value>
+    <value>Version {0} available: open release page</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
     <value>Version {0} is available. Click the tray menu to install it.</value>
@@ -201,7 +201,7 @@
     <value>Update available</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>Version {0} is out - you are running {1}.</value>
+    <value>Version {0} is out, you are running {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
     <value>Install now</value>

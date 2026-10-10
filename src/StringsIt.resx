@@ -78,7 +78,7 @@
     <value>Lampeggiante</value>
   </data>
   <data name="PresetSpectrumCycle" xml:space="preserve">
-    <value>Ciclo spettro</value>
+    <value>Ciclo dello spettro</value>
   </data>
   <data name="PresetRainbow" xml:space="preserve">
     <value>Arcobaleno</value>
@@ -153,7 +153,7 @@
     <value>Avvia con Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Alla chiusura, vai nell'area di notifica</value>
+    <value>Riduci a icona nell'area di notifica alla chiusura</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Illuminazione all'avvio</value>
@@ -189,7 +189,7 @@
     <value>Installa la versione {0}</value>
   </data>
   <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>Versione {0} disponibile - apri la pagina della versione</value>
+    <value>Versione {0} disponibile: apri la pagina della release</value>
   </data>
   <data name="TrayUpdateAvailable" xml:space="preserve">
     <value>La versione {0} è disponibile. Fai clic sul menu nell'area di notifica per installarla.</value>
@@ -201,13 +201,13 @@
     <value>Aggiornamento disponibile</value>
   </data>
   <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>La versione {0} è disponibile - stai usando la {1}.</value>
+    <value>La versione {0} è disponibile, stai usando la {1}.</value>
   </data>
   <data name="UpdateNoticeInstall" xml:space="preserve">
     <value>Installa ora</value>
   </data>
   <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>Apri la pagina della versione</value>
+    <value>Apri la pagina della release</value>
   </data>
   <data name="UpdateNoticeLater" xml:space="preserve">
     <value>Più tardi</value>
