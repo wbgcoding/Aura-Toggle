@@ -107,6 +107,7 @@ Name: "zh"; MessagesFile: "ChineseSimplified.isl"; LicenseFile: "license-en.txt"
 
 [CustomMessages]
 en.AutoStart=Start Aura Toggle when Windows starts
+en.CloseAppFirst=Aura Toggle is still running. Close it (right-click the tray icon, Exit) and click OK to continue.
 en.DesktopIcon=Create a desktop shortcut
 en.RemoveSettings=Also delete your settings, custom presets and channel names? (%1)
 en.RuntimeAsk=Aura Toggle needs the Microsoft .NET 10 Desktop Runtime, which this PC does not have yet.%n%nDownload it from Microsoft and install it now? It is about 60 MB and takes a minute.
@@ -115,6 +116,7 @@ en.RuntimeInstalling=Installing the .NET 10 Desktop Runtime...
 en.RuntimeDeclined=Aura Toggle cannot run without the .NET 10 Desktop Runtime, so nothing was installed.
 en.RuntimeFailed=The .NET 10 Desktop Runtime could not be installed. Install it by hand from https://dotnet.microsoft.com/download/dotnet/10.0 and run this setup again.
 de.AutoStart=Aura Toggle mit Windows starten
+de.CloseAppFirst=Aura Toggle läuft noch. Beende es (Rechtsklick auf das Symbol im Infobereich, Beenden) und klicke auf OK, um fortzufahren.
 de.DesktopIcon=Verknüpfung auf dem Desktop anlegen
 de.RemoveSettings=Auch deine Einstellungen, eigenen Presets und Kanalnamen löschen? (%1)
 de.RuntimeAsk=Aura Toggle benötigt die Microsoft .NET 10 Desktop Runtime, die auf diesem PC noch fehlt.%n%nJetzt von Microsoft herunterladen und installieren? Das sind etwa 60 MB und dauert eine Minute.
@@ -123,6 +125,7 @@ de.RuntimeInstalling=.NET 10 Desktop Runtime wird installiert...
 de.RuntimeDeclined=Ohne die .NET 10 Desktop Runtime kann Aura Toggle nicht laufen, es wurde nichts installiert.
 de.RuntimeFailed=Die .NET 10 Desktop Runtime konnte nicht installiert werden. Installieren Sie sie von Hand über https://dotnet.microsoft.com/download/dotnet/10.0 und starten Sie dieses Setup erneut.
 es.AutoStart=Iniciar Aura Toggle al iniciar Windows
+es.CloseAppFirst=Aura Toggle sigue en ejecución. Ciérrelo (clic derecho en el icono del área de notificación, Salir) y haga clic en Aceptar para continuar.
 es.DesktopIcon=Crear un acceso directo en el escritorio
 es.RemoveSettings=¿Eliminar también la configuración, los preajustes propios y los nombres de canal? (%1)
 es.RuntimeAsk=Aura Toggle necesita Microsoft .NET 10 Desktop Runtime, que este equipo aún no tiene.%n%n¿Desea descargarlo de Microsoft e instalarlo ahora? Ocupa unos 60 MB y tarda un minuto.
@@ -131,6 +134,7 @@ es.RuntimeInstalling=Instalando .NET 10 Desktop Runtime...
 es.RuntimeDeclined=Aura Toggle no puede ejecutarse sin .NET 10 Desktop Runtime, por lo que no se instaló nada.
 es.RuntimeFailed=No se pudo instalar .NET 10 Desktop Runtime. Instálelo manualmente desde https://dotnet.microsoft.com/download/dotnet/10.0 y ejecute de nuevo este instalador.
 pt.AutoStart=Iniciar o Aura Toggle com o Windows
+pt.CloseAppFirst=O Aura Toggle ainda está em execução. Feche-o (clique com o botão direito no ícone da bandeja, Sair) e clique em OK para continuar.
 pt.DesktopIcon=Criar atalho na área de trabalho
 pt.RemoveSettings=Também excluir configurações, predefinições personalizadas e nomes de canais? (%1)
 pt.RuntimeAsk=O Aura Toggle precisa do Microsoft .NET 10 Desktop Runtime, que este PC ainda não tem.%n%nDeseja baixá-lo da Microsoft e instalá-lo agora? Ele tem cerca de 60 MB e leva um minuto.
@@ -139,6 +143,7 @@ pt.RuntimeInstalling=Instalando o .NET 10 Desktop Runtime...
 pt.RuntimeDeclined=O Aura Toggle não pode ser executado sem o .NET 10 Desktop Runtime, portanto nada foi instalado.
 pt.RuntimeFailed=Não foi possível instalar o .NET 10 Desktop Runtime. Instale-o manualmente em https://dotnet.microsoft.com/download/dotnet/10.0 e execute esta instalação novamente.
 it.AutoStart=Avvia Aura Toggle all'avvio di Windows
+it.CloseAppFirst=Aura Toggle è ancora in esecuzione. Chiuderlo (clic destro sull'icona nell'area di notifica, Esci) e fare clic su OK per continuare.
 it.DesktopIcon=Crea un collegamento sul desktop
 it.RemoveSettings=Eliminare anche impostazioni, preimpostazioni personalizzate e nomi dei canali? (%1)
 it.RuntimeAsk=Aura Toggle richiede Microsoft .NET 10 Desktop Runtime, che non è ancora presente in questo PC.%n%nScaricarlo da Microsoft e installarlo ora? Occupa circa 60 MB e richiede un minuto.
@@ -147,6 +152,7 @@ it.RuntimeInstalling=Installazione di .NET 10 Desktop Runtime in corso...
 it.RuntimeDeclined=Aura Toggle non può essere eseguito senza .NET 10 Desktop Runtime, quindi non è stato installato nulla.
 it.RuntimeFailed=Impossibile installare .NET 10 Desktop Runtime. Installarlo manualmente da https://dotnet.microsoft.com/download/dotnet/10.0 ed eseguire nuovamente questo programma di installazione.
 nl.AutoStart=Aura Toggle starten wanneer Windows wordt gestart
+nl.CloseAppFirst=Aura Toggle wordt nog uitgevoerd. Sluit het af (klik met de rechtermuisknop op het pictogram in het systeemvak, Afsluiten) en klik op OK om door te gaan.
 nl.DesktopIcon=Een snelkoppeling op het bureaublad maken
 nl.RemoveSettings=Ook instellingen, eigen voorinstellingen en kanaalnamen verwijderen? (%1)
 nl.RuntimeAsk=Aura Toggle heeft Microsoft .NET 10 Desktop Runtime nodig, maar deze pc beschikt daar nog niet over.%n%nNu downloaden van Microsoft en installeren? Dit is ongeveer 60 MB en duurt een minuut.
@@ -155,6 +161,7 @@ nl.RuntimeInstalling=.NET 10 Desktop Runtime wordt geïnstalleerd...
 nl.RuntimeDeclined=Aura Toggle kan niet worden uitgevoerd zonder .NET 10 Desktop Runtime, dus er is niets geïnstalleerd.
 nl.RuntimeFailed=De .NET 10 Desktop Runtime kon niet worden geïnstalleerd. Installeer deze handmatig via https://dotnet.microsoft.com/download/dotnet/10.0 en voer deze installatie opnieuw uit.
 pl.AutoStart=Uruchamiaj Aura Toggle podczas uruchamiania Windows
+pl.CloseAppFirst=Aura Toggle nadal działa. Zamknij go (kliknij prawym przyciskiem ikonę w obszarze powiadomień, Zakończ) i kliknij OK, aby kontynuować.
 pl.DesktopIcon=Utwórz skrót na pulpicie
 pl.RemoveSettings=Usunąć też ustawienia, własne presety i nazwy kanałów? (%1)
 pl.RuntimeAsk=Aura Toggle wymaga składnika Microsoft .NET 10 Desktop Runtime, którego nie ma jeszcze na tym komputerze.%n%nPobrać go z Microsoft i zainstalować teraz? Ma około 60 MB, a instalacja zajmuje minutę.
@@ -163,6 +170,7 @@ pl.RuntimeInstalling=Instalowanie .NET 10 Desktop Runtime...
 pl.RuntimeDeclined=Aura Toggle nie może działać bez .NET 10 Desktop Runtime, więc nic nie zostało zainstalowane.
 pl.RuntimeFailed=Nie udało się zainstalować .NET 10 Desktop Runtime. Zainstaluj go ręcznie ze strony https://dotnet.microsoft.com/download/dotnet/10.0, a następnie uruchom ten instalator ponownie.
 tr.AutoStart=Windows başladığında Aura Toggle'ı başlat
+tr.CloseAppFirst=Aura Toggle hâlâ çalışıyor. Kapatın (bildirim alanındaki simgeye sağ tıklayın, Çıkış) ve devam etmek için Tamam'a tıklayın.
 tr.DesktopIcon=Masaüstünde kısayol oluştur
 tr.RemoveSettings=Ayarlar, özel ön ayarlar ve kanal adları da silinsin mi? (%1)
 tr.RuntimeAsk=Aura Toggle, bu bilgisayarda henüz bulunmayan Microsoft .NET 10 Desktop Runtime'a ihtiyaç duyar.%n%nMicrosoft'tan indirip şimdi yüklemek ister misiniz? Yaklaşık 60 MB'tır ve bir dakika sürer.
@@ -171,6 +179,7 @@ tr.RuntimeInstalling=.NET 10 Desktop Runtime yükleniyor...
 tr.RuntimeDeclined=Aura Toggle, .NET 10 Desktop Runtime olmadan çalışamaz; bu nedenle hiçbir şey yüklenmedi.
 tr.RuntimeFailed=.NET 10 Desktop Runtime yüklenemedi. https://dotnet.microsoft.com/download/dotnet/10.0 adresinden elle yükleyin ve bu kurulumu yeniden çalıştırın.
 ja.AutoStart=Windows の起動時に Aura Toggle を起動する
+ja.CloseAppFirst=Aura Toggle はまだ実行中です。通知領域のアイコンを右クリックして［終了］を選び、閉じてから［OK］をクリックして続行してください。
 ja.DesktopIcon=デスクトップにショートカットを作成する
 ja.RemoveSettings=設定、カスタムプリセット、チャンネル名も削除しますか？（%1）
 ja.RuntimeAsk=Aura Toggle には、この PC にはまだインストールされていない Microsoft .NET 10 Desktop Runtime が必要です。%n%nMicrosoft からダウンロードして今すぐインストールしますか？ 約 60 MB で、1 分ほどかかります。
@@ -179,6 +188,7 @@ ja.RuntimeInstalling=.NET 10 Desktop Runtime をインストールしていま�
 ja.RuntimeDeclined=Aura Toggle は .NET 10 Desktop Runtime がないと実行できないため、何もインストールされませんでした。
 ja.RuntimeFailed=.NET 10 Desktop Runtime をインストールできませんでした。https://dotnet.microsoft.com/download/dotnet/10.0 から手動でインストールして、このセットアップをもう一度実行してください。
 zh.AutoStart=Windows 启动时启动 Aura Toggle
+zh.CloseAppFirst=Aura Toggle 仍在运行。请先将其关闭（右键单击通知区域图标，选择“退出”），然后单击“确定”继续。
 zh.DesktopIcon=创建桌面快捷方式
 zh.RemoveSettings=同时删除设置、自定义预设和通道名称吗？（%1）
 zh.RuntimeAsk=Aura Toggle 需要此电脑尚未安装的 Microsoft .NET 10 Desktop Runtime。%n%n是否要从 Microsoft 下载并立即安装？它约为 60 MB，只需一分钟。
@@ -647,6 +657,29 @@ begin
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   except
     DelTree(DataDir, True, True, True);
+  end;
+end;
+
+{ The uninstaller does not close a running copy, and a copy left in the tray writes its
+  settings and log again as it exits, which brings back the data folder the user just asked to
+  have deleted. Asked to close it first, in a loop, so a click on OK without doing it asks again.
+  Silent runs skip the question: nobody is there to answer it. Both mutex names are the ones the
+  app takes, the machine-wide one and its per-session fallback. There is deliberately no AppMutex
+  in the script, which would also block the silent in-app update. }
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+
+  if UninstallSilent then
+    Exit;
+
+  while CheckForMutexes('AuraToggle.SingleInstance,Global\AuraToggle.SingleInstance') do
+  begin
+    if MsgBox(CustomMessage('CloseAppFirst'), mbInformation, MB_OKCANCEL) = IDCANCEL then
+    begin
+      Result := False;
+      Exit;
+    end;
   end;
 end;
 
