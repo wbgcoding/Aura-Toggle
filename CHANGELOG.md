@@ -6,9 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-10
+
+A steadier window: no more flashing when other programs open or close, while a preset is edited
+or while a channel is renamed. A dynamic effect now takes every channel of its controller, which
+is what the hardware does anyway, the tray icon stays put while the window is open, and the tray
+menu got the same rounded look as the rest.
+
 ### Fixed
 
-- On a second monitor at a different display scale than the main one, the channel rename popup showed its text field half covered by its buttons and the start of the name scrolled out of view. The colour picker's hex field had the same fault. Every popup now lays itself out again when it opens on such a monitor
+- On a second monitor at a different display scale than the main one, the channel rename popup showed its text field half covered by its buttons and the start of the name scrolled out of view. The colour picker's hex field had the same fault. Every popup, the settings panel and the preset editor included, now lays itself out for that monitor when it opens there
 - The window, the big button most of all, could flash when another program opened or closed. Many programs announce a theme change as they do, even when nothing changed, and Windows answered each one by redrawing the window; such an empty announcement is now ignored
 - Editing a preset made the big button flash on every change, as each live preview briefly showed the window as busy. The preview now works in the background without that
 - Renaming a channel dimmed the big button while that channel blinked, as if the lighting had changed. The window now stays as it is while the name box is open
@@ -318,7 +325,8 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only 
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
-[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.4.0
 [1.3.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.3.0
 [1.2.1]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.2.1

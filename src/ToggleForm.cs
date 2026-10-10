@@ -160,6 +160,9 @@ internal sealed partial class ToggleForm : Form
     private List<AuraDeviceSummary> _devices = new();
     private bool _busy;
     private bool _busyQuiet;
+
+    /// <summary>The latest request that arrived during a quiet hold, see <see cref="Run"/>.</summary>
+    private Func<AuraState>? _afterQuiet;
     private bool _exiting;
     private bool _dark = Theme.Dark;
     private long _themeEchoUntil;
@@ -465,17 +468,20 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Room above the first and below the last entry, and a little more height per row, so the
     /// rounded highlight does not sit against the menu's own rounded edge. Applied as the menu
-    /// opens, which also catches the effect entries rebuilt since, at the window's current scale.
+    /// opens, which also catches the effect entries rebuilt since.
     /// </summary>
     private void SpaceTrayMenu(ToolStripDropDown menu)
     {
-        int edge = this.Scaled(4);
+        // The menu's own dpi: it opens on the screen with the notification area, which need not
+        // be the one the window is on.
+        int Scale(int length) => length * menu.DeviceDpi / 96;
+        int edge = Scale(4);
         menu.Padding = new Padding(menu.Padding.Left, edge, menu.Padding.Right, edge);
         foreach (ToolStripItem item in menu.Items)
         {
             if (item is ToolStripMenuItem)
             {
-                item.Padding = new Padding(0, this.Scaled(3), 0, this.Scaled(3));
+                item.Padding = new Padding(0, Scale(3), 0, Scale(3));
             }
         }
     }
@@ -875,6 +881,7 @@ internal sealed partial class ToggleForm : Form
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoActivate = 0x0010;
+    private const uint SwpNoZOrder = 0x0004;
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y,
@@ -1248,9 +1255,9 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Blinks the channel being renamed so its header is easy to find, and locks the main
-    /// buttons for as long as it runs - nothing else may write to the controller at the same
-    /// time. Stopped by cancelling <see cref="_identifyCts"/>, which <see cref="Program.Identify"/>
+    /// Blinks the channel being renamed so its header is easy to find, holding the controller
+    /// quietly for as long as it runs - nothing else may write to it at the same time, and a
+    /// switch asked for meanwhile waits until the name box closes. Stopped by cancelling <see cref="_identifyCts"/>, which <see cref="Program.Identify"/>
     /// answers by putting every channel of that controller back to its own record before returning.
     /// </summary>
     private async Task RunIdentify(string deviceKey, int channelIndex, CancellationTokenSource cts)
@@ -2108,6 +2115,16 @@ internal sealed partial class ToggleForm : Form
         _dark = Theme.Dark;
         Theme.Retint(this);
 
+        // Asked for from this thread, so DropForeignFrameRefresh lets it through: should the
+        // broadcast have arrived before the setting changed, the refresh Windows sent with it was
+        // dropped as an echo, and the frame would otherwise keep the old theme.
+        _themeEchoUntil = 0;
+        if (IsHandleCreated)
+        {
+            SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0,
+                SwpNoSize | SwpNoMove | SwpNoZOrder | SwpNoActivate | (uint)SwpFrameChanged);
+        }
+
         if (_tray.ContextMenuStrip is ContextMenuStrip menu)
         {
             // Not part of the window's own control tree, and it paints from a colour table that is
@@ -2293,8 +2310,16 @@ internal sealed partial class ToggleForm : Form
         if (_busy)
         {
             // A quiet hold shows nothing, so a click that lands during it has nothing telling
-            // the user it was refused: it waits its turn instead.
-            if (!queue && !_busyQuiet)
+            // the user it was refused. It is parked instead and runs once the hold ends; only
+            // the latest one is kept, so a few quick clicks end on the last of them rather than
+            // on whichever happened to get its turn first.
+            if (!queue && _busyQuiet)
+            {
+                _afterQuiet = action;
+                return;
+            }
+
+            if (!queue)
             {
                 // Dropped, but the control that asked for it (a slider, a picked chip) is already
                 // showing the value that was refused - painted again from the real state.
@@ -2361,17 +2386,27 @@ internal sealed partial class ToggleForm : Form
     private const int BusyFlashDelayMs = 180;
 
     /// <param name="quiet">
-    /// Holds the controller without any visible busy state. For the preset editor's live
-    /// preview: it runs once per change made in the editor, often longer than the delay above
-    /// on a board with several channels, so every edit dimmed the big button and greyed the
-    /// window out and back in - a flash on each click in a window the user is not even using.
+    /// Holds the controller without any visible busy state, and with every control left live:
+    /// a request made meanwhile is parked by <see cref="Run"/> rather than refused. For the preset
+    /// editor's live preview and the rename blink - the preview runs once per change made in the
+    /// editor, often longer than the delay above on a board with several channels, so every edit
+    /// dimmed the big button and greyed the window out and back in.
     /// </param>
     private void SetBusy(bool busy, bool quiet = false)
     {
         // Dropping a request that arrives while one is already in flight must not wait for the
         // delay below - only the *visible* grey-out does.
+        bool endsQuietHold = !busy && _busyQuiet;
         _busy = busy;
         _busyQuiet = busy && quiet;
+
+        // Whatever was parked during the hold runs now - posted, so the caller finishes first.
+        // A preview that takes the controller again before it gets there parks it once more.
+        if (endsQuietHold && _afterQuiet is Func<AuraState> parked && !IsDisposed)
+        {
+            _afterQuiet = null;
+            BeginInvoke(() => _ = Run(parked));
+        }
 
         if (busy && quiet)
         {
@@ -2887,7 +2922,8 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
     {
         // A drop down gets its border from the compositor along with the rounded corners; a
         // square one drawn here would show its corners poking out of the rounded window.
-        if (e.ToolStrip is not ToolStripDropDown)
+        // Windows 10 rounds nothing and draws no border of its own, so the menu keeps its drawn one.
+        if (e.ToolStrip is not ToolStripDropDown || !OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
         {
             base.OnRenderToolStripBorder(e);
         }
