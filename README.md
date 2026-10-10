@@ -168,8 +168,9 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
    defaults (your own custom presets included). Before a reset deletes anything it zips every
    file it is about to remove into `reset-backup.zip`, right next to them.
 
-Minimising sends the window to the notification area. Left click the icon there to toggle the
-lighting, double-click to reopen the window, right-click for the same options in a menu.
+The icon sits in the notification area for as long as the tool runs, window open or not, and
+minimising sends the window there. Left click the icon to toggle the lighting, double-click to
+bring the window up, right-click for the same options in a menu.
 
 The window reopens where and how wide you last left it, unless that spot belongs to a display
 that is no longer attached, in which case it centres itself rather than opening off-screen.

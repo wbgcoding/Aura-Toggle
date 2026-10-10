@@ -142,12 +142,6 @@ internal sealed partial class ToggleForm : Form
     /// moment there is one again, instead of waiting for the next check up to 24 hours later.</summary>
     private UpdateInfo? _pendingNotice;
 
-    /// <summary>Once true, keeps the tray icon itself visible even while the window is open, so
-    /// <see cref="_trayUpdate"/> stays reachable - <see cref="RestoreFromTray"/> would otherwise
-    /// hide the icon the next time the window is shown, same as it always does when nothing is
-    /// minimised to it.</summary>
-    private bool _updatePending;
-
     /// <summary>Set while an update downloads and starts; a second click meanwhile does nothing.</summary>
     private bool _installingUpdate;
 
@@ -536,6 +530,10 @@ internal sealed partial class ToggleForm : Form
         _tray.Icon = _iconOnTray ?? Icon;
         _tray.Text = Strings.WindowTitle;
         _tray.ContextMenuStrip = menu;
+
+        // Shown for as long as the tool runs, window open or not: one click switches the
+        // lighting and the menu reaches the effects without bringing the window forward.
+        _tray.Visible = true;
 
         // A shortcut or script may have switched the board since the menu last showed it.
         menu.Opening += (_, _) => RefreshFromDisk();
@@ -2170,7 +2168,6 @@ internal sealed partial class ToggleForm : Form
         WindowState = FormWindowState.Normal;
         Activate();
         RefreshFromDisk();
-        _tray.Visible = _updatePending;
         _toggle.Paused = false;
 
         if (_pendingNotice is UpdateInfo notice)

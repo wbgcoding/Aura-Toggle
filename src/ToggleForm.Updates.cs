@@ -53,11 +53,6 @@ internal sealed partial class ToggleForm
         SetTrayUpdate(string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateInstall, found.Version),
             async () => await InstallUpdate(found));
 
-        // Kept reachable through the tray icon even after the window is reopened and closed
-        // again - RestoreFromTray would otherwise hide the icon (and this entry with it) the
-        // moment the window is next shown, the same way it always hides the icon once nothing
-        // is minimised to it.
-        _updatePending = true;
         _tray.Visible = true;
         _tray.BalloonTipTitle = Strings.WindowTitle;
         _tray.BalloonTipText = string.Format(CultureInfo.CurrentCulture, Strings.TrayUpdateAvailable, found.Version);
