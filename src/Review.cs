@@ -594,6 +594,7 @@ internal static partial class Program
         ("settings", "gear panel, opened from the main window"),
         ("settings-start", "gear panel with its start lighting list open"),
         ("effects", "effect list, opened from the main window"),
+        ("channels", "channel list, opened from the main window"),
         ("editor", "new custom preset, opened from the main window"),
         ("rename", "channel rename, opened from the main window"),
         ("colour", "colour picker, opened from the custom colour chip"),
@@ -604,7 +605,7 @@ internal static partial class Program
     private static readonly Dictionary<string, string[]> ShotGroups = new()
     {
         ["all"] = ShotSurfaces.Select(s => s.Id).ToArray(),
-        ["popups"] = new[] { "settings", "settings-start", "effects", "editor", "rename", "colour", "error", "update" },
+        ["popups"] = new[] { "settings", "settings-start", "effects", "channels", "editor", "rename", "colour", "error", "update" },
     };
 
     private static int RunSurfaceTool(string[] args)
@@ -1320,6 +1321,9 @@ internal static partial class Program
                     break;
                 case "effects":
                     form.OpenEffectsForReview();
+                    break;
+                case "channels":
+                    form.OpenChannelsForReview();
                     break;
                 case "editor":
                     form.OpenEditorForReview();

@@ -1039,12 +1039,13 @@ internal sealed partial class ToggleForm : Form
         {
             // Kept as narrow as its own longest label: the effect list takes the rest of the row,
             // and that is where a long preset name would otherwise be cut off. The list it opens
-            // stays wider than the button, since it has room to spare. The bounds are scaled
-            // because what they bound is not: the measured label width grows with the display,
-            // so a limit written for 96 dpi would clip every name on a 150 % screen.
+            // is exactly as wide as its longest row, pencil included - a fixed minimum left a
+            // short list of channels sitting in a panel far wider than anything in it. The bounds
+            // are scaled because what they bound is not: the measured label width grows with the
+            // display, so a limit written for 96 dpi would clip every name on a 150 % screen.
             _channel.Width = Math.Clamp(_channel.PreferredWidthForItems(withIcon: false) + this.Scaled(6),
                 this.Scaled(92), this.Scaled(190));
-            _channel.PopupWidth = Math.Max(_channel.Width, this.Scaled(200));
+            _channel.PopupWidth = Math.Min(_channel.PreferredPopupWidth(), this.Scaled(340));
         }
 
         FitEffectList();
@@ -1583,6 +1584,9 @@ internal sealed partial class ToggleForm : Form
 #if REVIEW
     /// <summary>Surface tool only: the effect list, opened the way a click on it does.</summary>
     internal void OpenEffectsForReview() => _effects.OpenForReview();
+
+    /// <summary>Surface tool only: the channel list, opened the way a click on it does.</summary>
+    internal void OpenChannelsForReview() => _channel.OpenForReview();
 
     /// <summary>Surface tool only: the editor for a new preset, as its list row opens it.</summary>
     internal void OpenEditorForReview() => OpenPresetEditor(null);

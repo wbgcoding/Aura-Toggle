@@ -203,6 +203,10 @@ internal sealed class Select : FlatControl
             (withIcon ? IconWidth + IconGap : 0));
     }
 
+    /// <summary>How wide the list this opens needs to be for its longest entry, see
+    /// <see cref="SelectPopup.WidthFor"/>.</summary>
+    public int PreferredPopupWidth() => SelectPopup.WidthFor(_items, Font, DeviceDpi);
+
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public SelectItem? Selected { get; private set; }
 
@@ -485,6 +489,31 @@ internal sealed class SelectPopup : PopupForm
     }
 
     private int Scale(int length) => length * _dpi / 96;
+
+    /// <summary>
+    /// The narrowest this list can open at without cutting an entry short: each row's text plus
+    /// what the row paint puts beside it - the icon or plus on the left, the pencil or the edit
+    /// buttons on the right. Mirrors the row layout in OnPaint, so a change to one belongs in
+    /// the other.
+    /// </summary>
+    public static int WidthFor(IEnumerable<SelectItem> items, Font font, int dpi)
+    {
+        int Scale(int length) => length * dpi / 96;
+
+        int widest = 0;
+        foreach (SelectItem item in items)
+        {
+            int left = Scale(8) + (item.IsAction ? Scale(14) + Scale(8)
+                : item.Mode is not null || item.CustomColours is { Length: > 0 } ? Scale(22) + Scale(10)
+                : 0);
+            int right = item.Editable ? (Scale(ButtonAt96) * 3) + (Scale(ButtonGapAt96) * 2) + Scale(InsetAt96)
+                : item.Renamable ? Scale(ButtonAt96) + Scale(InsetAt96)
+                : Scale(InsetAt96);
+            widest = Math.Max(widest, left + TextRenderer.MeasureText(item.Text, font).Width + right);
+        }
+
+        return widest + (Scale(InsetAt96) * 2);
+    }
 
     private void ComputeMetrics()
     {
