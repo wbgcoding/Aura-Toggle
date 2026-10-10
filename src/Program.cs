@@ -390,7 +390,9 @@ internal static partial class Program
             bool currentlyOn = targetChannel >= 0
                 ? AuraChannelStates.Get(AuraChannelStates.All(), targetDevice!, targetChannel)?.On
                     ?? AuraState.Load().On
-                : AuraState.Load().On;
+                : !string.IsNullOrEmpty(targetDevice)
+                    ? ControllerIsOn(targetDevice)
+                    : AuraState.Load().On;
 
             Switch(!currentlyOn, targetDevice, targetChannel);
             return 0;
@@ -1049,6 +1051,36 @@ internal static partial class Program
         }
 
         return named;
+    }
+
+    /// <summary>
+    /// Whether one controller counts as on, the way the window shows it: any of its channels whose
+    /// record is on, or without a record while the board is. The board-wide flag alone stays true
+    /// as long as any other controller is lit, which would make a toggle aimed at a dark controller
+    /// switch it off again and never on. An unlisted controller falls back to the board-wide flag,
+    /// and the switch that follows reports why it cannot be reached.
+    /// </summary>
+    private static bool ControllerIsOn(string deviceKey)
+    {
+        AuraDeviceSummary? summary = AuraDevice.ListDevices().Find(d => d.Key == deviceKey);
+        AuraState state = AuraState.Load();
+
+        if (summary == null)
+        {
+            return state.On;
+        }
+
+        Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
+
+        foreach (AuraChannel own in summary.Channels)
+        {
+            if (AuraChannelStates.Get(remembered, deviceKey, own.Index)?.On ?? state.On)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>One controller by key, or every controller when none is named. Shared by every
