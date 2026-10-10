@@ -2690,8 +2690,8 @@ internal sealed partial class ToggleForm : Form
     /// itself out of a bad measurement keeps the extra width when the measurement was only wrong
     /// because a display-scale change was still in flight, which is how a trip to the second
     /// monitor and back left the window permanently wider. The check drives the settle in
-    /// <see cref="SettleAfterDpiChange"/>, which re-measures instead, and the report
-    /// <see cref="DescribeLayout"/> builds below.
+    /// <see cref="SettleAfterDpiChange"/>, which re-measures instead, and the layout report the
+    /// review build prints.
     /// </summary>
     private IEnumerable<(string Name, int Right, int Overflow)> RightOverflow()
     {

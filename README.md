@@ -30,7 +30,8 @@ job and gets out of the way.
 **Quickstart:**
 
 1. Download `AuraToggle.exe` or the installer from the [latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)
-2. Run it, no admin rights needed. The portable exe needs the
+2. Run it. The portable exe needs no admin rights, and neither does the setup's "just for me"
+   install; installing for everyone asks once. The portable exe needs the
    [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0); the installer
    fetches it for you
 3. Click the big button
@@ -67,7 +68,7 @@ Aura Toggle exists for the case where none of that is worth it for flipping one 
   header lights up white and the rest of the board goes dark, so there is nothing to guess
 - **Ten languages** in the window *and* in the setup: English, German, Spanish, Portuguese,
   Italian, Dutch, Polish, Turkish, Japanese and Chinese
-- No admin rights, no driver, no telemetry. The program itself makes no network connections at
+- No driver, no telemetry, and no admin rights for the portable exe. The program itself makes no network connections at
   all; only the setup fetches the .NET runtime from Microsoft if your PC has none
 
 ## What it can't do
@@ -125,7 +126,7 @@ controller, it works.
 **Unattended installs**: verified switches, for scripted rollouts:
 
 ```bat
-AuraToggle-Setup-<version>.exe /VERYSILENT /NORESTART        :: for everyone, no prompts
+AuraToggle-Setup-<version>.exe /VERYSILENT /NORESTART        :: for everyone, run from an elevated prompt
 AuraToggle-Setup-<version>.exe /VERYSILENT /CURRENTUSER      :: just the current user
 AuraToggle-Setup-<version>.exe /VERYSILENT /LOG="install.log" :: with a log file
 AuraToggle-Setup-<version>.exe /LANG=ja                      :: force the setup language
@@ -188,7 +189,8 @@ second Windows profile, or just a backup. On different hardware the channels are
 position (first channel to first channel, and so on) rather than the exact controller, since a
 different machine has no way to have the same one. Import takes the file as it finds it: anything
 larger than 256 KB is refused outright, and a name longer than the 40 characters the editor allows
-is shortened to fit.
+is shortened to fit. The file also carries each controller's device path, which identifies the
+hardware of the machine it was exported on.
 
 ## Command line
 

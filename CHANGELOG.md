@@ -14,6 +14,7 @@ on the releases page.
 ### Removed
 
 - The update check and in-app updates. The tool no longer connects to the internet at all; new versions are on the releases page. Releases no longer carry `.sig` files, only the exes and `SHA256SUMS.txt`
+- Upgrading from 1.4.x: the old version still announces 1.5.0 but reports it as not verified, since there is no signature any more. That notice is expected; download the new version from the releases page once, after that no further checks take place
 
 ## [1.4.1] - 2026-10-10
 
