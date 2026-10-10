@@ -303,9 +303,9 @@ internal static class AuraFiles
         }
     }
 
-    // The four element readers below are used by every kind-checked JSON file this tool has -
+    // The element readers below are used by every kind-checked JSON file this tool has -
     // one place to get "wrong type in a hand-edited file falls back instead of throwing" right,
-    // rather than the same four checks re-typed per file.
+    // rather than the same checks re-typed per file.
 
     public static string JsonText(JsonElement element, string name, string fallback = "") =>
         element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String

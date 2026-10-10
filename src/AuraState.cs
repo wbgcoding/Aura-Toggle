@@ -36,18 +36,22 @@ internal sealed record AuraState(
 
     internal const string FileName = "state.json";
 
+#if REVIEW
     /// <summary>
     /// Handed to the review surfaces instead of the stored state, so a screenshot never shows
-    /// whatever the machine taking it happens to have switched on. Null everywhere else.
+    /// whatever the machine taking it happens to have switched on. Null unless a surface set it.
     /// </summary>
     internal static AuraState? ReviewState { get; set; }
+#endif
 
     public static AuraState Load()
     {
+#if REVIEW
         if (ReviewState != null)
         {
             return ReviewState;
         }
+#endif
 
         using JsonDocument? document = AuraFiles.Read(FileName, JsonValueKind.Object);
         if (document == null)

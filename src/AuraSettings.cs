@@ -83,8 +83,6 @@ internal sealed record AuraSettings(
         {
             JsonElement root = document.RootElement;
 
-            // "startMinimised" from before autostart always went to the tray on its own is read
-            // by nobody any more - an old file with the key just falls through to Default here.
             return new AuraSettings(
                 MinimiseOnClose: AuraFiles.JsonFlag(root, "minimiseOnClose", Default.MinimiseOnClose),
                 StartAction: ValidStartAction(AuraFiles.JsonText(root, "startAction", StartActionNone)),
@@ -206,9 +204,9 @@ internal sealed record AuraSettings(
                 using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKey);
 
                 // A portable copy moved or deleted after the Run entry was written leaves the
-                // entry itself behind - Windows starts nothing from it, but the old check read
-                // "on" from its mere presence anyway. Compared against the path actually running
-                // now instead: only a value this copy itself could have written counts as "on".
+                // entry itself behind - Windows starts nothing from it, so its mere presence
+                // must not read as "on". Compared against the path actually running now: only a
+                // value this copy itself could have written counts.
                 if (key?.GetValue(RunValue) is not string value || Environment.ProcessPath is not string exe)
                 {
                     return false;

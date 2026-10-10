@@ -45,11 +45,10 @@ internal static class AuraPresets
     /// <summary>
     /// Finds a preset by name. Spelling is forgiving: casing, spaces, hyphens and underscores
     /// are ignored, and the display name is accepted in any of the interface languages - not just
-    /// whichever one
-    /// the interface happens to be set to, so a script written as <c>-preset Regenbogen</c> keeps
-    /// working after the user switches to English. Matches how <c>-channel</c> already resolves a
-    /// channel's default name. The command line's <c>-custom</c> lookup uses this same helper,
-    /// so both spellings behave alike.
+    /// whichever one the interface happens to be set to, so a script written as
+    /// <c>-preset Regenbogen</c> keeps working after the user switches to English. Matches how
+    /// <c>-channel</c> already resolves a channel's default name. The command line's <c>-custom</c>
+    /// lookup uses this same helper, so both spellings behave alike.
     /// </summary>
     public static AuraPreset? Find(string name)
     {
