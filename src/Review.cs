@@ -430,7 +430,7 @@ internal static partial class Program
 
             // The panel is its own top-level window, so a simulated move only ever changes the main
             // window's scale - the panel keeps the real screen's dpi and never re-fits, which is
-            // exactly the step that used to walk it out from under the gear on a second monitor.
+            // exactly the step that walks it out from under the gear on a second monitor.
             // Re-fitting it half again as wide stands in for that resize on a single screen.
             form.RefitSettingsForReview(150);
             await Task.Yield();
@@ -512,7 +512,7 @@ internal static partial class Program
     /// instead of something only a second physical monitor could show. WM_DPICHANGED arrives while
     /// WM_ENTERSIZEMOVE is still in effect and WM_EXITSIZEMOVE does not follow until well after -
     /// a real drag between two monitors crosses the scale change with the mouse button still
-    /// down, which is the case that used to wait for a release that had not happened yet.
+    /// down, so the layout must not wait for a release that has not happened yet.
     /// </summary>
     private static void MoveToSimulatedScale(Form form, int scale, Action<string> report, Action? next = null)
     {
