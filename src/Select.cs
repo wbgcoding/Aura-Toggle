@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace AuraToggle;
@@ -240,9 +237,9 @@ internal sealed class Select : FlatControl
 
     /// <summary>
     /// Shared by every <see cref="Select"/> in the process. A sibling drop down still open when
-    /// this one is clicked used to take an extra click or two to get out of the way: the click
-    /// that landed on this control first only deactivated the other popup, and that popup's own
-    /// close raced this one's open. Closing it here, synchronously, before this one is even
+    /// this one is clicked would take an extra click or two to get out of the way: the click
+    /// that lands on this control first only deactivates the other popup, and that popup's own
+    /// close races this one's open. Closing it here, synchronously, before this one is even
     /// created removes the race - by the time the new popup opens, the old one is fully gone.
     /// </summary>
     private static SelectPopup? _openPopup;
@@ -343,8 +340,8 @@ internal sealed class Select : FlatControl
 
         DrawFocusRing(g, path);
 
-        // Everything here is custom painted, so nothing grows with the display on its own - the
-        // icon stayed 22x14 next to text that had doubled.
+        // Everything here is custom painted, so nothing grows with the display on its own - an
+        // unscaled icon would stay 22x14 next to text that had doubled.
         int left = this.Scaled(TextInset);
         var icon = new Rectangle(left, (Height - this.Scaled(IconHeight)) / 2,
             this.Scaled(IconWidth), this.Scaled(IconHeight));
@@ -434,8 +431,8 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>
     /// Set once an arrow key has moved the selection, cleared by the next mouse move. The list
-    /// opens with nothing marked at all: marking the current entry made the highlight jump back to
-    /// it whenever the pointer left the rows, which reads as flicker rather than as an answer to
+    /// opens with nothing marked at all: marking the current entry would make the highlight jump
+    /// back to it whenever the pointer left the rows, which reads as flicker rather than as an answer to
     /// "which one is running" - the closed control says that already.
     /// </summary>
     private bool _keyboard;
@@ -560,9 +557,9 @@ internal sealed class SelectPopup : PopupForm
     }
 
     /// <summary>
-    /// Takes the item list again while the window stays open. Deleting a preset from a row used to
-    /// close the whole list, so removing three of them meant opening it three times - the list is
-    /// where presets are managed, so it has to survive managing them.
+    /// Takes the item list again while the window stays open. Deleting a preset from a row must
+    /// not close the whole list, or removing three of them would mean opening it three times - the
+    /// list is where presets are managed, so it has to survive managing them.
     /// </summary>
     public void Resync(IEnumerable<SelectItem> items)
     {
@@ -708,6 +705,7 @@ internal sealed class SelectPopup : PopupForm
     private static string ShortcutHintFor(SelectItem item) =>
         item.Editable ? Strings.PresetShortcutHint : Strings.ChannelShortcutHint;
 
+#if REVIEW
     /// <summary>
     /// Review mode only: shows the tooltip on the first row that has one, the same way hovering it
     /// would - so the dark-tooltip fix can be screenshotted directly instead of trusted by reading
@@ -739,6 +737,7 @@ internal sealed class SelectPopup : PopupForm
     {
         Theme.PaintToolTip(new DrawToolTipEventArgs(g, this, this, bounds, text, Theme.Surface, Theme.Text, Font));
     }
+#endif
 
     /// <summary>
     /// Set only by <see cref="Program"/>'s review mode: with nothing else on screen to hold focus
