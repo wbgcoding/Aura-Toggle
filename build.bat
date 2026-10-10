@@ -123,10 +123,10 @@ if errorlevel 1 (
 
 if not exist "%DEST%" mkdir "%DEST%"
 
-REM Only the exe is taken out of the staging folder. Publishing straight into dist is what used
-REM to leave the intermediate build output lying next to it; nothing is deleted here, so a
-REM "build.bat portable" no longer removes the setup a full build produced.
-REM Every copy is checked: a silent failure used to leave dist empty while "all" marched on and
+REM Only the exe is taken out of the staging folder: publishing straight into dist would leave
+REM the intermediate build output lying next to it. Nothing is deleted here, so a
+REM "build.bat portable" keeps the setup a full build produced.
+REM Every copy is checked: a silent failure would leave dist empty while "all" marched on and
 REM packed a stale installer.
 copy /y "%STAGE%\%EXE%" "%DEST%" >nul
 if errorlevel 1 goto :copyfailed

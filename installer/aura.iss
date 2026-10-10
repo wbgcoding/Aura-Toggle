@@ -219,9 +219,9 @@ Type: files; Name: "{group}\Aura An.lnk"
 Type: files; Name: "{group}\Aura Aus.lnk"
 
 [Icons]
-; The application and nothing else. One-click on/off shortcuts used to be created here too, which
-; put three entries in the Start menu for a tool whose whole point is one switch - anyone who
-; wants them can make one from the documented -on/-off arguments.
+; The application and nothing else: three Start menu entries for a tool whose whole point is one
+; switch would be noise - anyone who wants on/off shortcuts can make them from the documented
+; -on/-off arguments.
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
@@ -513,12 +513,11 @@ begin
     RepointLegacyAutoStart;
 
   { The [Run] entry below launches the app de-elevated (runasoriginaluser) once the user clicks
-    Finish - a different hand-off than a plain child process, which is why it used to open behind
-    whatever window had focus at that point instead of in front. That hand-off does not go through
-    this elevated Setup.exe directly, so this grant does not reliably reach the process it actually
-    creates - kept anyway as a harmless, no-cost attempt for whichever launch path it does reach.
-    The launched application now claims the foreground itself once its window is up, which does
-    not depend on this grant at all and is the fix this bug actually needed. }
+    Finish - a different hand-off than a plain child process, so the window can open behind
+    whatever has focus. That hand-off does not go through this elevated Setup.exe directly, so
+    this grant does not reliably reach the process it actually creates - kept as a harmless,
+    no-cost attempt for whichever launch path it does reach. The launched application claims
+    the foreground itself once its window is up, which does not depend on this grant. }
   if CurStep = ssDone then
     AllowSetForegroundWindow(AnyProcess);
 end;

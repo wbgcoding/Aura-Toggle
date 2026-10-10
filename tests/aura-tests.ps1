@@ -62,9 +62,8 @@ function Restore-UserData {
         }
         else {
             # Windows PowerShell 5.1's "-Encoding UTF8" always adds a BOM, which AuraFiles.Write
-            # never does - restoring through it left a byte the original file never had, despite
-            # what this comment used to claim. WriteAllText with an explicit BOM-less UTF8Encoding
-            # is the one way to actually match the app's own files byte for byte.
+            # never does. WriteAllText with an explicit BOM-less UTF8Encoding is the one way to
+            # match the app's own files byte for byte.
             $utf8NoBom = New-Object System.Text.UTF8Encoding $false
             [IO.File]::WriteAllText($path, $saved, $utf8NoBom)
         }

@@ -77,7 +77,6 @@ foreach ($bundle in $bundles) {
 }
 
 $english = $bundles[0].Keys
-$englishPath = $bundles[0].Path
 Write-Host "  $($bundles.Count) languages, $($english.Count) keys in $($bundles[0].Name)"
 
 # Placeholders are what actually breaks: a translation that loses "{0}" prints a sentence with a
