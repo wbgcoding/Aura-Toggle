@@ -185,39 +185,6 @@
   <data name="SettingAlwaysOnTop" xml:space="preserve">
     <value>始终置顶</value>
   </data>
-  <data name="TrayUpdateInstall" xml:space="preserve">
-    <value>安装版本 {0}</value>
-  </data>
-  <data name="TrayUpdateOpenPage" xml:space="preserve">
-    <value>版本 {0} 可用：打开发布页面</value>
-  </data>
-  <data name="TrayUpdateAvailable" xml:space="preserve">
-    <value>版本 {0} 可用。点击托盘菜单安装。</value>
-  </data>
-  <data name="TrayUpdateFailed" xml:space="preserve">
-    <value>无法下载或验证更新。</value>
-  </data>
-  <data name="UpdateNoticeTitle" xml:space="preserve">
-    <value>有可用更新</value>
-  </data>
-  <data name="UpdateNoticeBody" xml:space="preserve">
-    <value>版本 {0} 已发布，当前运行的是 {1}。</value>
-  </data>
-  <data name="UpdateNoticeInstall" xml:space="preserve">
-    <value>立即安装</value>
-  </data>
-  <data name="UpdateNoticeOpenPage" xml:space="preserve">
-    <value>打开发布页面</value>
-  </data>
-  <data name="UpdateNoticeLater" xml:space="preserve">
-    <value>稍后</value>
-  </data>
-  <data name="UpdateNotVerified" xml:space="preserve">
-    <value>无法确认版本 {0} 是官方发布的版本，因此没有安装。你可以自行从发布页面下载。</value>
-  </data>
-  <data name="SettingCheckUpdates" xml:space="preserve">
-    <value>检查更新</value>
-  </data>
   <data name="SettingLanguage" xml:space="preserve">
     <value>语言</value>
   </data>

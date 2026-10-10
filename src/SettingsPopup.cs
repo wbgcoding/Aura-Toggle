@@ -23,7 +23,6 @@ internal sealed class SettingsPopup : PopupForm
     private readonly ToggleSwitch _autoStart = new();
     private readonly Select _startAction = new();
     private readonly ToggleSwitch _closeAfterStart = new();
-    private readonly ToggleSwitch _checkUpdates = new();
     private readonly Select _language = new();
     private readonly PillButton _reset = new();
     private readonly ArmedButton _resetArm;
@@ -86,7 +85,7 @@ internal sealed class SettingsPopup : PopupForm
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            RowCount = 15,
+            RowCount = 14,
             BackColor = Theme.Surface,
         };
         _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -126,12 +125,10 @@ internal sealed class SettingsPopup : PopupForm
         });
         UpdateStartActionVisibility();
 
-        AddSwitch(11, () => Strings.SettingCheckUpdates, _checkUpdates, settings.CheckUpdates);
+        AddLabel(11, () => Strings.SettingLanguage);
+        AddSelect(12, _language, () => Strings.SettingLanguage, Languages(), settings.Language);
 
-        AddLabel(12, () => Strings.SettingLanguage);
-        AddSelect(13, _language, () => Strings.SettingLanguage, Languages(), settings.Language);
-
-        AddButton(14, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
+        AddButton(13, _reset, Strings.SettingReset, Theme.NeutralSoft, Theme.Danger);
 
         Controls.Add(_layout);
 
@@ -143,7 +140,6 @@ internal sealed class SettingsPopup : PopupForm
         _animate.CheckedChanged += (_, _) => Apply();
         _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
         _closeAfterStart.CheckedChanged += (_, _) => Apply();
-        _checkUpdates.CheckedChanged += (_, _) => Apply();
         _startAction.SelectionChanged += (_, _) =>
         {
             UpdateStartActionVisibility();
@@ -517,7 +513,6 @@ internal sealed class SettingsPopup : PopupForm
                 AlwaysOnTop = _alwaysOnTop.Checked,
                 StartAction = _startAction.Selected?.Key ?? AuraSettings.StartActionNone,
                 CloseAfterStart = _closeAfterStart.Checked,
-                CheckUpdates = _checkUpdates.Checked,
                 Language = _language.Selected?.Key ?? AuraSettings.LanguageAuto,
                 HotkeyEnabled = _hotkeyEnabled.Checked,
                 Hotkey = _pendingHotkey,

@@ -22,7 +22,7 @@ internal static partial class Program
     /// <summary>
     /// Shows one surface standalone: "settings" (the gear panel, hotkey row forced visible
     /// regardless of the real setting), "error" (a sample <see cref="ErrorDialog"/>, no real
-    /// exception involved), "update" (the update notice for a made-up version), "gear" (the real
+    /// exception involved), "gear" (the real
     /// window and its settings panel together, to measure how the panel sits against the gear and
     /// the toggle button it opened from), or "tip" (the
     /// real effect list with its first hinted row's tooltip already showing, since the review
@@ -32,10 +32,10 @@ internal static partial class Program
     /// </summary>
     private static int RunReview(string surface, string argument)
     {
-        if (surface is not ("settings" or "error" or "editor" or "rename" or "layout" or "update" or "gear"
+        if (surface is not ("settings" or "error" or "editor" or "rename" or "layout" or "gear"
             or "tip" or "preview"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|rename|layout|update|gear|tip|preview|engine|ids [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|rename|layout|gear|tip|preview|engine|ids [scale%]");
             return 2;
         }
 
@@ -90,14 +90,6 @@ internal static partial class Program
             shown = ErrorDialog.Report(
                 new IOException("Sample error for review - the LED controller did not answer in time."),
                 "Review", owner: null, onClosed: Application.Exit, requireMessageLoop: false);
-        }
-        else if (surface == "update")
-        {
-            // A made-up version, no network access - this is the review surface, not a real check.
-            var popup = new UpdatePopup("9.9.9");
-            popup.FormClosed += (_, _) => Application.Exit();
-            popup.Open(owner: null);
-            shown = popup;
         }
         else if (surface == "tip")
         {
@@ -600,13 +592,12 @@ internal static partial class Program
         ("rename", "channel rename, opened from the main window"),
         ("colour", "colour picker, opened from the custom colour chip"),
         ("error", "error dialog"),
-        ("update", "update notice"),
     };
 
     private static readonly Dictionary<string, string[]> ShotGroups = new()
     {
         ["all"] = ShotSurfaces.Select(s => s.Id).ToArray(),
-        ["popups"] = new[] { "settings", "settings-start", "effects", "channels", "tray", "editor", "rename", "colour", "error", "update" },
+        ["popups"] = new[] { "settings", "settings-start", "effects", "channels", "tray", "editor", "rename", "colour", "error" },
     };
 
     private static int RunSurfaceTool(string[] args)
@@ -634,27 +625,6 @@ internal static partial class Program
         if (surface == "engine")
         {
             return ReviewEngine();
-        }
-
-        if (surface == "swap")
-        {
-            return args.Length >= 3 ? ReviewSwap(args[2]) : 2;
-        }
-
-        if (surface == "install")
-        {
-            return args.Length >= 3 ? ReviewInstall(args[2]) : 2;
-        }
-
-        // The downgrade gate on its own: does <file> carry <version>? Printed and written to
-        // %TEMP%\aura-carries.txt; exit 0 yes, 1 no.
-        if (surface == "carries" && args.Length >= 4)
-        {
-            bool carries = AuraUpdate.CarriesVersion(File.ReadAllBytes(args[2]), args[3]);
-            string line = (carries ? "carries " : "does not carry ") + args[3];
-            File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-carries.txt"), line + Environment.NewLine);
-            WriteLine(line);
-            return carries ? 0 : 1;
         }
 
         Strings.Override = AuraSettings.Load().Language;
@@ -690,89 +660,6 @@ internal static partial class Program
         File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-follow.txt"), report + Environment.NewLine);
         WriteLine(report);
         return ok ? 0 : 1;
-    }
-
-    /// <summary>
-    /// The portable self-update without GitHub: verifies a local file against its <c>.sig</c> with
-    /// the same gate the download uses, then swaps this running exe for it and starts the new copy.
-    /// The result goes to <c>%TEMP%\aura-swap.txt</c> as well, since this is a WinExe.
-    /// </summary>
-    private static int ReviewSwap(string file)
-    {
-        string result;
-        int code;
-
-        try
-        {
-            byte[] data = File.ReadAllBytes(file);
-            string signature = File.Exists(file + ".sig") ? File.ReadAllText(file + ".sig") : "";
-
-            if (!UpdateSignature.Verify(data, signature, UpdatePublicKey.Value))
-            {
-                (result, code) = ("not verified, nothing swapped", 1);
-            }
-            else if (!AuraUpdate.SwapPortable(new UpdateDownload(UpdateResult.Verified, data, Path.GetFileName(file))))
-            {
-                (result, code) = ("verified, swap failed", 3);
-            }
-            else
-            {
-                StartReplacement(RestartPath!);
-                (result, code) = ("verified, swapped, restarted " + RestartPath, 0);
-            }
-        }
-        catch (IOException ex)
-        {
-            (result, code) = ("cannot read " + file + ": " + ex.Message, 2);
-        }
-
-        File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-swap.txt"), result + Environment.NewLine);
-        WriteLine(result);
-        return code;
-    }
-
-    /// <summary>
-    /// The installed copy's update without GitHub: verifies a local setup against its <c>.sig</c>
-    /// with the same gate the download uses, then hands it to the same start as the real update,
-    /// elevated for an install for all users. Run from the installed folder. The result goes to
-    /// <c>%TEMP%\aura-install.txt</c> as well, since this is a WinExe.
-    /// </summary>
-    private static int ReviewInstall(string file)
-    {
-        string result;
-        int code;
-
-        try
-        {
-            byte[] data = File.ReadAllBytes(file);
-            string signature = File.Exists(file + ".sig") ? File.ReadAllText(file + ".sig") : "";
-
-            if (!AuraUpdate.IsInstalled)
-            {
-                (result, code) = ("not an installed copy, nothing started", 3);
-            }
-            else if (!UpdateSignature.Verify(data, signature, UpdatePublicKey.Value))
-            {
-                (result, code) = ("not verified, nothing started", 1);
-            }
-            else if (AuraUpdate.InstallVerified(new UpdateDownload(UpdateResult.Verified, data, Path.GetFileName(file)),
-                out bool declined))
-            {
-                (result, code) = ("verified, setup started", 0);
-            }
-            else
-            {
-                (result, code) = (declined ? "verified, UAC declined, app stays open" : "verified, setup did not start", 4);
-            }
-        }
-        catch (IOException ex)
-        {
-            (result, code) = ("cannot read " + file + ": " + ex.Message, 2);
-        }
-
-        File.WriteAllText(Path.Combine(Path.GetTempPath(), "aura-install.txt"), result + Environment.NewLine);
-        WriteLine(result);
-        return code;
     }
 
     /// <summary>
@@ -918,7 +805,7 @@ internal static partial class Program
     private static int PrintSurfaceIds()
     {
         WriteLine("Review surfaces (-review <id> [scale%]):");
-        WriteLine("  settings  error  editor  rename  layout  gear  tip  preview  follow  engine  swap <signed exe>  install <signed setup>  carries <file> <version>");
+        WriteLine("  settings  error  editor  rename  layout  gear  tip  preview  follow  engine");
         WriteLine("");
         WriteLine("Shot surfaces (-shot [id|group ...] [scale=100,150] [lang=en,de] [out=<folder>]):");
         foreach ((string id, string description) in ShotSurfaces)
@@ -1249,41 +1136,27 @@ internal static partial class Program
             }
         }
 
-        if (id is "error" or "update")
+        if (id == "error")
         {
             void OpenAlone()
             {
-                if (id == "error")
+                if (ErrorDialog.Report(
+                        new IOException("Sample error for review - the LED controller did not answer in time."),
+                        "Review", owner: null, onClosed: () => { }, requireMessageLoop: false) is Form dialog)
                 {
-                    if (ErrorDialog.Report(
-                            new IOException("Sample error for review - the LED controller did not answer in time."),
-                            "Review", owner: null, onClosed: () => { }, requireMessageLoop: false) is Form dialog)
+                    dialog.Shown += async (_, _) =>
                     {
-                        dialog.Shown += async (_, _) =>
-                        {
-                            await Settle(dialog);
-                            await Capture();
-                        };
-                    }
-                    else
-                    {
-                        Application.Exit();
-                    }
-
-                    return;
+                        await Settle(dialog);
+                        await Capture();
+                    };
                 }
-
-                // A made-up version, no network access - the popup alone, the way the error dialog is.
-                var notice = new UpdatePopup("9.9.9");
-                notice.Shown += async (_, _) =>
+                else
                 {
-                    await Settle(notice);
-                    await Capture();
-                };
-                notice.Open(owner: null);
+                    Application.Exit();
+                }
             }
 
-            // These two have no window to open from, so with AURA_SHOT_WAIT set they are created
+            // This one has no window to open from, so with AURA_SHOT_WAIT set it is created
             // only once the wait is over - after the display scale changed, like an error raised
             // while the main window sits on a second monitor.
             if (int.TryParse(Environment.GetEnvironmentVariable("AURA_SHOT_WAIT"), out int held) && held > 0)

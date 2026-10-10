@@ -131,20 +131,6 @@ internal sealed partial class ToggleForm : Form
     /// <summary>The built-in effects and custom presets, as in the window's list - see <see cref="RefreshTrayEffects"/>.</summary>
     private readonly ToolStripMenuItem _trayEffects = new();
 
-    /// <summary>Hidden until <see cref="CheckForUpdatesIfDue"/> actually finds a newer release.</summary>
-    private readonly ToolStripMenuItem _trayUpdate = new() { Visible = false };
-
-    /// <summary>What a click on <see cref="_trayUpdate"/> does right now - see <see cref="SetTrayUpdate"/>.</summary>
-    private Action? _trayUpdateAction;
-
-    /// <summary>A one-time notice that came due while there was no window to show it on
-    /// (autostart, or manually minimised to tray) - shown by <see cref="RestoreFromTray"/> the
-    /// moment there is one again, instead of waiting for the next check up to 24 hours later.</summary>
-    private UpdateInfo? _pendingNotice;
-
-    /// <summary>Set while an update downloads and starts; a second click meanwhile does nothing.</summary>
-    private bool _installingUpdate;
-
     // A single left click on the tray icon toggles the lighting, but the first click of a
     // double-click looks identical until the second one either arrives or does not - so it is
     // held here until SystemInformation.DoubleClickTime passes with no second click, and dropped
@@ -518,8 +504,6 @@ internal sealed partial class ToggleForm : Form
         RefreshTrayEffects();
 
         menu.Items.Add(new ToolStripSeparator());
-        _trayUpdate.Click += (_, _) => _trayUpdateAction?.Invoke();
-        menu.Items.Add(_trayUpdate);
 
         var open =new ToolStripMenuItem(Strings.TrayOpen) { Tag = "open" };
         open.Click += (_, _) => RestoreFromTray();
@@ -830,14 +814,6 @@ internal sealed partial class ToggleForm : Form
         }
 
         Reveal();
-
-#if REVIEW
-        // The review build runs against a throwaway data folder and must never reach the network.
-        if (!AuraFiles.ReviewStore)
-#endif
-        {
-            _ = CheckForUpdatesIfDue();
-        }
     }
 
     /// <summary>
@@ -2186,12 +2162,6 @@ internal sealed partial class ToggleForm : Form
         Activate();
         RefreshFromDisk();
         _toggle.Paused = false;
-
-        if (_pendingNotice is UpdateInfo notice)
-        {
-            _pendingNotice = null;
-            ShowUpdateNotice(notice);
-        }
 
         if (_devices.Count == 0)
         {

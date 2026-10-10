@@ -20,10 +20,7 @@ internal sealed record AuraSettings(
     int Hotkey,
     int? WindowX,
     int? WindowY,
-    int? WindowWidth,
-    bool CheckUpdates,
-    string LastUpdateCheckUtc,
-    string UpdateNoticeVersion)
+    int? WindowWidth)
 {
     /// <summary>Leave the lighting untouched when the tool starts.</summary>
     public const string StartActionNone = "";
@@ -59,10 +56,7 @@ internal sealed record AuraSettings(
         Hotkey: HotKey.Default,
         WindowX: null,
         WindowY: null,
-        WindowWidth: null,
-        CheckUpdates: true,
-        LastUpdateCheckUtc: "",
-        UpdateNoticeVersion: "");
+        WindowWidth: null);
 
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string RunValue = "AuraToggle";
@@ -102,10 +96,7 @@ internal sealed record AuraSettings(
                 Hotkey: ValidHotkey(AuraFiles.JsonNumber(root, "hotkey", Default.Hotkey)),
                 WindowX: AuraFiles.JsonNumberOrNull(root, "windowX"),
                 WindowY: AuraFiles.JsonNumberOrNull(root, "windowY"),
-                WindowWidth: AuraFiles.JsonNumberOrNull(root, "windowWidth"),
-                CheckUpdates: AuraFiles.JsonFlag(root, "checkUpdates", Default.CheckUpdates),
-                LastUpdateCheckUtc: AuraFiles.JsonText(root, "lastUpdateCheckUtc"),
-                UpdateNoticeVersion: AuraFiles.JsonText(root, "updateNoticeVersion"));
+                WindowWidth: AuraFiles.JsonNumberOrNull(root, "windowWidth"));
         }
         catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
@@ -165,9 +156,6 @@ internal sealed record AuraSettings(
             writer.WriteNumber("windowWidth", WindowWidth.Value);
         }
 
-        writer.WriteBoolean("checkUpdates", CheckUpdates);
-        writer.WriteString("lastUpdateCheckUtc", LastUpdateCheckUtc);
-        writer.WriteString("updateNoticeVersion", UpdateNoticeVersion);
         writer.WriteEndObject();
     });
 
