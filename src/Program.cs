@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace AuraToggle;
@@ -204,9 +202,9 @@ internal static partial class Program
     /// machine - two sessions of the same account (a physical logon plus a Remote Desktop one)
     /// would each see themselves as the first instance and both open the one physical controller.
     /// The "Global\" prefix makes it machine-wide instead, which is what "one instance" is meant
-    /// to guarantee here. Falls back to the old session-local name if creating a global object is
+    /// to guarantee here. Falls back to a session-local name if creating a global object is
     /// denied - a locked-down policy blocking that is rare, and failing open (one instance per
-    /// session, the previous behaviour) beats not starting at all.
+    /// session) beats not starting at all.
     /// </summary>
     private static Mutex CreateSingleInstanceMutex(out bool first)
     {
@@ -232,7 +230,7 @@ internal static partial class Program
     /// <see cref="Application.MessageLoop"/> is per-thread: it reads true on the UI thread (the
     /// common case, <see cref="Application.ThreadException"/>) but false for
     /// <see cref="AppDomain.UnhandledException"/> firing on a worker thread, even with the
-    /// window very much still open - that used to fall through to <see cref="Environment.Exit"/>
+    /// window very much still open - that would fall through to <see cref="Environment.Exit"/>
     /// with nothing shown at all. <see cref="_mainForm"/> covers that case by marshalling the
     /// dialog over with <see cref="Control.BeginInvoke(Delegate)"/> instead.
     /// </remarks>
@@ -416,7 +414,7 @@ internal static partial class Program
     /// <summary>
     /// Pulls <c>-device</c> and <c>-channel</c> out of the argument list wherever they appear,
     /// each consuming the token right after it; everything else stays in order for the existing
-    /// positional parsing below to see exactly as before.
+    /// positional parsing below to see unchanged.
     /// </summary>
     private static (List<string> Positional, string? Device, string? Channel) ExtractTargeting(string[] args)
     {
@@ -454,7 +452,7 @@ internal static partial class Program
     /// Turns <c>-device</c>/<c>-channel</c> into the (deviceKey, channel) pair every apply method
     /// already takes. Does no hardware discovery at all when neither flag was given, which is the
     /// overwhelmingly common case - <c>-on</c>/<c>-off</c>/<c>-preset</c>/<c>-brightness</c> stay
-    /// exactly as cheap as before for anyone not targeting a single channel or controller.
+    /// exactly as cheap for anyone not targeting a single channel or controller.
     /// </summary>
     private static bool TryResolveTarget(string? deviceArg, string? channelArg, out string? deviceKey,
         out int channel, out int errorExitCode)
@@ -1044,8 +1042,8 @@ internal static partial class Program
     /// <remarks>
     /// Re-asserting the untouched channels is what makes a mix survive. The controller applies a
     /// new effect across its channels unless every one of them is named in the same burst, which
-    /// is why a static header next to an animated one used to end up running the same effect as
-    /// its neighbour. Channels that have never been set on their own are left alone, since there
+    /// is why a static header next to an animated one would end up running the same effect as its
+    /// neighbour. Channels that have never been set on their own are left alone, since there
     /// is nothing to re-assert and guessing would overwrite the BIOS lighting - except when a
     /// firmware mode is picked, which the hardware runs on every channel anyway
     /// (<see cref="ShareEngine"/>).
@@ -1060,8 +1058,8 @@ internal static partial class Program
     {
         List<AuraDevice> targets = ResolveDevices(devices, deviceKey);
 
-        // Read once, then indexed per channel: this used to re-read and re-parse the whole file
-        // for every single channel.
+        // Read once, then indexed per channel, rather than re-parsing the whole file for every
+        // single channel.
         Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
         var named = new List<(string, int)>();
         IOException? failure = null;
@@ -1401,8 +1399,7 @@ internal static partial class Program
             // still applies an effect across every channel of a controller in one burst unless
             // the whole mix arrives together, so anything left out on a
             // controller the preset touches is re-asserted from its own record here, the same
-            // rule ApplyMix enforces for the plain switch path. This held only by convention
-            // before, because the preset editor always names every channel it finds.
+            // rule ApplyMix enforces for the plain switch path.
             //
             // A brightness override additionally reaches every OTHER controller too, named by
             // the preset or not: "all channels to this brightness" has to mean literally every
@@ -1410,8 +1407,7 @@ internal static partial class Program
             // AuraChannelStates.SetBrightness. Without this, a channel the preset does not
             // mention - on the same controller or a second one entirely - would keep whatever
             // brightness it already had while everything the preset does name jumped to the new
-            // value, which is the same "did the slider even do anything" complaint that started
-            // this fix in the first place.
+            // value, and the slider would look as if it did nothing.
             var gapFillDevices = brightnessOverride.HasValue
                 ? devices
                 : devices.FindAll(d => named.Any(n => n.DeviceKey == d.Key));
@@ -1519,8 +1515,7 @@ internal static partial class Program
         // A preset sets each channel individually, so each one remembers its own look - written
         // in one pass instead of once per entry. A brightness override's 0 means "follow the
         // board" and has to land as written, not be read back as "unset" and swapped for the
-        // channel's previous value - which was the whole-board slider's own "did it even do
-        // anything" bug re-entering one layer down.
+        // channel's previous value, which would make the whole-board slider do nothing.
         AuraChannelStates.Remember(applied, Attached(devices), keepBrightness: !brightnessOverride.HasValue);
 
         CustomPresetEntry first = preset.Entries[0];
