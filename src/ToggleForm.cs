@@ -467,6 +467,24 @@ internal sealed partial class ToggleForm : Form
         return stream == null ? null : new Icon(stream, size);
     }
 
+    /// <summary>
+    /// Room above the first and below the last entry, and a little more height per row, so the
+    /// rounded highlight does not sit against the menu's own rounded edge. Applied as the menu
+    /// opens, which also catches the effect entries rebuilt since, at the window's current scale.
+    /// </summary>
+    private void SpaceTrayMenu(ToolStripDropDown menu)
+    {
+        int edge = this.Scaled(4);
+        menu.Padding = new Padding(menu.Padding.Left, edge, menu.Padding.Right, edge);
+        foreach (ToolStripItem item in menu.Items)
+        {
+            if (item is ToolStripMenuItem)
+            {
+                item.Padding = new Padding(0, this.Scaled(3), 0, this.Scaled(3));
+            }
+        }
+    }
+
     private void SetUpTray()
     {
         var menu = new ContextMenuStrip
@@ -488,6 +506,13 @@ internal sealed partial class ToggleForm : Form
         _trayEffects.DropDown.BackColor = Theme.Surface;
         _trayEffects.DropDown.ForeColor = Theme.Text;
         _trayEffects.DropDown.Font = Theme.Menu;
+
+        // The same compositor-drawn rounded corners and border as every popup of the window, for
+        // the menu and its effect list alike; HandleCreated covers a handle WinForms recreates.
+        menu.HandleCreated += (_, _) => Theme.RoundWindowCorners(menu.Handle);
+        _trayEffects.DropDown.HandleCreated += (_, _) => Theme.RoundWindowCorners(_trayEffects.DropDown.Handle);
+        menu.Opening += (_, _) => SpaceTrayMenu(menu);
+        _trayEffects.DropDown.Opening += (_, _) => SpaceTrayMenu(_trayEffects.DropDown);
         menu.Items.Add(_trayEffects);
         RefreshTrayEffects();
 
@@ -1634,6 +1659,23 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>Surface tool only: the channel list, opened the way a click on it does.</summary>
     internal void OpenChannelsForReview() => _channel.OpenForReview();
+
+    /// <summary>Surface tool only: the tray menu with its effect list open, placed over the
+    /// window so a window shot takes it in - the real one opens at the notification area.</summary>
+    internal static IEnumerable<ToolStripDropDown> ReviewMenus =>
+        Application.OpenForms.OfType<ToggleForm>()
+            .SelectMany(f => new ToolStripDropDown?[] { f._tray.ContextMenuStrip, f._trayEffects.DropDown })
+            .OfType<ToolStripDropDown>();
+
+    internal void OpenTrayMenuForReview()
+    {
+        if (_tray.ContextMenuStrip is ContextMenuStrip menu)
+        {
+            menu.Show(this, new Point(this.Scaled(16), this.Scaled(16)));
+            _trayEffects.Select();
+            _trayEffects.ShowDropDown();
+        }
+    }
 
     /// <summary>Surface tool only: the editor for a new preset, as its list row opens it.</summary>
     internal void OpenEditorForReview() => OpenPresetEditor(null);
@@ -2835,6 +2877,34 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
     public TrayMenuRenderer() : base(new TrayColours())
     {
         RoundedEdges = true;
+    }
+
+    protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
+    {
+        // A drop down gets its border from the compositor along with the rounded corners; a
+        // square one drawn here would show its corners poking out of the rounded window.
+        if (e.ToolStrip is not ToolStripDropDown)
+        {
+            base.OnRenderToolStripBorder(e);
+        }
+    }
+
+    protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+    {
+        if (e.Item is not { Selected: true, Enabled: true })
+        {
+            return;
+        }
+
+        // A rounded highlight set in from the menu's edges, matching the rows of the window's own
+        // lists, instead of the square bar that ran into the rounded corners.
+        Rectangle row = new(Point.Empty, e.Item.Size);
+        int inset = Math.Max(2, row.Height / 8);
+        var area = new RectangleF(inset, 1, row.Width - (inset * 2) - 1, row.Height - 3);
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using var path = Theme.RoundedRectangle(area, row.Height / 5f);
+        using var brush = new SolidBrush(Theme.AccentSoft);
+        e.Graphics.FillPath(brush, path);
     }
 
     protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)

@@ -595,6 +595,7 @@ internal static partial class Program
         ("settings-start", "gear panel with its start lighting list open"),
         ("effects", "effect list, opened from the main window"),
         ("channels", "channel list, opened from the main window"),
+        ("tray", "notification area menu with its effect list open, shown over the main window"),
         ("editor", "new custom preset, opened from the main window"),
         ("rename", "channel rename, opened from the main window"),
         ("colour", "colour picker, opened from the custom colour chip"),
@@ -605,7 +606,7 @@ internal static partial class Program
     private static readonly Dictionary<string, string[]> ShotGroups = new()
     {
         ["all"] = ShotSurfaces.Select(s => s.Id).ToArray(),
-        ["popups"] = new[] { "settings", "settings-start", "effects", "channels", "editor", "rename", "colour", "error", "update" },
+        ["popups"] = new[] { "settings", "settings-start", "effects", "channels", "tray", "editor", "rename", "colour", "error", "update" },
     };
 
     private static int RunSurfaceTool(string[] args)
@@ -1325,6 +1326,9 @@ internal static partial class Program
                 case "channels":
                     form.OpenChannelsForReview();
                     break;
+                case "tray":
+                    form.OpenTrayMenuForReview();
+                    break;
                 case "editor":
                     form.OpenEditorForReview();
                     break;
@@ -1374,6 +1378,9 @@ internal static partial class Program
     /// bottom and black columns on the right. The frame is as thick on the right and bottom as it
     /// is on the left, so the painted edge is the client edge plus that thickness.
     /// </summary>
+    private static Rectangle CapturedBounds(Control control) =>
+        control is Form form ? PaintedBounds(form) : control.Bounds;
+
     private static Rectangle PaintedBounds(Form form)
     {
         Rectangle visible = VisibleBounds(form);
@@ -1395,21 +1402,24 @@ internal static partial class Program
     /// </summary>
     private static Bitmap CaptureSurface()
     {
-        List<Form> forms = Application.OpenForms.Cast<Form>()
+        // Open menus are windows of their own but not forms; the tray menu is the one there is.
+        List<Control> forms = Application.OpenForms.Cast<Form>()
             .Where(f => f.Visible && f.Opacity > 0 && f.Width > 0 && f.Height > 0)
+            .Cast<Control>()
+            .Concat(ToggleForm.ReviewMenus.Where(m => m.Visible))
             .ToList();
         if (forms.Count == 0)
         {
             throw new InvalidOperationException("nothing visible to capture");
         }
 
-        Rectangle union = forms.Select(PaintedBounds).Aggregate(Rectangle.Union);
+        Rectangle union = forms.Select(CapturedBounds).Aggregate(Rectangle.Union);
         var shot = new Bitmap(union.Width, union.Height, PixelFormat.Format32bppArgb);
         using Graphics canvas = Graphics.FromImage(shot);
         canvas.Clear(Color.Transparent);
 
         // Creation order: the main window first, then what was opened from it on top.
-        foreach (Form form in forms)
+        foreach (Control form in forms)
         {
             using var layer = new Bitmap(form.Width, form.Height, PixelFormat.Format32bppRgb);
             using (Graphics g = Graphics.FromImage(layer))
@@ -1425,7 +1435,7 @@ internal static partial class Program
                 }
             }
 
-            Rectangle visible = PaintedBounds(form);
+            Rectangle visible = CapturedBounds(form);
             canvas.DrawImage(layer,
                 new Rectangle(visible.Left - union.Left, visible.Top - union.Top, visible.Width, visible.Height),
                 new Rectangle(visible.Left - form.Left, visible.Top - form.Top, visible.Width, visible.Height),
