@@ -152,7 +152,9 @@ internal static partial class Program
                     return 0;
                 }
 
-                AuraLog.Info($"Start action \"{action}\" applied, exiting without a window.");
+                AuraLog.Info($"Start action \"{action}\" applied.");
+                ReassertStartAction(action);
+                AuraLog.Info("Start action settled, exiting without a window.");
                 return 0;
             }
             catch (AuraNotFoundException ex) when (!ex.WorthRetrying)
@@ -171,6 +173,72 @@ internal static partial class Program
                 Thread.Sleep(pauseMs);
             }
         }
+    }
+
+    /// <summary>
+    /// Sends the start lighting again a few times during the first minute after logon. The
+    /// controller answers and takes the burst as soon as it enumerates, but the board can still
+    /// reset its lighting after that (the USB hub settling, a fast-startup resume, another
+    /// lighting service starting up) and leave every header dark. This run exits right after, so
+    /// without a second look nothing would ever put the lighting back.
+    /// </summary>
+    /// <remarks>
+    /// Re-sending what is already showing changes nothing visible. As soon as the lighting was
+    /// changed from anywhere else in the meantime (the window opened by hand, the command line,
+    /// the hotkey), the records on disk differ from the snapshot and the re-asserting stops, so a
+    /// choice the user just made is never undone.
+    /// </remarks>
+    private static void ReassertStartAction(string action)
+    {
+        int[] pausesMs = [5000, 10000, 15000, 30000];
+        string snapshot = LightingRecords();
+
+        foreach (int pause in pausesMs)
+        {
+            Thread.Sleep(pause);
+
+            using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+            {
+                if (LightingRecords() != snapshot)
+                {
+                    AuraLog.Info("Lighting changed since the start action, no longer re-asserting it.");
+                    return;
+                }
+
+                try
+                {
+                    // The lock is re-entrant on this thread, so the apply below holds it straight
+                    // through and nothing can slip in between the check and the write.
+                    ApplyStartAction(action);
+                }
+                catch (Exception ex) when (ex is AuraNotFoundException or IOException)
+                {
+                    // The controller dropping out for a moment is exactly what this is for - the
+                    // next round tries again.
+                    AuraLog.Warn($"Start action re-assert: {ex.GetType().Name}: {ex.Message}");
+                }
+
+                snapshot = LightingRecords();
+            }
+        }
+    }
+
+    /// <summary>The stored lighting records as raw text, to tell whether anyone changed them.</summary>
+    private static string LightingRecords()
+    {
+        static string Text(string name)
+        {
+            try
+            {
+                return File.ReadAllText(AuraFiles.PathTo(name));
+            }
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
+            {
+                return "";
+            }
+        }
+
+        return Text(AuraState.FileName) + "\n" + Text(AuraChannelStates.FileName);
     }
 
     /// <summary>

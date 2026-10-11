@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- With "Apply and close app" on, the start lighting could be gone right after logon and leave the board dark. The tool now sends it again a few times during the first minute and stops as soon as the lighting is changed by hand
+
 ## [1.5.0] - 2026-10-10
 
 Aura Toggle now works entirely offline. The update check is gone; new versions are announced
