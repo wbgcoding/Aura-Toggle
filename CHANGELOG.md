@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The setup warns when Aura Toggle is already installed in a different folder and offers to uninstall that copy first. Settings and presets are kept, and autostart moves over to the new folder
+
 ### Fixed
 
 - Upgrading from an early 1.0 build left the old "Aura Toggle.exe" in the install folder, and an autostart entry pointing at it kept starting that old build at logon, which ignored the start lighting. The setup now removes it and points the entry at the current exe
