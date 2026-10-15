@@ -146,14 +146,30 @@ internal static partial class Program
         {
             try
             {
-                if (ApplyStartAction(action) == null)
+                string snapshot;
+                using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
                 {
-                    AuraLog.Info($"Start action \"{action}\" names nothing that exists any more, left the lighting alone.");
-                    return 0;
+                    if (ApplyStartAction(action) == null)
+                    {
+                        AuraLog.Info($"Start action \"{action}\" names nothing that exists any more, left the lighting alone.");
+                        return 0;
+                    }
+
+                    // Taken under the same lock as the apply, so nothing written in between can
+                    // end up as the baseline the re-asserting compares against.
+                    snapshot = LightingRecords();
                 }
 
                 AuraLog.Info($"Start action \"{action}\" applied.");
-                ReassertStartAction(action);
+                foreach (int pause in ReassertPausesMs)
+                {
+                    Thread.Sleep(pause);
+                    if (ReassertStartAction(action, ref snapshot) == null)
+                    {
+                        break;
+                    }
+                }
+
                 AuraLog.Info("Start action settled, exiting without a window.");
                 return 0;
             }
@@ -176,55 +192,54 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// Sends the start lighting again a few times during the first minute after logon. The
+    /// How long after the start lighting it is sent again, one pause before each round. The
     /// controller answers and takes the burst as soon as it enumerates, but the board can still
     /// reset its lighting after that (the USB hub settling, a fast-startup resume, another
-    /// lighting service starting up) and leave every header dark. This run exits right after, so
-    /// without a second look nothing would ever put the lighting back.
+    /// lighting service starting up) and leave every header dark, so it is sent a few more times
+    /// during the first minute after logon.
     /// </summary>
-    /// <remarks>
-    /// Re-sending what is already showing changes nothing visible. As soon as the lighting was
-    /// changed from anywhere else in the meantime (the window opened by hand, the command line,
-    /// the hotkey), the records on disk differ from the snapshot and the re-asserting stops, so a
-    /// choice the user just made is never undone.
-    /// </remarks>
-    private static void ReassertStartAction(string action)
+    public static readonly int[] ReassertPausesMs = [5000, 10000, 15000, 30000];
+
+    /// <summary>
+    /// One round of sending the start lighting again. Re-sending what is already showing changes
+    /// nothing visible. As soon as the lighting was changed from anywhere else since
+    /// <paramref name="snapshot"/> (the window, the command line, the hotkey), the records on disk
+    /// differ and this returns null without touching anything, so a choice the user just made is
+    /// never undone; the caller stops there.
+    /// </summary>
+    /// <param name="snapshot">The records as last left by the start action, updated after the round.</param>
+    /// <returns>The state afterwards, or null once the lighting was changed by someone else.</returns>
+    public static AuraState? ReassertStartAction(string action, ref string snapshot)
     {
-        int[] pausesMs = [5000, 10000, 15000, 30000];
-        string snapshot = LightingRecords();
-
-        foreach (int pause in pausesMs)
+        using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
         {
-            Thread.Sleep(pause);
-
-            using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+            if (LightingRecords() != snapshot)
             {
-                if (LightingRecords() != snapshot)
-                {
-                    AuraLog.Info("Lighting changed since the start action, no longer re-asserting it.");
-                    return;
-                }
-
-                try
-                {
-                    // The lock is re-entrant on this thread, so the apply below holds it straight
-                    // through and nothing can slip in between the check and the write.
-                    ApplyStartAction(action);
-                }
-                catch (Exception ex) when (ex is AuraNotFoundException or IOException)
-                {
-                    // The controller dropping out for a moment is exactly what this is for - the
-                    // next round tries again.
-                    AuraLog.Warn($"Start action re-assert: {ex.GetType().Name}: {ex.Message}");
-                }
-
-                snapshot = LightingRecords();
+                AuraLog.Info("Lighting changed since the start action, no longer re-asserting it.");
+                return null;
             }
+
+            AuraState state = AuraState.Load();
+            try
+            {
+                // The lock is re-entrant on this thread, so the apply below holds it straight
+                // through and nothing can slip in between the check and the write.
+                state = ApplyStartAction(action) ?? state;
+            }
+            catch (Exception ex) when (ex is AuraNotFoundException or IOException)
+            {
+                // The controller dropping out for a moment is exactly what this is for - the
+                // next round tries again.
+                AuraLog.Warn($"Start action re-assert: {ex.GetType().Name}: {ex.Message}");
+            }
+
+            snapshot = LightingRecords();
+            return state;
         }
     }
 
     /// <summary>The stored lighting records as raw text, to tell whether anyone changed them.</summary>
-    private static string LightingRecords()
+    public static string LightingRecords()
     {
         static string Text(string name)
         {
@@ -1679,9 +1694,6 @@ internal static partial class Program
                 return;
             }
 
-            AuraState state = AuraState.Load();
-            Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
-
             // Recorded before each controller is written, not after: a controller that throws
             // half way through its burst has still been changed and has to be put back.
             var touched = new List<AuraDevice>();
@@ -1715,6 +1727,11 @@ internal static partial class Program
                 // controller stuck dark with channel-state.json still describing it as lit.
                 using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
                 {
+                    // Read now, not before the wait: the lock was free all that time, so the
+                    // command line or a start action may have changed what the records say.
+                    AuraState state = AuraState.Load();
+                    Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
+
                     foreach (AuraDevice device in touched)
                     {
                         Replay(device, state, remembered);

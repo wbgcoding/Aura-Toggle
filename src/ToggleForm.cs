@@ -178,15 +178,6 @@ internal sealed partial class ToggleForm : Form
     private System.Windows.Forms.Timer? _revealTimer;
 
     /// <summary>
-    /// Autostart only: a controller that is not up yet at logon is looked for again every few
-    /// seconds, the way the headless start-lighting path waits for it, so the start lighting
-    /// still lands. Stopped as soon as one appears or the budget is spent.
-    /// </summary>
-    private System.Windows.Forms.Timer? _startRetryTimer;
-
-    private int _startRetries;
-
-    /// <summary>
     /// Stands in for the real controllers when <c>-review layout</c> measures the window. Never
     /// set by the normal application, which always asks the hardware.
     /// </summary>
@@ -1329,74 +1320,6 @@ internal sealed partial class ToggleForm : Form
             {
                 _identifyCts = null;
             }
-        }
-    }
-
-    private void StartDiscoveryRetry()
-    {
-        const int intervalMs = 3000;
-        const int maxRetries = 20;
-
-        _startRetries = 0;
-        _startRetryTimer = new System.Windows.Forms.Timer { Interval = intervalMs };
-        _startRetryTimer.Tick += async (_, _) =>
-        {
-            if (_busy || IsDisposed)
-            {
-                return;
-            }
-
-            // Stopped while the discovery runs, so a slow sweep is never started a second time.
-            _startRetryTimer?.Stop();
-            _startRetries++;
-
-            if (_devices.Count == 0)
-            {
-                await DiscoverDevices();
-            }
-
-            if (IsDisposed)
-            {
-                return;
-            }
-
-            if (_devices.Count > 0)
-            {
-                StopDiscoveryRetry();
-                await ApplyStartAction();
-            }
-            else if (_startRetries >= maxRetries)
-            {
-                StopDiscoveryRetry();
-                AuraLog.Info("No controller appeared within the autostart retry window.");
-            }
-            else
-            {
-                _startRetryTimer?.Start();
-            }
-        };
-        _startRetryTimer.Start();
-    }
-
-    private void StopDiscoveryRetry()
-    {
-        _startRetryTimer?.Stop();
-        _startRetryTimer?.Dispose();
-        _startRetryTimer = null;
-    }
-
-    /// <summary>
-    /// Puts the lighting into the state chosen in the settings. Only called for a real
-    /// Windows-startup launch (see <see cref="OnShown"/>), never for the user opening the window
-    /// by hand later in the same session.
-    /// </summary>
-    private async Task ApplyStartAction()
-    {
-        string action = _settings.StartAction;
-
-        if (action != AuraSettings.StartActionNone)
-        {
-            await Run(() => Program.ApplyStartAction(action) ?? _state);
         }
     }
 
