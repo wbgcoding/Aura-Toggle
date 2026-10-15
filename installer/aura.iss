@@ -582,19 +582,23 @@ end;
 
 { Runs the other copy's own uninstaller, silently, and waits for it to finish. ShellExec rather
   than Exec, so a per-machine uninstaller started from a per-user setup can still ask for its
-  elevation. The first phase of an Inno uninstaller hands over to a copy of itself, so the key
-  disappearing is what says it is done, not the process ending. Every version of the uninstaller
-  answers its "delete settings too?" question with No when it runs silently. }
+  elevation; declining that prompt fails the call, and there is nothing to wait for. The first
+  phase of an Inno uninstaller hands over to a copy of itself, so the process ending says
+  nothing: done is when its key is gone and its own exe, the last thing it removes after its
+  final step, is gone too. Every version of the uninstaller answers its "delete settings too?"
+  question with No when it runs silently. }
 function UninstallOther(Root: Integer; const Uninstaller: String): Boolean;
 var
   ResultCode: Integer;
   Waited: Integer;
 begin
-  ShellExec('', Uninstaller, '/SILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_SHOW,
-    ewWaitUntilTerminated, ResultCode);
+  Result := False;
+  if not ShellExec('', Uninstaller, '/SILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_SHOW,
+    ewWaitUntilTerminated, ResultCode) then
+    Exit;
 
   Waited := 0;
-  while RegKeyExists(Root, UninstallKey) and (Waited < 60000) do
+  while (RegKeyExists(Root, UninstallKey) or FileExists(Uninstaller)) and (Waited < 60000) do
   begin
     Sleep(250);
     Waited := Waited + 250;
@@ -608,6 +612,7 @@ function CheckOtherInstall(Root: Integer): Boolean;
 var
   Dir: String;
   Uninstaller: String;
+  Current: String;
 begin
   Result := True;
   if not OtherInstall(Root, Dir, Uninstaller) then
@@ -619,7 +624,9 @@ begin
       Result := False;
     IDYES:
       begin
-        if RegValueExists(HKEY_CURRENT_USER, RunKey, 'AuraToggle') then
+        { Only an entry that starts the copy being removed; a portable copy's stays its own. }
+        if RegQueryStringValue(HKEY_CURRENT_USER, RunKey, 'AuraToggle', Current) and
+           (Pos(Lowercase(AddBackslash(Dir)), Lowercase(Current)) > 0) then
           RestoreAutoStart := True;
 
         if not UninstallOther(Root, Uninstaller) then
@@ -832,24 +839,26 @@ begin
     if RegQueryStringValue(HKEY_CURRENT_USER,
       'Software\Microsoft\Windows\CurrentVersion\Run', 'AuraToggle', RunValue) and
        (Pos(Lowercase(ExpandConstant('{app}\')), Lowercase(RunValue)) > 0) then
-    begin
       RegDeleteValue(HKEY_CURRENT_USER,
         'Software\Microsoft\Windows\CurrentVersion\Run', 'AuraToggle');
 
     { Same blind spot as the [Run] reg.exe entry at install time: if this uninstaller is
       elevated as a *different* administrator account than the one that actually used the app,
-      the call above clears that admin's own Run key, not the real user's. [UninstallRun] has no
-      runasoriginaluser flag (Run-only), so ExecAsOriginalUser is the documented way to still
-      reach the real interactive user's hive from [Code]. Best-effort like the install-time call:
-      raises instead of failing quietly when this uninstaller was never elevated - the common,
-      per-user case - which would otherwise abort the rest of this procedure, skipping the app
-      data prompt below entirely over a call that was never going to do anything anyway. }
-      try
-        ExecAsOriginalUser('reg.exe',
-          'delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle /f',
-          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-      except
-      end;
+      the call above only sees that admin's own Run key, not the real user's. [UninstallRun] has
+      no runasoriginaluser flag (Run-only), so ExecAsOriginalUser is the documented way to still
+      reach the real interactive user's hive from [Code]. The check that the entry starts this
+      install runs over there too, inside the same command, since this process cannot read that
+      hive. Best-effort like the install-time call: raises instead of failing quietly when this
+      uninstaller was never elevated - the common, per-user case - which would otherwise abort
+      the rest of this procedure, skipping the app data prompt below over a call that was never
+      going to do anything anyway. }
+    try
+      ExecAsOriginalUser(ExpandConstant('{cmd}'),
+        '/c reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle' +
+        ' | findstr /i /c:"' + ExpandConstant('{app}\{#AppExe}') + '" >nul' +
+        ' && reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle /f',
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    except
     end;
 
     DataDir := OriginalUserLocalAppData + '\aura-toggle';
