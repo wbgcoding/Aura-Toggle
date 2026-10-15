@@ -542,7 +542,8 @@ begin
 
   { Only the entry the old version wrote. Anything already naming the current executable - or
     something the user pointed elsewhere themselves - is none of this installer's business. }
-  if (Pos('aura.exe', Lowercase(Current)) = 0) and (Pos('aura toggle.exe', Lowercase(Current)) = 0) then
+  if (Pos(Lowercase(ExpandConstant('{app}\aura.exe')), Lowercase(Current)) = 0) and
+     (Pos(Lowercase(ExpandConstant('{app}\Aura Toggle.exe')), Lowercase(Current)) = 0) then
     Exit;
 
   WriteAutoStart;
@@ -820,14 +821,20 @@ var
   DataDir: String;
   FileList: String;
   ResultCode: Integer;
+  RunValue: String;
 begin
   if CurUninstallStep = usPostUninstall then
   begin
     { The Run entry is only removed by uninsdeletevalue when the install-time task was ticked.
-      Autostart switched on later from the gear writes the same value name, so it has to be
-      cleared unconditionally - otherwise an entry pointing at a deleted exe is left behind. }
-    RegDeleteValue(HKEY_CURRENT_USER,
-      'Software\Microsoft\Windows\CurrentVersion\Run', 'AuraToggle');
+      Autostart switched on later from the gear writes the same value name, so it is cleared
+      here whenever it starts this install - otherwise an entry pointing at a deleted exe is
+      left behind. One that names a portable copy elsewhere (same value name) is left alone. }
+    if RegQueryStringValue(HKEY_CURRENT_USER,
+      'Software\Microsoft\Windows\CurrentVersion\Run', 'AuraToggle', RunValue) and
+       (Pos(Lowercase(ExpandConstant('{app}\')), Lowercase(RunValue)) > 0) then
+    begin
+      RegDeleteValue(HKEY_CURRENT_USER,
+        'Software\Microsoft\Windows\CurrentVersion\Run', 'AuraToggle');
 
     { Same blind spot as the [Run] reg.exe entry at install time: if this uninstaller is
       elevated as a *different* administrator account than the one that actually used the app,
@@ -837,11 +844,12 @@ begin
       raises instead of failing quietly when this uninstaller was never elevated - the common,
       per-user case - which would otherwise abort the rest of this procedure, skipping the app
       data prompt below entirely over a call that was never going to do anything anyway. }
-    try
-      ExecAsOriginalUser('reg.exe',
-        'delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle /f',
-        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    except
+      try
+        ExecAsOriginalUser('reg.exe',
+          'delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v AuraToggle /f',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      except
+      end;
     end;
 
     DataDir := OriginalUserLocalAppData + '\aura-toggle';
