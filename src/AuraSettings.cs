@@ -62,6 +62,22 @@ internal sealed record AuraSettings(
     private const string RunValue = "AuraToggle";
 
     /// <summary>
+    /// Where Task Manager's startup tab keeps its enabled/disabled mark per Run value. A value
+    /// marked disabled there stays in the Run key, but Windows no longer starts it at logon.
+    /// </summary>
+    private const string StartupApprovedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+
+    /// <summary>
+    /// Whether the Run entry was switched off in Task Manager. The first byte of the mark is even
+    /// for enabled and odd for disabled; a missing mark means enabled.
+    /// </summary>
+    private static bool DisabledInWindows()
+    {
+        using RegistryKey? approved = Registry.CurrentUser.OpenSubKey(StartupApprovedKey);
+        return approved?.GetValue(RunValue) is byte[] { Length: > 0 } mark && (mark[0] & 1) != 0;
+    }
+
+    /// <summary>
     /// Passed by the Run key entry. Only a start by Windows may open straight into the
     /// notification area; starting the tool by hand always shows the window.
     /// </summary>
@@ -225,7 +241,8 @@ internal sealed record AuraSettings(
                     return false;
                 }
 
-                return string.Equals(value[1..closingQuote], exe, StringComparison.OrdinalIgnoreCase);
+                return string.Equals(value[1..closingQuote], exe, StringComparison.OrdinalIgnoreCase) &&
+                    !DisabledInWindows();
             }
             catch (Exception ex) when (AuraFiles.IsExpected(ex))
             {
@@ -262,6 +279,12 @@ internal sealed record AuraSettings(
                 {
                     key.DeleteValue(RunValue, throwOnMissingValue: false);
                 }
+
+                // Turning autostart on here is the user's own explicit choice, so an older
+                // "disabled" mark from Task Manager must not keep overruling it; turning it off
+                // leaves nothing behind either.
+                using RegistryKey? approved = Registry.CurrentUser.OpenSubKey(StartupApprovedKey, writable: true);
+                approved?.DeleteValue(RunValue, throwOnMissingValue: false);
             }
             catch (Exception ex) when (AuraFiles.IsExpected(ex))
             {

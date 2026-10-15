@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Autostart did nothing when it had once been disabled in Task Manager's startup tab, although the settings showed it as on. The settings now show it as off in that case, and turning it on there (or ticking it in the setup) clears the old mark so Windows starts the tool again
 - With "Apply and close app" on, the start lighting could be gone right after logon and leave the board dark. The tool now sends it again a few times during the first minute and stops as soon as the lighting is changed by hand
 
 ## [1.5.0] - 2026-10-10

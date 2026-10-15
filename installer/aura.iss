@@ -232,6 +232,10 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 ; under - the [Run] entry below repeats the same write as the original user to cover that case too.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; \
     ValueName: "AuraToggle"; ValueData: """{app}\{#AppExe}"" -autostart"; Flags: uninsdeletevalue; Tasks: autostart
+; A "disabled" mark Task Manager once left for this value would keep Windows from starting it
+; although the box above was ticked, so it goes along with the write.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: none; \
+    ValueName: "AuraToggle"; Flags: deletevalue uninsdeletevalue; Tasks: autostart
 
 [Run]
 ; runasoriginaluser: without it the app inherits the installer's elevation and writes its
@@ -242,6 +246,8 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; \
 ; Same reasoning as above, aimed at the [Registry] entry's blind spot: reg.exe run as the
 ; original user writes the value into the profile that will actually start the app.
 Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v AuraToggle /d ""\""{app}\{#AppExe}\"" -autostart"" /f"; \
+    Flags: runasoriginaluser runhidden; Tasks: autostart
+Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"" /v AuraToggle /f"; \
     Flags: runasoriginaluser runhidden; Tasks: autostart
 
 [UninstallDelete]
