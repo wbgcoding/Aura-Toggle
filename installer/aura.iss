@@ -217,6 +217,10 @@ Source: "verify-signature.ps1"; DestDir: "{tmp}"; Flags: dontcopy
 Type: files; Name: "{app}\aura.exe"
 Type: files; Name: "{group}\Aura An.lnk"
 Type: files; Name: "{group}\Aura Aus.lnk"
+; Early 1.0 builds named it "Aura Toggle.exe". The same trap: that build stays behind, a Run
+; entry it wrote keeps starting it at logon, and it knows neither custom presets nor "apply and
+; close", so the start lighting the user picked in the current version never happens.
+Type: files; Name: "{app}\Aura Toggle.exe"
 
 [Icons]
 ; The application and nothing else: three Start menu entries for a tool whose whole point is one
@@ -472,7 +476,7 @@ begin
 end;
 
 { ---------------------------------------------------------------------------------------------
-  1.0.0 wrote its autostart entry pointing at "aura.exe", and the switch inside the application
+  1.0.0 wrote its autostart entry pointing at "aura.exe" (early 1.0 builds "Aura Toggle.exe"), and the switch inside the application
   writes the same value name - so an entry left from that version survives an upgrade while the
   file it names has just been deleted above, and autostart silently stops working for someone who
   had deliberately turned it on. Repointed rather than removed, because the user's choice was
@@ -493,7 +497,7 @@ begin
 
   { Only the entry the old version wrote. Anything already naming the current executable - or
     something the user pointed elsewhere themselves - is none of this installer's business. }
-  if Pos('aura.exe', Lowercase(Current)) = 0 then
+  if (Pos('aura.exe', Lowercase(Current)) = 0) and (Pos('aura toggle.exe', Lowercase(Current)) = 0) then
     Exit;
 
   Wanted := '"' + ExpandConstant('{app}\{#AppExe}') + '" -autostart';
