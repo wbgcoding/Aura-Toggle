@@ -686,7 +686,10 @@ internal sealed class CustomPresetEditor : PopupForm
 
     private void SaveAndClose()
     {
-        string name = _name.Text.Trim();
+        // Stored exactly as every reader will see it again: a pasted tab or line break would
+        // otherwise be kept here but come back as a space, so the start action and a later save
+        // under the same name would no longer find this preset.
+        string name = AuraFiles.Caption(_name.Text.Trim(), AuraFiles.MaxPresetName);
         if (name.Length == 0 || _rows.Count == 0)
         {
             _name.Focus();
