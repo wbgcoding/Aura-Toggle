@@ -131,7 +131,7 @@ internal static class AuraFiles
         try
         {
             Directory.CreateDirectory(Folder);
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Folder) { UseShellExecute = true });
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Folder) { UseShellExecute = true })?.Dispose();
         }
         catch (Exception ex) when (IsExpected(ex) || ex is System.ComponentModel.Win32Exception)
         {

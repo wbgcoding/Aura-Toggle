@@ -74,7 +74,8 @@ internal static partial class Program
 #endif
 
         // The language choice also governs usage and error output on the command line.
-        Strings.Override = AuraSettings.Load().Language;
+        AuraSettings launchSettings = AuraSettings.Load();
+        Strings.Override = launchSettings.Language;
         AuraLog.Info($"Start {VersionText}");
 
         LaunchedAtStartup = args.Length == 1 && args[0] == AuraSettings.AutoStartArgument;
@@ -83,10 +84,10 @@ internal static partial class Program
         // the single-instance check on purpose: holding that lock while waiting for a controller
         // that is still coming up at logon would make opening the tool by hand in those seconds
         // do nothing at all.
-        if (LaunchedAtStartup && AuraSettings.Load() is { CloseAfterStart: true } startSettings &&
-            startSettings.StartAction != AuraSettings.StartActionNone)
+        if (LaunchedAtStartup && launchSettings is { CloseAfterStart: true } &&
+            launchSettings.StartAction != AuraSettings.StartActionNone)
         {
-            return ApplyStartActionAndExit(startSettings.StartAction);
+            return ApplyStartActionAndExit(launchSettings.StartAction);
         }
 
         if (args.Length == 0 || LaunchedAtStartup)
