@@ -153,7 +153,7 @@
     <value>Avvia con Windows</value>
   </data>
   <data name="SettingMinimiseOnClose" xml:space="preserve">
-    <value>Riduci a icona nell'area di notifica alla chiusura</value>
+    <value>Chiudi nell'area di notifica</value>
   </data>
   <data name="SettingStartAction" xml:space="preserve">
     <value>Illuminazione all'avvio</value>

@@ -237,7 +237,7 @@
     <value>Onaltılık değer olarak renk</value>
   </data>
   <data name="BrightnessValue" xml:space="preserve">
-    <value>{0}%</value>
+    <value>%{0}</value>
   </data>
   <data name="ButtonNewCustomPreset" xml:space="preserve">
     <value>Yeni ön ayar</value>

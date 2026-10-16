@@ -318,7 +318,7 @@
     <value>Auch Presets. Sicher?</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
-    <value>Nichts wurde zur&#252;ckgesetzt: Die Sicherung deiner Einstellungen und Presets konnte nicht geschrieben werden. Gib etwas Speicherplatz frei und versuche es erneut.</value>
+    <value>Nichts wurde zur&#252;ckgesetzt: Die Sicherung deiner Einstellungen und Presets konnte nicht geschrieben werden. Gib etwas Speicherplatz frei und versuch es noch mal.</value>
   </data>
   <data name="ErrorResetIncomplete" xml:space="preserve">
     <value>Einige Dateien ließen sich nicht zurücksetzen, weil ein anderes Programm sie benutzt. Beende es und versuch es noch mal.</value>
