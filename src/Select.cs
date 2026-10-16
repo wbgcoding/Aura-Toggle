@@ -723,7 +723,7 @@ internal sealed class SelectPopup : PopupForm
         string tip = _items[row].Hint ?? ShortcutHintFor(_items[row]);
         Rectangle rect = RowRect(row);
         _tipRow = row;
-        _shortcutTip.Show(tip, this, rect.Left + 12, rect.Top + 20, 4000);
+        _shortcutTip.Show(tip, this, rect.Left + this.Scaled(12), rect.Top + this.Scaled(20), 4000);
     }
 
     /// <summary>
@@ -913,14 +913,14 @@ internal sealed class SelectPopup : PopupForm
             {
                 if (row >= 0)
                 {
-                    Invalidate(Rectangle.Inflate(RowRect(row), 2, 2));
+                    Invalidate(Rectangle.Inflate(RowRect(row), this.Scaled(2), this.Scaled(2)));
                 }
             }
 
             if (left < 0 || hovered < 0)
             {
                 // The highlight also follows the keyboard selection, which is elsewhere.
-                Invalidate(Rectangle.Inflate(RowRect(_highlighted), 2, 2));
+                Invalidate(Rectangle.Inflate(RowRect(_highlighted), this.Scaled(2), this.Scaled(2)));
             }
         }
 
@@ -937,7 +937,7 @@ internal sealed class SelectPopup : PopupForm
         if (tip != null && hovered != _tipRow)
         {
             _tipRow = hovered;
-            _shortcutTip.Show(tip, this, e.Location.X + 12, e.Location.Y + 20, 4000);
+            _shortcutTip.Show(tip, this, e.Location.X + this.Scaled(12), e.Location.Y + this.Scaled(20), 4000);
         }
         else if (tip == null && _tipRow >= 0)
         {

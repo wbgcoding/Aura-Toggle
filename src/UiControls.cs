@@ -1134,14 +1134,15 @@ internal sealed class ColourPickerPopup : PopupForm
         g.DrawImage(HueStripBitmap, HueRect);
         int hueX = HueRect.X + (int)(_hue / 360.0 * (HueRect.Width - 1));
         int hueOverhang = this.Scaled(2);
+        int outlineOffset = this.Scaled(1);
         using (var huePen = new Pen(Color.White, this.ScaledF(2f)))
         {
             g.DrawLine(huePen, hueX, HueRect.Y - hueOverhang, hueX, HueRect.Bottom + hueOverhang);
         }
         using (var hueOutline = new Pen(Color.FromArgb(90, 0, 0, 0), this.ScaledF(1f)))
         {
-            g.DrawLine(hueOutline, hueX - 1, HueRect.Y - hueOverhang, hueX - 1, HueRect.Bottom + hueOverhang);
-            g.DrawLine(hueOutline, hueX + 1, HueRect.Y - hueOverhang, hueX + 1, HueRect.Bottom + hueOverhang);
+            g.DrawLine(hueOutline, hueX - outlineOffset, HueRect.Y - hueOverhang, hueX - outlineOffset, HueRect.Bottom + hueOverhang);
+            g.DrawLine(hueOutline, hueX + outlineOffset, HueRect.Y - hueOverhang, hueX + outlineOffset, HueRect.Bottom + hueOverhang);
         }
 
         var swatch = new Rectangle(this.Scaled(Pad), HueRect.Bottom + this.Scaled(Gap),
