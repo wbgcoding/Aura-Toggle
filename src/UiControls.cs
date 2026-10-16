@@ -1913,7 +1913,7 @@ internal sealed class ThemedTip : IDisposable
             _expire.Stop();
             if (_window is { IsDisposed: false })
             {
-                _window.Hide();
+                _window.HideTip();
             }
         };
     }
@@ -1956,7 +1956,7 @@ internal sealed class ThemedTip : IDisposable
         _expire.Stop();
         if (_window is { IsDisposed: false })
         {
-            _window.Hide();
+            _window.HideTip();
         }
     }
 
@@ -2001,6 +2001,17 @@ internal sealed class ThemedTip : IDisposable
         private const int CsDropShadow = 0x00020000;
         private const int WmNcHitTest = 0x0084;
         private const int HtTransparent = -1;
+        private static readonly IntPtr TopMostZ = new(-1);
+        private const uint SwpNoSize = 0x0001;
+        private const uint SwpNoMove = 0x0002;
+        private const uint SwpNoZOrder = 0x0004;
+        private const uint SwpNoActivate = 0x0010;
+        private const uint SwpShowWindow = 0x0040;
+        private const uint SwpHideWindow = 0x0080;
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y,
+            int width, int height, uint flags);
 
         private string _text = "";
         private Control? _owner;
@@ -2013,9 +2024,6 @@ internal sealed class ThemedTip : IDisposable
             AutoScaleMode = AutoScaleMode.None;
             BackColor = Theme.Surface;
             DoubleBuffered = true;
-            // As a property, not an extended style: WinForms clears a style-only topmost on Show,
-            // which left the tip behind the list it belongs to.
-            TopMost = true;
         }
 
         protected override bool ShowWithoutActivation => true;
@@ -2046,23 +2054,32 @@ internal sealed class ThemedTip : IDisposable
                 Math.Max(area.Top, Math.Min(screen.Y, area.Bottom - size.Height)),
                 size.Width, size.Height);
 
-            if (!IsHandleCreated)
-            {
-                CreateHandle();
-            }
-
-            Theme.Cloak(Handle, true);
+            IntPtr handle = Handle;
+            Theme.Cloak(handle, true);
             // Twice: moving onto a display at another scale resizes the window to its own guess.
             Bounds = bounds;
             Bounds = bounds;
-            if (!Visible)
+            // Shown and raised natively, never through Show or TopMost: WinForms raises a topmost
+            // form without SWP_NOACTIVATE, the tip took the activation, the list behind it closed
+            // on losing it and disposed this window halfway through showing it.
+            SetWindowPos(handle, TopMostZ, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+            if (IsDisposed)
             {
-                Show();
+                return;
             }
 
             Invalidate();
             Update();
-            Theme.Cloak(Handle, false);
+            Theme.Cloak(handle, false);
+        }
+
+        public void HideTip()
+        {
+            if (IsHandleCreated)
+            {
+                SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0,
+                    SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpHideWindow);
+            }
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)

@@ -698,8 +698,16 @@ internal static partial class Program
         using var host = new Form { ShowInTaskbar = false, StartPosition = FormStartPosition.Manual, Location = new Point(-2000, -2000) };
         host.Show();
 
+        // The list closes when it loses the activation, so the tip must never take it.
+        int deactivated = 0;
+        host.Activate();
+        Application.DoEvents();
+        host.Deactivate += (_, _) => deactivated++;
+
         var tip = new ThemedTip();
         check("tip: shows", "ok", Outcome(() => tip.Show("tip", host, 4, 4, 1000)));
+        Application.DoEvents();
+        check("tip: owner keeps the activation", "0", deactivated.ToString(CultureInfo.InvariantCulture));
         tip.Dispose();
         check("tip: show after dispose", "ok", Outcome(() => tip.Show("tip", host, 4, 4, 1000)));
         check("tip: hide after dispose", "ok", Outcome(() => tip.Hide(host)));
