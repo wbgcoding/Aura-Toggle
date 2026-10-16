@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-16
+
+A safer and steadier release. Damaged settings files no longer take your presets with them, the
+portable exe ignores a planted copy of a Windows library next to it, autostart behaves when it was
+once disabled in Task Manager, and a long list of small fixes makes the window, the preset editor
+and the translations more reliable.
+
 ### Added
 
 - The setup warns when Aura Toggle is already installed in a different folder and offers to uninstall that copy first. Settings and presets are kept, and autostart moves over to the new folder
@@ -365,7 +372,8 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only 
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
-[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/wbgcoding/Aura-Toggle/releases/tag/v1.4.0
