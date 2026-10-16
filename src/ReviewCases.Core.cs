@@ -20,6 +20,23 @@ internal static partial class Program
         SwitchOnCoverageCases(check);
         DuplicateNameCases(check);
         RedactCases(check);
+        BadStampCases(check);
+    }
+
+    private static void BadStampCases(Action<string, string, string> check)
+    {
+        System.Globalization.CultureInfo before = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            // The Thai Buddhist calendar would turn 2026 into 2569.
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("th-TH");
+            check("bad stamp: invariant digits and calendar", "20261016-080405",
+                AuraFiles.BadStamp(new DateTime(2026, 10, 16, 8, 4, 5)));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = before;
+        }
     }
 
     private static void RedactCases(Action<string, string, string> check)
@@ -41,6 +58,10 @@ internal static partial class Program
         check("redact: path ending in the user name", "clean", Leaks("Access denied: E:/" + user));
         check("redact: profile folder", "clean",
             Leaks(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\AppData\x.json"));
+        check("redact: a leading word equal to the name stays", "clean-start",
+            AuraFiles.Redact(user + ": a switch was running").StartsWith(user, StringComparison.Ordinal)
+                ? "clean-start"
+                : "redacted");
         check("redact: other text stays", @"D:\tools\x.exe", AuraFiles.Redact(@"D:\tools\x.exe"));
     }
 

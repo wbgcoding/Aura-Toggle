@@ -79,7 +79,7 @@ internal static class AuraFiles
     /// profile (<c>D:\&lt;name&gt;\tools</c>). Too short a name would match half of any text.</summary>
     private static readonly System.Text.RegularExpressions.Regex? UserSegment = Environment.UserName.Length >= 3
         ? new System.Text.RegularExpressions.Regex(
-            @"(?<=^|[\\/])" + System.Text.RegularExpressions.Regex.Escape(Environment.UserName) + @"(?=[\\/\s""'<>|:,;)\]]|$)",
+            @"(?<=[\\/])" + System.Text.RegularExpressions.Regex.Escape(Environment.UserName) + @"(?=[\\/\s""'<>|:,;)\]]|$)",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)
         : null;
 
@@ -386,28 +386,43 @@ internal static class AuraFiles
     /// once, right before the first write that would replace it. Only the three newest copies of
     /// a file are kept. The log gets one line, never the content.
     /// </summary>
-    private static void KeepDamagedCopy(string name)
+    /// <returns>
+    /// False when the copy could not be made: the file stays marked and the caller must not
+    /// replace it, since nothing would be left of what the user had.
+    /// </returns>
+    private static bool KeepDamagedCopy(string name)
     {
         lock (DamagedFiles)
         {
             if (!DamagedFiles.Remove(name))
             {
-                return;
+                return true;
             }
         }
+
+        string copy;
+        string stem = Path.GetFileNameWithoutExtension(name);
 
         try
         {
             string path = PathTo(name);
             if (!File.Exists(path) || new FileInfo(path).Length == 0)
             {
-                return;
+                return true;
             }
 
-            string stem = Path.GetFileNameWithoutExtension(name);
-            string copy = PathTo($"{stem}.bad-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            copy = PathTo($"{stem}.bad-{BadStamp(DateTime.Now)}.json");
             File.Copy(path, copy, overwrite: true);
+        }
+        catch (Exception ex) when (IsExpected(ex))
+        {
+            AuraLog.Error("KeepDamagedCopy " + name, ex);
+            MarkDamaged(name, true);
+            return false;
+        }
 
+        try
+        {
             string[] old = Directory.GetFiles(Folder, stem + ".bad-*.json");
             Array.Sort(old, StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < old.Length - KeptBadCopies; i++)
@@ -419,9 +434,19 @@ internal static class AuraFiles
         }
         catch (Exception ex) when (IsExpected(ex))
         {
+            // The copy exists; only trimming the old ones failed.
             AuraLog.Error("KeepDamagedCopy " + name, ex);
         }
+
+        return true;
     }
+
+    /// <summary>
+    /// The sortable stamp of a damaged-file copy. Invariant culture: another calendar's year
+    /// would sort the newest copy first in the name order that decides which ones are trimmed.
+    /// </summary>
+    internal static string BadStamp(DateTime when) =>
+        when.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
 
     // The element readers below are used by every kind-checked JSON file this tool has -
     // one place to get "wrong type in a hand-edited file falls back instead of throwing" right,
@@ -484,7 +509,10 @@ internal static class AuraFiles
         try
         {
             Directory.CreateDirectory(Folder);
-            KeepDamagedCopy(name);
+            if (!KeepDamagedCopy(name))
+            {
+                return false;
+            }
 
             using (FileStream stream = File.Create(temp))
             {
@@ -552,7 +580,9 @@ internal static class AuraFiles
         private readonly Mutex? _mutex;
         private readonly bool _held;
 
-        public bool Held => _held;
+        // No mutex at all (both names denied) counts as held, the way every other caller
+        // carries on without a lock in that case.
+        public bool Held => _held || _mutex == null;
 
         public FileLock(string globalName, string localName, int timeoutMs)
         {
