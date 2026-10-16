@@ -149,6 +149,12 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>The latest request that arrived during a quiet hold, see <see cref="Run"/>.</summary>
     private Func<AuraState>? _afterQuiet;
+
+    /// <summary>
+    /// The newest effect picked while a switch was running, applied once it ends. Arrow keys on the
+    /// closed list pick one effect per press; applying each would drop all but the first.
+    /// </summary>
+    private (string Key, string Text, string? DeviceKey, int Channel, Color Colour)? _pendingEffect;
     private bool _exiting;
     private bool _dark = Theme.Dark;
     private long _themeEchoUntil;
@@ -1409,7 +1415,23 @@ internal sealed partial class ToggleForm : Form
         // The colour that goes with a built-in effect is the one on show, which for a single
         // channel is that channel's own rather than whatever was last set board-wide.
         (string? deviceKey, int channel) = Target;
-        ApplyEffect(_effects.Selected.Key, _effects.Selected.Text, deviceKey, channel, _displayed.Colour);
+        _pendingEffect = (_effects.Selected.Key, _effects.Selected.Text, deviceKey, channel, _displayed.Colour);
+        ApplyPendingEffect();
+    }
+
+    /// <summary>
+    /// Applies the newest pick unless a switch is still running; <see cref="SetBusy"/> calls this
+    /// again when it ends, so only the last of several quick picks reaches the controller.
+    /// </summary>
+    private void ApplyPendingEffect()
+    {
+        if (_busy || IsDisposed || _pendingEffect is not { } pick)
+        {
+            return;
+        }
+
+        _pendingEffect = null;
+        ApplyEffect(pick.Key, pick.Text, pick.DeviceKey, pick.Channel, pick.Colour);
     }
 
     /// <summary>What picking an effect does, whether it was picked in the window or in the tray menu.</summary>
@@ -2327,6 +2349,11 @@ internal sealed partial class ToggleForm : Form
 
         _busyTimer.Stop();
         ApplyBusyVisuals(busy: false);
+
+        if (_pendingEffect != null && !IsDisposed)
+        {
+            BeginInvoke(ApplyPendingEffect);
+        }
     }
 
     /// <summary>
@@ -2494,7 +2521,12 @@ internal sealed partial class ToggleForm : Form
         _toggle.Show(on, painted, Color.FromArgb(red, green, blue));
 
         _effects.Colour = colour;
-        _effects.ShowSelection(effectKey);
+
+        // A newer pick is still waiting for its turn: snapping the list back would undo it.
+        if (_pendingEffect == null)
+        {
+            _effects.ShowSelection(effectKey);
+        }
 
         _colours.Colour = colour;
         _colours.Visible = usesColour;
