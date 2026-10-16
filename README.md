@@ -128,7 +128,7 @@ controller, it works.
 ```bat
 AuraToggle-Setup-<version>.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART  :: for everyone, run from an elevated prompt
 AuraToggle-Setup-<version>.exe /VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER :: just the current user
-AuraToggle-Setup-<version>.exe /VERYSILENT /LOG="install.log" :: with a log file
+AuraToggle-Setup-<version>.exe /VERYSILENT /SUPPRESSMSGBOXES /LOG="install.log" :: with a log file
 AuraToggle-Setup-<version>.exe /LANG=ja                      :: force the setup language
 unins000.exe /VERYSILENT                                     :: silent uninstall
 ```
