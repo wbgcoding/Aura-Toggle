@@ -1374,8 +1374,7 @@ internal sealed partial class ToggleForm : Form
         get
         {
             (string? deviceKey, int channel) = Target;
-            return DisplayedFor(
-                _state, deviceKey == null ? new() : AuraChannelStates.All(), deviceKey, channel);
+            return DisplayedFor(_state, deviceKey == null ? new() : _channelStates.Get(), deviceKey, channel);
         }
     }
 
@@ -2522,7 +2521,7 @@ internal sealed partial class ToggleForm : Form
             effectKey = CustomKey(_state.CustomPreset);
             usesColour = false;
 
-            if (FindCustomPreset(_state.CustomPreset) is CustomPreset active &&
+            if (_customPresets.Get().Find(p => p.Name == _state.CustomPreset) is CustomPreset active &&
                 MostUsed(active) is CustomPresetEntry common)
             {
                 painted = common.Mode;

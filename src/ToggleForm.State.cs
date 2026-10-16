@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 
 namespace AuraToggle;
 
@@ -10,6 +12,48 @@ namespace AuraToggle;
 /// </summary>
 internal sealed partial class ToggleForm
 {
+    /// <summary>
+    /// A data file read once and read again only when it changes on disk. The command line and
+    /// other windows write these files too, so the file's own stamp and length decide, not an
+    /// event of this window.
+    /// </summary>
+    private sealed class FileCache<T>
+    {
+        private readonly string _name;
+        private readonly Func<T> _load;
+        private T? _value;
+        private DateTime _stamp;
+        private long _length = -2;
+
+        public FileCache(string name, Func<T> load)
+        {
+            _name = name;
+            _load = load;
+        }
+
+        public T Get()
+        {
+            var file = new FileInfo(AuraFiles.PathTo(_name));
+            DateTime stamp = file.Exists ? file.LastWriteTimeUtc : DateTime.MinValue;
+            long length = file.Exists ? file.Length : -1;
+
+            // Stamped before the read: a write landing in between leaves a stale stamp, which
+            // only costs one more read next time.
+            if (_length != length || _stamp != stamp)
+            {
+                _value = _load();
+                _stamp = stamp;
+                _length = length;
+            }
+
+            return _value!;
+        }
+    }
+
+    private readonly FileCache<List<CustomPreset>> _customPresets = new(AuraCustomPresets.FileName, AuraCustomPresets.Load);
+    private readonly FileCache<Dictionary<string, ChannelLighting>> _channelStates =
+        new(AuraChannelStates.FileName, AuraChannelStates.All);
+
     /// <summary>
     /// <see cref="Displayed"/> worked out from the given state and records instead of the cached
     /// ones. <paramref name="remembered"/> only matters when a controller or channel is named.
