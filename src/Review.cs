@@ -792,6 +792,9 @@ internal static partial class Program
             string.Join(" ", editor.ReviewRows().Select(r => $"{r.DeviceKey}/{r.Channel}={r.Effect}")));
         editor.Dispose();
 
+        ReviewCoreCases(Check);
+        ReviewUiCases(Check);
+
         lines.Add(failed == 0 ? "engine: all passed" : $"engine: {failed} failed");
         File.WriteAllLines(Path.Combine(Path.GetTempPath(), "aura-engine.txt"), lines);
         foreach (string line in lines)
