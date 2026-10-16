@@ -18,6 +18,46 @@ internal static partial class Program
         DamagedFileCases(check);
         EntryResolutionCases(check);
         SwitchOnCoverageCases(check);
+        DuplicateNameCases(check);
+    }
+
+    private static void DuplicateNameCases(Action<string, string, string> check)
+    {
+        string path = AuraFiles.PathTo(AuraCustomPresets.FileName);
+        byte[]? original = File.Exists(path) ? File.ReadAllBytes(path) : null;
+
+        try
+        {
+            string stem = new string('x', 40);
+            string Preset(string name) =>
+                "{\"name\":\"" + name + "\",\"entries\":[{\"deviceKey\":\"review-1\",\"channel\":0,\"mode\":1}]}";
+
+            File.WriteAllText(path, "[" + Preset(stem + "a") + "," + Preset(stem + "b") + "," + Preset(stem + "c") + "]");
+            List<string> names = AuraCustomPresets.Load().Select(p => p.Name).ToList();
+
+            check("duplicate names: all kept", "3", names.Count.ToString());
+            check("duplicate names: all different", "3", names.Distinct().Count().ToString());
+            check("duplicate names: all within the cap", "True",
+                names.All(n => n.Length <= AuraFiles.MaxPresetName).ToString());
+            check("duplicate names: first keeps its name", stem, names[0]);
+            check("duplicate names: second counts up", stem[..(AuraFiles.MaxPresetName - 4)] + " (2)", names[1]);
+
+            var taken = new HashSet<string>();
+            check("duplicate names: short name unchanged", "Calm", AuraCustomPresets.UniqueName("Calm", taken));
+            check("duplicate names: short repeat counts up", "Calm (2)", AuraCustomPresets.UniqueName("Calm", taken));
+            check("duplicate names: third repeat", "Calm (3)", AuraCustomPresets.UniqueName("Calm", taken));
+        }
+        finally
+        {
+            if (original != null)
+            {
+                File.WriteAllBytes(path, original);
+            }
+            else
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     private static void SwitchOnCoverageCases(Action<string, string, string> check)

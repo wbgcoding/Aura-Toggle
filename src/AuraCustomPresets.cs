@@ -33,6 +33,7 @@ internal static class AuraCustomPresets
     public static List<CustomPreset> Load()
     {
         var presets = new List<CustomPreset>();
+        var taken = new HashSet<string>();
 
         using JsonDocument? document = AuraFiles.Read(FileName, JsonValueKind.Array);
         if (document == null)
@@ -106,7 +107,7 @@ internal static class AuraCustomPresets
 
                 if (entries.Count > 0)
                 {
-                    presets.Add(new CustomPreset(name, entries));
+                    presets.Add(new CustomPreset(UniqueName(name, taken), entries));
                 }
             }
 
@@ -116,6 +117,28 @@ internal static class AuraCustomPresets
         {
             return presets;
         }
+    }
+
+    /// <summary>
+    /// The name to list a preset under: the name itself, or with " (2)", " (3)" and so on when an
+    /// earlier preset already has it. Cutting a long name to the cap can make two different ones
+    /// equal, and every lookup and delete goes by name. The cut base keeps the result inside the
+    /// cap. The chosen name is added to <paramref name="taken"/>.
+    /// </summary>
+    internal static string UniqueName(string name, HashSet<string> taken)
+    {
+        string candidate = name;
+
+        for (int count = 2; !taken.Add(candidate); count++)
+        {
+            string suffix = $" ({count})";
+            string cut = name.Length + suffix.Length > AuraFiles.MaxPresetName
+                ? name[..(AuraFiles.MaxPresetName - suffix.Length)]
+                : name;
+            candidate = AuraFiles.Caption(cut, AuraFiles.MaxPresetName) + suffix;
+        }
+
+        return candidate;
     }
 
     public static bool Save(List<CustomPreset> presets) => AuraFiles.Write(FileName, writer =>
