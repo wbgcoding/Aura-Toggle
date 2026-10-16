@@ -17,6 +17,24 @@ internal static partial class Program
     {
         DamagedFileCases(check);
         EntryResolutionCases(check);
+        SwitchOnCoverageCases(check);
+    }
+
+    private static void SwitchOnCoverageCases(Action<string, string, string> check)
+    {
+        var preset = new CustomPreset("coverage", new List<CustomPresetEntry>
+        {
+            new("review-1", 0, "Onboard", 1, 255, 0, 0),
+            new("review-1", 1, "ARGB 1", 1, 0, 255, 0),
+        });
+
+        (List<string> named, List<string> left) = SplitControllers(preset, new[] { "review-1", "review-2" });
+        check("switch on: preset names one of two, it applies", "review-1", string.Join(",", named));
+        check("switch on: the other one is restored", "review-2", string.Join(",", left));
+
+        (named, left) = SplitControllers(preset, new[] { "review-3", "review-4" });
+        check("switch on: preset names none, nothing applies", "", string.Join(",", named));
+        check("switch on: every attached one is restored", "review-3,review-4", string.Join(",", left));
     }
 
     private static void EntryResolutionCases(Action<string, string, string> check)

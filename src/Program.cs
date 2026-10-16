@@ -932,7 +932,13 @@ internal static partial class Program
             CustomPreset? preset = AuraCustomPresets.Load().Find(p => p.Name == state.CustomPreset);
             if (preset != null)
             {
-                return ApplyCustomPreset(preset);
+                // Null when the preset names none of the attached controllers: the plain restore
+                // below brings the board back instead of failing on a stale device path.
+                AuraState? applied = ApplyCustomPresetCore(preset, null, restoreOthers: true);
+                if (applied != null)
+                {
+                    return applied;
+                }
             }
         }
 
@@ -1140,9 +1146,14 @@ internal static partial class Program
     /// </param>
     /// <returns>The channels that were named, for the caller to record.</returns>
     private static List<(string DeviceKey, int Channel)> ApplyMix(List<AuraDevice> devices, string? deviceKey,
-        int channel, AuraState state, ChannelLighting? look, byte? brightness = null, bool keepPower = false)
+        int channel, AuraState state, ChannelLighting? look, byte? brightness = null, bool keepPower = false,
+        Func<AuraDevice, bool>? only = null)
     {
         List<AuraDevice> targets = ResolveDevices(devices, deviceKey);
+        if (only != null)
+        {
+            targets = targets.FindAll(device => only(device));
+        }
 
         // Read once, then indexed per channel, rather than re-parsing the whole file for every
         // single channel.
@@ -1408,6 +1419,25 @@ internal static partial class Program
         entries.FindLast(e => e.DeviceKey == deviceKey && e.Channel < 0);
 
     /// <summary>
+    /// Splits the attached controllers into those a preset names and those it leaves out. A
+    /// controller's key is its device path, which changes when the header lands on another port,
+    /// so a preset can name none of the controllers that are there.
+    /// </summary>
+    internal static (List<string> Named, List<string> Left) SplitControllers(
+        CustomPreset preset, IEnumerable<string> attached)
+    {
+        var named = new List<string>();
+        var left = new List<string>();
+
+        foreach (string key in attached)
+        {
+            (preset.Entries.Exists(e => e.DeviceKey == key) ? named : left).Add(key);
+        }
+
+        return (named, left);
+    }
+
+    /// <summary>
     /// Applies a named bundle of per-device effects. The remembered state mirrors the first
     /// entry, which is what the button and the effect list show while the preset is active.
     /// </summary>
@@ -1418,7 +1448,15 @@ internal static partial class Program
     /// preset dims on its own. Null for every other caller, where each entry's own brightness -
     /// or the channel's own record when the entry carries none - keeps applying.
     /// </param>
-    public static AuraState ApplyCustomPreset(CustomPreset preset, byte? brightnessOverride = null)
+    public static AuraState ApplyCustomPreset(CustomPreset preset, byte? brightnessOverride = null) =>
+        ApplyCustomPresetCore(preset, brightnessOverride, restoreOthers: false)!;
+
+    /// <param name="restoreOthers">
+    /// Switching the board on: the controllers the preset does not name come back to their own
+    /// records too, and a preset that names none of the attached ones gives null instead of
+    /// throwing, so the caller can restore everything.
+    /// </param>
+    private static AuraState? ApplyCustomPresetCore(CustomPreset preset, byte? brightnessOverride, bool restoreOthers)
     {
         if (preset.Entries.Count == 0)
         {
@@ -1581,6 +1619,26 @@ internal static partial class Program
                     failure = ex;
                 }
             }
+
+            // Controllers the preset leaves out would stay dark after the board was off.
+            if (restoreOthers && !brightnessOverride.HasValue && applied.Count > 0)
+            {
+                List<string> left = SplitControllers(preset, devices.Select(d => d.Key)).Left;
+
+                if (left.Count > 0)
+                {
+                    try
+                    {
+                        List<(string, int)> switched = ApplyMix(devices, null, -1, state, look: null,
+                            only: device => left.Contains(device.Key));
+                        AuraChannelStates.SetPower(switched, on: true, BoardWide(state), Attached(devices));
+                    }
+                    catch (IOException ex)
+                    {
+                        AuraLog.Error("Restore of controllers outside the preset", ex);
+                    }
+                }
+            }
         }
         finally
         {
@@ -1601,6 +1659,12 @@ internal static partial class Program
             // change when the header lands on another port, so the preset needs saving again and
             // no amount of waiting at logon will fix that.
             AuraLog.Warn($"Custom preset \"{preset.Name}\" names no attached controller, re-save it in the window.");
+
+            if (restoreOthers)
+            {
+                return null;
+            }
+
             throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3, worthRetrying: false);
         }
 
