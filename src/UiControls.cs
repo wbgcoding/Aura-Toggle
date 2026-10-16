@@ -2015,6 +2015,7 @@ internal sealed class ThemedTip : IDisposable
 
         private string _text = "";
         private Control? _owner;
+        private bool _shown;
 
         public TipWindow()
         {
@@ -2055,26 +2056,42 @@ internal sealed class ThemedTip : IDisposable
                 size.Width, size.Height);
 
             IntPtr handle = Handle;
-            Theme.Cloak(handle, true);
-            // Twice: moving onto a display at another scale resizes the window to its own guess.
-            Bounds = bounds;
-            Bounds = bounds;
-            // Shown and raised natively, never through Show or TopMost: WinForms raises a topmost
-            // form without SWP_NOACTIVATE, the tip took the activation, the list behind it closed
-            // on losing it and disposed this window halfway through showing it.
-            SetWindowPos(handle, TopMostZ, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+            // Cloaked only on the way in: one already showing is dark already, and cloaking it again
+            // for every row the pointer crosses made it drop out for a frame each time.
+            bool appearing = !_shown;
+            if (appearing)
+            {
+                Theme.Cloak(handle, true);
+            }
+
+            // Shown, placed and raised natively, never through Show or TopMost: WinForms raises a
+            // topmost form without SWP_NOACTIVATE, the tip took the activation, the list behind
+            // it closed on losing it and disposed this window halfway through showing it.
+            SetWindowPos(handle, TopMostZ, bounds.X, bounds.Y, bounds.Width, bounds.Height,
+                SwpNoActivate | SwpShowWindow);
+            _shown = true;
             if (IsDisposed)
             {
                 return;
             }
 
+            // Moving onto a display at another scale resizes the window to its own guess.
+            if (Bounds != bounds)
+            {
+                Bounds = bounds;
+            }
+
             Invalidate();
             Update();
-            Theme.Cloak(handle, false);
+            if (appearing)
+            {
+                Theme.Cloak(handle, false);
+            }
         }
 
         public void HideTip()
         {
+            _shown = false;
             if (IsHandleCreated)
             {
                 SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0,
