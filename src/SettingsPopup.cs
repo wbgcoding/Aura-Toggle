@@ -385,14 +385,22 @@ internal sealed class SettingsPopup : PopupForm
         // seconds; the window stays responsive meanwhile.
         _reset.Enabled = false;
         AuraFiles.ResetResult result = await System.Threading.Tasks.Task.Run(AuraFiles.ResetAll);
-        if (result == AuraFiles.ResetResult.BackupFailed)
+        if (result is AuraFiles.ResetResult.BackupFailed or AuraFiles.ResetResult.Busy)
         {
             // Nothing was deleted, so the Run key, the window and the settings all stay as they
-            // are; the user is told why and can try again.
-            if (!IsDisposed)
+            // are; the user is told why and can try again. The popup can be gone by now (it
+            // closes when it loses the activation), and the news must not go with it.
+            string message = result == AuraFiles.ResetResult.Busy
+                ? Strings.ErrorControllerBusy
+                : Strings.ErrorResetBackupFailed;
+            if (IsDisposed)
+            {
+                ErrorDialog.Report(new IOException(message), "Reset", null);
+            }
+            else
             {
                 _reset.Enabled = true;
-                ShowResetError(Strings.ErrorResetBackupFailed);
+                ShowResetError(message);
             }
 
             return;
@@ -406,6 +414,11 @@ internal sealed class SettingsPopup : PopupForm
         Reset?.Invoke(this, EventArgs.Empty);
         if (IsDisposed)
         {
+            if (result == AuraFiles.ResetResult.Incomplete)
+            {
+                ErrorDialog.Report(new IOException(Strings.ErrorResetIncomplete), "Reset", null);
+            }
+
             return;
         }
 

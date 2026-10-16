@@ -187,9 +187,9 @@ internal static class AuraFiles
     /// <returns>
     /// <see cref="ResetResult.BackupFailed"/> when the backup could not be written: nothing is
     /// deleted then, since a reset the user cannot take back is only acceptable with the net
-    /// underneath it. <see cref="ResetResult.Incomplete"/> when some file would not go (another
-    /// program holds it) - the rest is gone and the caller says so; also when a running switch
-    /// kept the hardware lock for the whole wait, in which case nothing was deleted.
+    /// underneath it. <see cref="ResetResult.Busy"/> when a running switch kept the hardware lock
+    /// for the whole wait: nothing is deleted. <see cref="ResetResult.Incomplete"/> when some file
+    /// would not go (another program holds it) - the rest is gone and the caller says so.
     /// </returns>
     public static ResetResult ResetAll()
     {
@@ -199,7 +199,7 @@ internal static class AuraFiles
         if (hardware == null)
         {
             AuraLog.Warn("Reset: a switch was still running, nothing was deleted");
-            return ResetResult.Incomplete;
+            return ResetResult.Busy;
         }
 
         using IDisposable held = Lock();
@@ -236,6 +236,7 @@ internal static class AuraFiles
     {
         Done,
         BackupFailed,
+        Busy,
         Incomplete,
     }
 
