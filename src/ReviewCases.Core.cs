@@ -19,6 +19,29 @@ internal static partial class Program
         EntryResolutionCases(check);
         SwitchOnCoverageCases(check);
         DuplicateNameCases(check);
+        RedactCases(check);
+    }
+
+    private static void RedactCases(Action<string, string, string> check)
+    {
+        string user = Environment.UserName;
+        if (user.Length < 3)
+        {
+            return;
+        }
+
+        // The placeholders themselves may contain a short user name ("USER").
+        string Leaks(string text) => AuraFiles.Redact(text).Replace("%USERPROFILE%", "").Replace("%USERNAME%", "")
+            .Contains(user, StringComparison.OrdinalIgnoreCase)
+            ? "leaks"
+            : "clean";
+
+        check("redact: portable path outside the profile", "clean", Leaks(@"D:\" + user + @"\tools\x.exe"));
+        check("redact: user name in other case", "clean", Leaks(@"d:\" + user.ToUpperInvariant() + @"\tools"));
+        check("redact: path ending in the user name", "clean", Leaks("Access denied: E:/" + user));
+        check("redact: profile folder", "clean",
+            Leaks(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\AppData\x.json"));
+        check("redact: other text stays", @"D:\tools\x.exe", AuraFiles.Redact(@"D:\tools\x.exe"));
     }
 
     private static void DuplicateNameCases(Action<string, string, string> check)

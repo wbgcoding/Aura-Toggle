@@ -54,16 +54,56 @@ internal static class AuraFiles
     private static readonly string ProfileFolder =
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
+    /// <summary>The 8.3 short form of the profile folder, which names the user as well as the long
+    /// one does. Empty when the volume has no short names.</summary>
+    private static readonly string ProfileShortFolder = ShortPath(ProfileFolder);
+
+    private static string ShortPath(string path)
+    {
+        try
+        {
+            var buffer = new StringBuilder(520);
+            uint length = GetShortPathName(path, buffer, (uint)buffer.Capacity);
+            return length > 0 && length < buffer.Capacity ? buffer.ToString() : "";
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            return "";
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern uint GetShortPathName(string longPath, StringBuilder shortPath, uint bufferLength);
+
+    /// <summary>The Windows user name as a whole path segment, for a portable exe kept outside the
+    /// profile (<c>D:\&lt;name&gt;\tools</c>). Too short a name would match half of any text.</summary>
+    private static readonly System.Text.RegularExpressions.Regex? UserSegment = Environment.UserName.Length >= 3
+        ? new System.Text.RegularExpressions.Regex(
+            @"(?<=^|[\\/])" + System.Text.RegularExpressions.Regex.Escape(Environment.UserName) + @"(?=[\\/\s""'<>|:,;)\]]|$)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)
+        : null;
+
     /// <summary>
-    /// Replaces the user's profile path with a placeholder wherever it appears - a stack trace
-    /// or an I/O exception routinely carries the full path this ran under
-    /// (<c>C:\Users\&lt;name&gt;\...</c>), and that text ends up both in <c>log.txt</c> and in
-    /// the error dialog's "Copy details" button, which is meant for pasting into a public
-    /// GitHub issue.
+    /// Replaces the user's profile path, its short 8.3 form and the user name as a path segment
+    /// with a placeholder wherever they appear - a stack trace or an I/O exception routinely
+    /// carries the full path this ran under (<c>C:\Users\&lt;name&gt;\...</c>), and that text
+    /// ends up both in <c>log.txt</c> and in the error dialog's "Copy details" button, which is
+    /// meant for pasting into a public GitHub issue.
     /// </summary>
-    public static string Redact(string text) => ProfileFolder.Length > 0
-        ? text.Replace(ProfileFolder, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase)
-        : text;
+    public static string Redact(string text)
+    {
+        if (ProfileFolder.Length > 0)
+        {
+            text = text.Replace(ProfileFolder, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (ProfileShortFolder.Length > 0)
+        {
+            text = text.Replace(ProfileShortFolder, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return UserSegment?.Replace(text, "%USERNAME%") ?? text;
+    }
 
     /// <summary>How long a custom preset's name may be, in the editor and in <c>presets.json</c>.</summary>
     public const int MaxPresetName = 40;

@@ -322,7 +322,7 @@ Start-up, version and every error land in a plain text file:
 ```
 
 Paste that path into the Explorer address bar or into Win+R. It rolls over to `log.old.txt` past
-200 KB, holds no personal data (your user name is replaced with `%USERPROFILE%`) and the last
+200 KB, holds no personal data (your Windows user name is replaced in paths) and the last
 few lines are usually enough to say why a controller could not be reached. Attach them to a
 [bug report](https://github.com/wbgcoding/Aura-Toggle/issues).
 
@@ -412,7 +412,7 @@ State lives in `%LOCALAPPDATA%\aura-toggle`:
 
 The per-channel files are keyed by the controller's device path, so the entries survive a reboot. Portable and installed builds share the folder, every write goes through a
 temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete it.
-Nothing in there is ever sent anywhere, and your user name is replaced with `%USERPROFILE%` in
+Nothing in there is ever sent anywhere, and your Windows user name is replaced in the paths of
 anything the log or the error dialog writes out.
 
 ## Licence and trademarks

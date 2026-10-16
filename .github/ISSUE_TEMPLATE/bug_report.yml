@@ -41,5 +41,5 @@ body:
     id: log
     attributes:
       label: Last lines of the log
-      description: From `%LOCALAPPDATA%\aura-toggle\log.txt`. User names are already replaced with `%USERPROFILE%`.
+      description: From `%LOCALAPPDATA%\aura-toggle\log.txt`. Your Windows user name is already replaced in paths.
       render: text
