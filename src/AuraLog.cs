@@ -15,11 +15,6 @@ internal static class AuraLog
     private const string OldLogName = "log.old.txt";
     private const long RotateAtBytes = 200 * 1024;
 
-    // Guards against this process's own threads (window UI thread plus a fired-off command)
-    // interleaving two Write calls; AuraFiles.Lock() below guards against a second process (the
-    // test suite shells out constantly) doing the same at the same time.
-    private static readonly object Gate = new();
-
     public static void Info(string message) => Write("INFO", message);
 
     /// <summary>Something worth knowing about when a report comes in, but not a failure.</summary>
@@ -44,31 +39,32 @@ internal static class AuraLog
 
     private static void Write(string level, string message)
     {
-        lock (Gate)
+        // The log has its own lock rather than the files lock: it is written from everywhere,
+        // including under a hardware burst, and must never wait for or block a file writer. The
+        // named mutex also keeps this process's own threads apart, and the test suite's other
+        // processes, from interleaving two writes.
+        try
         {
-            try
+            using IDisposable guard = AuraFiles.LogLock();
+
+            Directory.CreateDirectory(AuraFiles.Folder);
+
+            string path = AuraFiles.PathTo(LogName);
+            if (File.Exists(path) && new FileInfo(path).Length > RotateAtBytes)
             {
-                using IDisposable guard = AuraFiles.Lock();
-
-                Directory.CreateDirectory(AuraFiles.Folder);
-
-                string path = AuraFiles.PathTo(LogName);
-                if (File.Exists(path) && new FileInfo(path).Length > RotateAtBytes)
-                {
-                    File.Move(path, AuraFiles.PathTo(OldLogName), overwrite: true);
-                }
-
-                // Invariant: the separators in a custom format string are the culture's own, so
-                // the same log would read "14:03:27" here and "14.03.27" on a machine set to
-                // another language - and this file is meant to be pasted into an issue and
-                // compared.
-                string stamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-                string line = $"{stamp}  {level}  {AuraFiles.Redact(message)}{Environment.NewLine}";
-                File.AppendAllText(path, line, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                File.Move(path, AuraFiles.PathTo(OldLogName), overwrite: true);
             }
-            catch (Exception ex) when (AuraFiles.IsExpected(ex))
-            {
-            }
+
+            // Invariant: the separators in a custom format string are the culture's own, so
+            // the same log would read "14:03:27" here and "14.03.27" on a machine set to
+            // another language - and this file is meant to be pasted into an issue and
+            // compared.
+            string stamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            string line = $"{stamp}  {level}  {AuraFiles.Redact(message)}{Environment.NewLine}";
+            File.AppendAllText(path, line, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        }
+        catch (Exception ex) when (AuraFiles.IsExpected(ex))
+        {
         }
     }
 }

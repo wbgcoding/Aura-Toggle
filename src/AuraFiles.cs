@@ -461,25 +461,49 @@ internal static class AuraFiles
         }
     }
 
-    /// <summary>
-    /// Held around a read-modify-write, so the window and a command line invocation running at
-    /// the same time cannot each read, change and save a different copy of the same file.
-    /// </summary>
-    public static IDisposable Lock() => new FileLock(LockTimeoutMs);
+    // Three locks, taken in this order and never the other way round: hardware (a whole discovery
+    // plus burst, seconds), then files (one short read-modify-write), and the log lock as a leaf
+    // that nothing is taken under. The window's own file writers take only the files lock, so a
+    // burst running on a worker never freezes them.
 
     /// <summary>
-    /// <see cref="Lock()"/> with a wait of the caller's choosing, for a burst that outlasts the
-    /// short wait file access needs (<see cref="HardwareLockTimeoutMs"/>). A wait that runs out
-    /// still carries on without the lock, as the short one does.
+    /// Held around a read-modify-write of a stored file, so the window and a command line
+    /// invocation running at the same time cannot each read, change and save a different copy of
+    /// the same file. Short: it is never held across a controller burst.
     /// </summary>
-    public static IDisposable Lock(int timeoutMs) => new FileLock(timeoutMs);
+    public static IDisposable Lock() => new FileLock(@"Global\AuraToggle.Files", "AuraToggle.Files", LockTimeoutMs);
+
+    /// <summary>
+    /// Held for as long as a caller talks to the controller. A wait that runs out still carries
+    /// on without the lock, as the files lock does.
+    /// </summary>
+    public static IDisposable HardwareLock() =>
+        new FileLock(@"Global\AuraToggle.Hardware", "AuraToggle.Hardware", HardwareLockTimeoutMs);
+
+    /// <summary>The hardware lock, or null when it did not come free within the wait.</summary>
+    public static IDisposable? TryHardwareLock()
+    {
+        var held = new FileLock(@"Global\AuraToggle.Hardware", "AuraToggle.Hardware", HardwareLockTimeoutMs);
+        if (held.Held)
+        {
+            return held;
+        }
+
+        held.Dispose();
+        return null;
+    }
+
+    /// <summary>Serialises writes to the log file between processes and threads.</summary>
+    public static IDisposable LogLock() => new FileLock(@"Global\AuraToggle.Log", "AuraToggle.Log", LockTimeoutMs);
 
     private sealed class FileLock : IDisposable
     {
         private readonly Mutex? _mutex;
         private readonly bool _held;
 
-        public FileLock(int timeoutMs)
+        public bool Held => _held;
+
+        public FileLock(string globalName, string localName, int timeoutMs)
         {
             // "Global\" rather than a plain name: %LOCALAPPDATA% is the same folder for every
             // session the same account is logged into (a physical logon plus a Remote Desktop
@@ -487,8 +511,8 @@ internal static class AuraFiles
             // session - two sessions would each get their own lock and race the same files.
             // Falls back to the old session-local name if the Global one is denied outright
             // (rare, locked-down policy) rather than running with no lock at all.
-            (Mutex, bool)? acquired = TryAcquire(@"Global\AuraToggle.Files", timeoutMs)
-                ?? TryAcquire("AuraToggle.Files", timeoutMs);
+            (Mutex, bool)? acquired = TryAcquire(globalName, timeoutMs)
+                ?? TryAcquire(localName, timeoutMs);
             _mutex = acquired?.Item1;
             _held = acquired?.Item2 ?? false;
         }

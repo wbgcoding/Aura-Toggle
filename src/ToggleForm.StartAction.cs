@@ -105,7 +105,7 @@ internal sealed partial class ToggleForm
         string snapshot = "";
         await Run(() =>
         {
-            using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+            using (AuraFiles.HardwareLock())
             {
                 try
                 {

@@ -150,7 +150,7 @@ internal static partial class Program
             try
             {
                 string snapshot;
-                using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+                using (AuraFiles.HardwareLock())
                 {
                     if (ApplyStartAction(action) == null)
                     {
@@ -214,7 +214,7 @@ internal static partial class Program
     /// <returns>The state afterwards, or null once the lighting was changed by someone else.</returns>
     public static AuraState? ReassertStartAction(string action, ref string snapshot)
     {
-        using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+        using (AuraFiles.HardwareLock())
         {
             if (LightingRecords() != snapshot)
             {
@@ -920,10 +920,9 @@ internal static partial class Program
     {
         // Locked around the whole read-modify-write: a command-line switch and one from the
         // window running at the same time would otherwise each save their own copy of
-        // state.json and one change would vanish - the same reasoning AuraChannelStates and
-        // AuraChannelNames already lock for. Re-entrant on the same thread, so the calls this
-        // makes into those (which take the same lock) do not deadlock.
-        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
+        // state.json and one change would vanish. Re-entrant on the same thread; the calls this
+        // makes into AuraChannelStates and AuraChannelNames take the files lock under it.
+        using IDisposable guard = AuraFiles.HardwareLock();
 
         AuraState state = AuraState.Load();
 
@@ -1297,7 +1296,7 @@ internal static partial class Program
     public static AuraState ApplyPreset(AuraPreset preset, Color? colour = null, string? deviceKey = null,
         int channel = -1)
     {
-        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
+        using IDisposable guard = AuraFiles.HardwareLock();
 
         AuraState state = AuraState.Load();
         bool wholeBoard = string.IsNullOrEmpty(deviceKey) && channel < 0;
@@ -1335,7 +1334,7 @@ internal static partial class Program
     /// </remarks>
     public static AuraState SetBrightness(byte percent, string? deviceKey = null, int channel = -1)
     {
-        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
+        using IDisposable guard = AuraFiles.HardwareLock();
 
         percent = Math.Clamp(percent, AuraState.MinBrightness, AuraState.MaxBrightness);
 
@@ -1463,7 +1462,7 @@ internal static partial class Program
             throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3);
         }
 
-        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
+        using IDisposable guard = AuraFiles.HardwareLock();
 
         AuraState state = AuraState.Load();
         var devices = AuraDevice.DiscoverAll();
@@ -1750,10 +1749,10 @@ internal static partial class Program
     public static void Identify(string deviceKey, int channel, CancellationToken token)
     {
         // The controller talks to one caller at a time: the discovery and the lighting burst
-        // below each hold the files lock, the open-ended wait between them deliberately does not
+        // below each hold the hardware lock, the open-ended wait between them deliberately does not
         // - a rename popup can stay open for minutes, and nothing else may be shut out for that.
         List<AuraDevice> devices;
-        using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+        using (AuraFiles.HardwareLock())
         {
             devices = AuraDevice.DiscoverAll();
         }
@@ -1773,7 +1772,7 @@ internal static partial class Program
 
             try
             {
-                using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+                using (AuraFiles.HardwareLock())
                 {
                     foreach (AuraDevice device in devices)
                     {
@@ -1798,7 +1797,7 @@ internal static partial class Program
                 // Even when lighting the target channel itself failed, whatever this did turn dark
                 // still needs to go back to its own record - a failure here must not leave a
                 // controller stuck dark with channel-state.json still describing it as lit.
-                using (AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs))
+                using (AuraFiles.HardwareLock())
                 {
                     // Read now, not before the wait: the lock was free all that time, so the
                     // command line or a start action may have changed what the records say.
@@ -1826,7 +1825,7 @@ internal static partial class Program
     /// </summary>
     public static void Preview(CustomPreset preset)
     {
-        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
+        using IDisposable guard = AuraFiles.HardwareLock();
 
         var devices = AuraDevice.DiscoverAll();
 
@@ -1871,7 +1870,7 @@ internal static partial class Program
     /// </summary>
     public static void RestoreFromRecords()
     {
-        using IDisposable guard = AuraFiles.Lock(AuraFiles.HardwareLockTimeoutMs);
+        using IDisposable guard = AuraFiles.HardwareLock();
 
         var devices = AuraDevice.DiscoverAll();
 
