@@ -133,14 +133,14 @@ es.CloseAppFirst=Aura Toggle sigue en ejecución. Ciérrelo (clic derecho en el 
 es.DesktopIcon=Crear un acceso directo en el escritorio
 es.OtherInstall=Aura Toggle ya está instalado en otra carpeta:%n%1%n%n¿Desinstalar esa copia antes de instalar aquí? La configuración y los preajustes se conservan.%n%nSí: desinstalarla%nNo: conservar ambas%nCancelar: volver
 es.OtherUninstallFailed=No se pudo desinstalar la copia de %1. La instalación continúa; puede quitarla más tarde desde la configuración de Windows.
-es.RemoveSettings=¿Eliminar también la configuración, los preajustes propios y los nombres de canal? (%1)
+es.RemoveSettings=¿Eliminar también la configuración, los preajustes personalizados y los nombres de canal? (%1)
 es.RuntimeAsk=Aura Toggle necesita Microsoft .NET 10 Desktop Runtime, que este equipo aún no tiene.%n%n¿Desea descargarlo de Microsoft e instalarlo ahora? Ocupa unos 60 MB y tarda un minuto.
 es.RuntimeDownloading=Descargando .NET 10 Desktop Runtime... %1%%
 es.RuntimeInstalling=Instalando .NET 10 Desktop Runtime...
 es.RuntimeDeclined=Aura Toggle no puede ejecutarse sin .NET 10 Desktop Runtime, por lo que no se instaló nada.
 es.RuntimeFailed=No se pudo instalar .NET 10 Desktop Runtime. Instálelo manualmente desde https://dotnet.microsoft.com/download/dotnet/10.0 y ejecute de nuevo este instalador.
 pt.AutoStart=Iniciar o Aura Toggle com o Windows
-pt.CloseAppFirst=O Aura Toggle ainda está em execução. Feche-o (clique com o botão direito no ícone da bandeja, Sair) e clique em OK para continuar.
+pt.CloseAppFirst=O Aura Toggle ainda está em execução. Feche-o (clique com o botão direito no ícone da área de notificação, Sair) e clique em OK para continuar.
 pt.DesktopIcon=Criar atalho na área de trabalho
 pt.OtherInstall=O Aura Toggle já está instalado em outra pasta:%n%1%n%nDesinstalar essa cópia antes de instalar aqui? Suas configurações e predefinições são mantidas.%n%nSim: desinstalar%nNão: manter as duas%nCancelar: voltar
 pt.OtherUninstallFailed=Não foi possível desinstalar a cópia em %1. A instalação continua; você pode removê-la depois nas configurações do Windows.
@@ -166,13 +166,13 @@ nl.CloseAppFirst=Aura Toggle wordt nog uitgevoerd. Sluit het af (klik met de rec
 nl.DesktopIcon=Een snelkoppeling op het bureaublad maken
 nl.OtherInstall=Aura Toggle is al in een andere map geïnstalleerd:%n%1%n%nDie kopie eerst verwijderen voordat hier wordt geïnstalleerd? Je instellingen en voorinstellingen blijven behouden.%n%nJa: verwijderen%nNee: beide houden%nAnnuleren: terug
 nl.OtherUninstallFailed=De kopie in %1 kon niet worden verwijderd. De installatie gaat verder; je kunt deze later via de Windows-instellingen verwijderen.
-nl.RemoveSettings=Ook instellingen, eigen voorinstellingen en kanaalnamen verwijderen? (%1)
+nl.RemoveSettings=Ook instellingen, aangepaste voorinstellingen en kanaalnamen verwijderen? (%1)
 nl.RuntimeAsk=Aura Toggle heeft Microsoft .NET 10 Desktop Runtime nodig, maar deze pc beschikt daar nog niet over.%n%nNu downloaden van Microsoft en installeren? Dit is ongeveer 60 MB en duurt een minuut.
 nl.RuntimeDownloading=.NET 10 Desktop Runtime wordt gedownload... %1%%
 nl.RuntimeInstalling=.NET 10 Desktop Runtime wordt geïnstalleerd...
 nl.RuntimeDeclined=Aura Toggle kan niet worden uitgevoerd zonder .NET 10 Desktop Runtime, dus er is niets geïnstalleerd.
 nl.RuntimeFailed=De .NET 10 Desktop Runtime kon niet worden geïnstalleerd. Installeer deze handmatig via https://dotnet.microsoft.com/download/dotnet/10.0 en voer deze installatie opnieuw uit.
-pl.AutoStart=Uruchamiaj Aura Toggle podczas uruchamiania Windows
+pl.AutoStart=Uruchamiaj Aura Toggle razem z Windows
 pl.CloseAppFirst=Aura Toggle nadal działa. Zamknij go (kliknij prawym przyciskiem ikonę w obszarze powiadomień, Zakończ) i kliknij OK, aby kontynuować.
 pl.DesktopIcon=Utwórz skrót na pulpicie
 pl.OtherInstall=Aura Toggle jest już zainstalowany w innym folderze:%n%1%n%nOdinstalować tę kopię przed instalacją tutaj? Ustawienia i presety zostaną zachowane.%n%nTak: odinstaluj%nNie: zachowaj obie%nAnuluj: wróć
@@ -190,7 +190,7 @@ tr.OtherInstall=Aura Toggle zaten başka bir klasörde yüklü:%n%1%n%nBuraya y�
 tr.OtherUninstallFailed=%1 içindeki kopya kaldırılamadı. Kurulum devam ediyor; onu daha sonra Windows ayarlarından kaldırabilirsiniz.
 tr.RemoveSettings=Ayarlar, özel ön ayarlar ve kanal adları da silinsin mi? (%1)
 tr.RuntimeAsk=Aura Toggle, bu bilgisayarda henüz bulunmayan Microsoft .NET 10 Desktop Runtime'a ihtiyaç duyar.%n%nMicrosoft'tan indirip şimdi yüklemek ister misiniz? Yaklaşık 60 MB'tır ve bir dakika sürer.
-tr.RuntimeDownloading=.NET 10 Desktop Runtime indiriliyor... %1%%
+tr.RuntimeDownloading=.NET 10 Desktop Runtime indiriliyor... %%%1
 tr.RuntimeInstalling=.NET 10 Desktop Runtime yükleniyor...
 tr.RuntimeDeclined=Aura Toggle, .NET 10 Desktop Runtime olmadan çalışamaz; bu nedenle hiçbir şey yüklenmedi.
 tr.RuntimeFailed=.NET 10 Desktop Runtime yüklenemedi. https://dotnet.microsoft.com/download/dotnet/10.0 adresinden elle yükleyin ve bu kurulumu yeniden çalıştırın.
@@ -507,14 +507,12 @@ end;
 const
   RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
 
-{ Points the autostart entry at the executable just installed. }
-procedure WriteAutoStart;
+{ Writes the autostart entry, in this hive and in the original user's. }
+procedure WriteRunValue(const Wanted: String);
 var
-  Wanted: String;
   Escaped: String;
   ResultCode: Integer;
 begin
-  Wanted := '"' + ExpandConstant('{app}\{#AppExe}') + '" -autostart';
   RegWriteStringValue(HKEY_CURRENT_USER, RunKey, 'AuraToggle', Wanted);
 
   { Same blind spot the [Run] section works around: elevated as a different administrator, the
@@ -531,6 +529,12 @@ begin
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   except
   end;
+end;
+
+{ Points the autostart entry at the executable just installed. }
+procedure WriteAutoStart;
+begin
+  WriteRunValue('"' + ExpandConstant('{app}\{#AppExe}') + '" -autostart');
 end;
 
 procedure RepointLegacyAutoStart;
@@ -613,8 +617,10 @@ var
   Dir: String;
   Uninstaller: String;
   Current: String;
+  Foreign: String;
 begin
   Result := True;
+  Foreign := '';
   if not OtherInstall(Root, Dir, Uninstaller) then
     Exit;
 
@@ -627,11 +633,18 @@ begin
         { Only an entry that starts the copy being removed; a portable copy's stays its own. }
         if RegQueryStringValue(HKEY_CURRENT_USER, RunKey, 'AuraToggle', Current) and
            (Pos(Lowercase(AddBackslash(Dir)), Lowercase(Current)) > 0) then
-          RestoreAutoStart := True;
+          RestoreAutoStart := True
+        else if Current <> '' then
+          Foreign := Current;
 
         if not UninstallOther(Root, Uninstaller) then
           SuppressibleMsgBox(FmtMessage(CustomMessage('OtherUninstallFailed'), [Dir]), mbError,
             MB_OK, IDOK);
+
+        { Uninstallers up to 1.5.0 delete the entry whatever it names, so one that started a
+          portable copy is written back as it was. }
+        if (Foreign <> '') and not RegValueExists(HKEY_CURRENT_USER, RunKey, 'AuraToggle') then
+          WriteRunValue(Foreign);
       end;
   end;
 end;
