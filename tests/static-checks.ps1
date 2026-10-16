@@ -275,6 +275,19 @@ foreach ($line in $sources) {
     }
 }
 
+# A bare find or sort in a batch file resolves to the GNU tool when Git or MSYS sits ahead of
+# System32 on PATH, and GNU find walks the whole drive instead of counting lines.
+foreach ($bat in Get-ChildItem $root -Filter *.bat) {
+    $number = 0
+    foreach ($text in [IO.File]::ReadAllLines($bat.FullName)) {
+        $number++
+        if ($text -match "^\s*(REM|::)") { continue }
+        if ($text -match "(^|[\s('|&])(find|sort)(\.exe)?\s" -and $text -notmatch "System32\\(find|sort)\.exe") {
+            Add-Finding "$($bat.Name):$number" "bare find/sort, use %SystemRoot%\System32\<tool>.exe"
+        }
+    }
+}
+
 $dist = Join-Path $root "dist"
 if (Test-Path $dist) {
     foreach ($file in Get-ChildItem $dist -Filter *.pdb) {
