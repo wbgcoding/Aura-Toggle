@@ -1891,6 +1891,7 @@ internal sealed class RenamePopup : PopupForm
 internal sealed class ThemedTip : IDisposable
 {
     private readonly Dictionary<Control, string> _texts = new();
+    private readonly HashSet<Form> _forms = new();
     private readonly System.Windows.Forms.Timer _delay = new() { Interval = SystemInformation.MouseHoverTime };
     private readonly System.Windows.Forms.Timer _expire = new();
     private TipWindow? _window;
@@ -1945,6 +1946,15 @@ internal sealed class ThemedTip : IDisposable
             _window = new TipWindow();
         }
 
+        // Topmost and without an owner of its own, the tip would float over another app after
+        // Alt+Tab or a minimise until it expired; it goes with the window it belongs to.
+        if (owner.FindForm() is Form form && _forms.Add(form))
+        {
+            form.Deactivate += OnFormLeft;
+            form.VisibleChanged += OnFormLeft;
+            form.FormClosed += OnFormLeft;
+        }
+
         _window.ShowAt(text, owner, owner.PointToScreen(new Point(x, y)));
         _expire.Stop();
         _expire.Interval = durationMs;
@@ -1953,6 +1963,26 @@ internal sealed class ThemedTip : IDisposable
 
     public void Hide(Control owner)
     {
+        _expire.Stop();
+        if (_window is { IsDisposed: false })
+        {
+            _window.HideTip();
+        }
+    }
+
+#if REVIEW
+    /// <summary>Surface tool only: whether the tip window is on screen right now.</summary>
+    internal bool ShowingForReview => _window is { IsDisposed: false, IsHandleCreated: true } window &&
+        IsWindowVisible(window.Handle);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr window);
+#endif
+
+    private void OnFormLeft(object? sender, EventArgs e)
+    {
+        _delay.Stop();
+        _hovered = null;
         _expire.Stop();
         if (_window is { IsDisposed: false })
         {
@@ -1989,6 +2019,13 @@ internal sealed class ThemedTip : IDisposable
             control.MouseDown -= OnLeave;
         }
 
+        foreach (Form form in _forms)
+        {
+            form.Deactivate -= OnFormLeft;
+            form.VisibleChanged -= OnFormLeft;
+            form.FormClosed -= OnFormLeft;
+        }
+
         _delay.Dispose();
         _expire.Dispose();
         _window?.Dispose();
@@ -2000,6 +2037,7 @@ internal sealed class ThemedTip : IDisposable
         private const int WsExNoActivate = 0x08000000;
         private const int CsDropShadow = 0x00020000;
         private const int WmNcHitTest = 0x0084;
+        private const int WmDpiChanged = 0x02E0;
         private const int HtTransparent = -1;
         private static readonly IntPtr TopMostZ = new(-1);
         private const uint SwpNoSize = 0x0001;
@@ -2075,12 +2113,6 @@ internal sealed class ThemedTip : IDisposable
                 return;
             }
 
-            // Moving onto a display at another scale resizes the window to its own guess.
-            if (Bounds != bounds)
-            {
-                Bounds = bounds;
-            }
-
             Invalidate();
             Update();
             if (appearing)
@@ -2118,6 +2150,15 @@ internal sealed class ThemedTip : IDisposable
             if (m.Msg == WmNcHitTest)
             {
                 m.Result = HtTransparent;
+                return;
+            }
+
+            // ShowAt measures with the owner's font and places the window itself. Left to
+            // WinForms, crossing onto a display at another scale rescaled the font after that
+            // measurement and painted text too large for its box.
+            if (m.Msg == WmDpiChanged)
+            {
+                m.Result = IntPtr.Zero;
                 return;
             }
 

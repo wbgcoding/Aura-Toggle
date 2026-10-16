@@ -107,12 +107,8 @@ internal static partial class Program
 
             popup.Shown += (_, _) =>
             {
-                // A manually shown ToolTip only ever paints for the foreground window, which a
-                // headless/automated session does not reliably hand a freshly opened one - shown
-                // for anyone testing this by hand, but %TEMP%\aura-tip.png below is what actually
-                // proves the colours: RenderTipForReview calls the exact same drawing code onto a
-                // bitmap, with nothing about window focus in the way.
-                // Shown a while after the list, as a hover does, so a recording of the screen can
+                // %TEMP%\aura-tip.png below is the tip's face drawn by the same code onto a bitmap,
+                // checkable without capturing the tip window. Shown a while after the list, as a hover does, so a recording of the screen can
                 // tell the tooltip's own first frames apart from the list appearing.
                 var later = new System.Windows.Forms.Timer { Interval = 1500 };
                 later.Tick += (_, _) =>
@@ -708,6 +704,12 @@ internal static partial class Program
         check("tip: shows", "ok", Outcome(() => tip.Show("tip", host, 4, 4, 1000)));
         Application.DoEvents();
         check("tip: owner keeps the activation", "0", deactivated.ToString(CultureInfo.InvariantCulture));
+        check("tip: on screen", "True", tip.ShowingForReview.ToString());
+        host.Hide();
+        Application.DoEvents();
+        check("tip: hides with its window", "False", tip.ShowingForReview.ToString());
+        host.Show();
+        Application.DoEvents();
         tip.Dispose();
         check("tip: show after dispose", "ok", Outcome(() => tip.Show("tip", host, 4, 4, 1000)));
         check("tip: hide after dispose", "ok", Outcome(() => tip.Hide(host)));
