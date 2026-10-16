@@ -1459,14 +1459,12 @@ internal sealed partial class ToggleForm : Form
         ApplyEffect(pick.Key, pick.Text, pick.DeviceKey, pick.Channel, pick.Colour);
     }
 
-    /// <summary>Shows the error dialog, or brings the one already open forward; the failure is logged either way.</summary>
+    /// <summary>Shows the error dialog, or puts the new error into the one already open; the failure is logged either way.</summary>
     private void ShowError(Exception ex, string context)
     {
         if (_errorDialog is { IsDisposed: false } open)
         {
-            AuraLog.Error(context, ex);
-            open.Activate();
-            open.BringToFront();
+            open.Replace(ex, context);
             return;
         }
 

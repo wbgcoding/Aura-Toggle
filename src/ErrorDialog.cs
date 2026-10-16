@@ -33,11 +33,11 @@ internal sealed class ErrorDialog : PopupForm
     private readonly PillButton _openLog = new();
     private readonly PillButton _close = new();
 
-    private readonly string _detailText;
+    private string _detailText;
 
     /// <summary>True when the body is the generic message, which is ours to say again in another
     /// language; a curated exception message was worded at the moment it was raised.</summary>
-    private readonly bool _genericBody;
+    private bool _genericBody;
 
     private ErrorDialog(string bodyText, string detailText, bool genericBody)
     {
@@ -154,14 +154,7 @@ internal sealed class ErrorDialog : PopupForm
             return null;
         }
 
-        bool curated = ex is AuraNotFoundException or IOException;
-        string body = curated ? ex.Message : Strings.ErrorUnexpected;
-
-        string details = AuraFiles.Redact(string.Join(Environment.NewLine,
-            $"Aura Toggle {Program.VersionText}",
-            $"Channels on record: {SafeChannelCount()}",
-            "",
-            ex.ToString()));
+        (string body, string details, bool curated) = Describe(ex);
 
         var dialog = new ErrorDialog(body, details, genericBody: !curated);
         if (onClosed != null)
@@ -171,6 +164,36 @@ internal sealed class ErrorDialog : PopupForm
 
         dialog.Open(owner);
         return dialog;
+    }
+
+    private static (string Body, string Details, bool Curated) Describe(Exception ex)
+    {
+        bool curated = ex is AuraNotFoundException or IOException;
+        string body = curated ? ex.Message : Strings.ErrorUnexpected;
+
+        string details = AuraFiles.Redact(string.Join(Environment.NewLine,
+            $"Aura Toggle {Program.VersionText}",
+            $"Channels on record: {SafeChannelCount()}",
+            "",
+            ex.ToString()));
+
+        return (body, details, curated);
+    }
+
+    /// <summary>Shows a different error in the dialog that is already open, so a later failure
+    /// is not hidden behind the first one.</summary>
+    public void Replace(Exception ex, string context)
+    {
+        AuraLog.Error(context, ex);
+
+        (string body, string details, bool curated) = Describe(ex);
+        _detailText = details;
+        _genericBody = !curated;
+        _body.Text = body;
+        _details.Text = details.Replace("\r\n", "\n").Replace("\n", "\r\n");
+        Reflow();
+        Activate();
+        BringToFront();
     }
 
     private static int SafeChannelCount()
