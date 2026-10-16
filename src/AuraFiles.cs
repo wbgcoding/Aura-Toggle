@@ -278,6 +278,7 @@ internal static class AuraFiles
             string path = PathTo(name);
             if (!File.Exists(path))
             {
+                MarkDamaged(name, false);
                 return null;
             }
 
@@ -285,21 +286,89 @@ internal static class AuraFiles
             // unparsable one, instead of being read into memory whole.
             if (new FileInfo(path).Length > MaxPresetFileBytes)
             {
+                MarkDamaged(name, true);
                 return null;
             }
 
             JsonDocument document = JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
             if (document.RootElement.ValueKind == expectedRoot)
             {
+                MarkDamaged(name, false);
                 return document;
             }
 
             document.Dispose();
+            MarkDamaged(name, true);
             return null;
         }
         catch (Exception ex) when (IsExpected(ex))
         {
+            MarkDamaged(name, true);
             return null;
+        }
+    }
+
+    // Files that exist but could not be read as what they should be. Every writer loads, changes
+    // and saves, so the first save after a failed read would replace the user's file with
+    // defaults plus one change; it is copied aside first.
+    private static readonly System.Collections.Generic.HashSet<string> DamagedFiles = new();
+
+    private const int KeptBadCopies = 3;
+
+    private static void MarkDamaged(string name, bool damaged)
+    {
+        lock (DamagedFiles)
+        {
+            if (damaged)
+            {
+                DamagedFiles.Add(name);
+            }
+            else
+            {
+                DamagedFiles.Remove(name);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Copies a file that failed to read to <c>&lt;name&gt;.bad-&lt;stamp&gt;.json</c> beside it,
+    /// once, right before the first write that would replace it. Only the three newest copies of
+    /// a file are kept. The log gets one line, never the content.
+    /// </summary>
+    private static void KeepDamagedCopy(string name)
+    {
+        lock (DamagedFiles)
+        {
+            if (!DamagedFiles.Remove(name))
+            {
+                return;
+            }
+        }
+
+        try
+        {
+            string path = PathTo(name);
+            if (!File.Exists(path) || new FileInfo(path).Length == 0)
+            {
+                return;
+            }
+
+            string stem = Path.GetFileNameWithoutExtension(name);
+            string copy = PathTo($"{stem}.bad-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            File.Copy(path, copy, overwrite: true);
+
+            string[] old = Directory.GetFiles(Folder, stem + ".bad-*.json");
+            Array.Sort(old, StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < old.Length - KeptBadCopies; i++)
+            {
+                File.Delete(old[i]);
+            }
+
+            AuraLog.Info($"{name} could not be read, kept a copy as {Path.GetFileName(copy)}");
+        }
+        catch (Exception ex) when (IsExpected(ex))
+        {
+            AuraLog.Error("KeepDamagedCopy " + name, ex);
         }
     }
 
@@ -364,6 +433,7 @@ internal static class AuraFiles
         try
         {
             Directory.CreateDirectory(Folder);
+            KeepDamagedCopy(name);
 
             using (FileStream stream = File.Create(temp))
             {
