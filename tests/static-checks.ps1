@@ -207,7 +207,13 @@ if ($projectVersion -ne $changelogVersion) { Add-Finding "CHANGELOG.md" "newest 
 # --------------------------------------------------------------------------------------------
 Write-Section "Leftovers and private traces"
 
-$textFiles = @(
+# Everything the repository publishes, so a new tracked file is covered without editing a list.
+# Outside a git checkout (a source zip) the known folders are scanned instead.
+$tracked = @(git -C $root ls-files 2>$null)
+$textFiles = if ($LASTEXITCODE -eq 0 -and $tracked.Count -gt 0) {
+    $tracked | Where-Object { $_ -match "\.(cs|resx|ps1|py|iss|isl|bat|md|txt|yml|yaml|csproj)$" } |
+        ForEach-Object { Join-Path $root $_ }
+} else { @(
     $csharp
     Get-ChildItem (Join-Path $root "src") -Filter *.resx | ForEach-Object { $_.FullName }
     Get-ChildItem (Join-Path $root "tools") -Filter *.ps1 | ForEach-Object { $_.FullName }
@@ -218,7 +224,21 @@ $textFiles = @(
     Join-Path $root "README.md"
     Join-Path $root "CHANGELOG.md"
     Get-ChildItem (Join-Path $root "installer") -Filter *.txt | ForEach-Object { $_.FullName }
-)
+) }
+
+# Names of local working files and tools that must not appear in a shipped file. The list stays
+# on the machine that builds releases, so publishing this script does not publish the names; where
+# it is missing (a fresh clone, CI) these two checks are skipped.
+$privateFiles = @()
+$privateWords = @()
+$privateList = Join-Path $PSScriptRoot "private-traces.txt"
+if (Test-Path $privateList) {
+    foreach ($entry in [IO.File]::ReadAllLines($privateList)) {
+        $word = $entry.Trim()
+        if (-not $word -or $word.StartsWith("#")) { continue }
+        if ($word -match "\.md$") { $privateFiles += [regex]::Escape($word) } else { $privateWords += [regex]::Escape($word) }
+    }
+}
 
 foreach ($line in Get-SourceLines $textFiles) {
     # This file is the one place the patterns themselves are written down.
@@ -235,13 +255,13 @@ foreach ($line in Get-SourceLines $textFiles) {
     }
     # The internal planning and design notes stay out of the repository, so a comment pointing at
     # one sends every reader of a clone to a file that is not there.
-    if ($line.Text -match "\b(NOTES)\.md\b") {
+    if ($privateFiles.Count -gt 0 -and $line.Text -match "\b($($privateFiles -join '|'))") {
         Add-Finding "$($line.File):$($line.Number)" "reference to a file this repository does not ship"
     }
     # Whose machine this was written on is nobody's business downstream. The account name comes
     # from the environment rather than a list, so this catches whoever is building without
     # writing anybody's name into a file that ships.
-    if ($line.Text -match "\b(PRIVATE)\b" -or
+    if (($privateWords.Count -gt 0 -and $line.Text -match "\b($($privateWords -join '|'))\b") -or
         ($env:USERNAME -and $line.Text -match "\b$([regex]::Escape($env:USERNAME))\b")) {
         Add-Finding "$($line.File):$($line.Number)" "author or tooling trace in a shipped file"
     }
