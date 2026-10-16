@@ -176,7 +176,7 @@ internal sealed record AuraSettings(
     /// <summary>
     /// Keeps a custom preset chosen as the start action pointing at the right preset: a rename
     /// carries the new name over, a delete (<paramref name="newName"/> null) falls back to leaving
-    /// the lighting alone. Without this a renamed preset silently stopped applying at logon.
+    /// the lighting alone. Without this a renamed preset would silently stop applying at logon.
     /// </summary>
     public static void FollowPresetRename(string oldName, string? newName)
     {

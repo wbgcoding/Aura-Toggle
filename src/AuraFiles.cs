@@ -253,8 +253,8 @@ internal static class AuraFiles
 
         try
         {
-            // A stale backup from before the .bak -> .zip rename never gets written again -
-            // remove it so it does not linger in the data folder forever.
+            // Nothing writes a reset-backup.bak any more, so one left in the data folder would
+            // stay there forever; removed here.
             try
             {
                 File.Delete(PathTo("reset-backup.bak"));
@@ -559,8 +559,8 @@ internal static class AuraFiles
             // session the same account is logged into (a physical logon plus a Remote Desktop
             // one, say), but a plain named mutex lives in the caller's own Terminal Services
             // session - two sessions would each get their own lock and race the same files.
-            // Falls back to the old session-local name if the Global one is denied outright
-            // (rare, locked-down policy) rather than running with no lock at all.
+            // Falls back to a session-local name if the Global one is denied
+            // outright (rare, locked-down policy) rather than running with no lock at all.
             (Mutex, bool)? acquired = TryAcquire(globalName, timeoutMs)
                 ?? TryAcquire(localName, timeoutMs);
             _mutex = acquired?.Item1;

@@ -1173,9 +1173,9 @@ internal static partial class Program
 
             try
             {
-                // Every channel of this controller in one burst - sending them one at a time left
-                // the onboard zone lit and settled a dozen reports before the last header caught
-                // up, which read as the board coming on in stages.
+                // Every channel of this controller in one burst - sending them one at a time
+                // would leave the onboard zone lit and settled a dozen reports before the last
+                // header caught up, which reads as the board coming on in stages.
                 device.Apply(looks);
                 named.AddRange(deviceNamed);
                 delivered = true;
@@ -1473,7 +1473,7 @@ internal static partial class Program
         bool delivered = false;
 
         // Every entry and every gap-filled channel lands here first, then each controller gets
-        // one Apply() call for its whole mix - not one call per channel, which left the onboard
+        // one Apply() call for its whole mix - one call per channel would leave the onboard
         // zone lit and settled a dozen reports before the last header caught up.
         var perDevice = new Dictionary<string, List<ChannelLook>>();
 
@@ -1728,14 +1728,12 @@ internal static partial class Program
     /// <para>
     /// Black here means the static mode carrying the colour 0,0,0, which is what the brightness
     /// model already produces for a channel set to black: the controller has no brightness of its
-    /// own, colours are scaled before they are sent. That is not the same as the mode-off that was
-    /// tried when this was first written and rejected, because on boards whose headers share one
-    /// bus an off neighbour can still catch stray colour from whichever header is driving it. A
-    /// static black holds the channel at a colour instead of releasing it, and measured on the
-    /// reference board that is genuinely dark (21.08.). If a board ever does show a glow on a
-    /// neighbour again, the answer is a faint white on the others - not a blink: toggling a
-    /// channel in a loop runs into the dynamic-lighting limit that silently drops the colour
-    /// command past a certain channel index, so it never blinks at all.
+    /// own, colours are scaled before they are sent. Mode off is not used: on boards whose headers
+    /// share one bus, an off neighbour can still catch stray colour. A static black holds the
+    /// channel dark. If a board ever does show a glow on a neighbour, the answer is a faint white
+    /// on the others - not a blink: toggling a channel in a loop runs into the dynamic-lighting
+    /// limit that silently drops the colour command past a certain channel index, so it never
+    /// blinks at all.
     /// </para>
     /// Runs until <paramref name="token"/> is cancelled, then puts every channel it touched back
     /// to what <c>channel-state.json</c> already says it should be - nothing is written here, this

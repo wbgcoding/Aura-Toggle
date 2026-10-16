@@ -368,7 +368,7 @@ internal sealed class AuraDevice : IDisposable
     /// </summary>
     /// <remarks>
     /// Both passes run over the <em>whole list</em>, not over one channel at a time. Sending each
-    /// channel to completion in turn meant the onboard zone was lit and settled twelve reports
+    /// channel to completion in turn would light the onboard zone and settle twelve reports
     /// before the last header caught up, which reads as the board coming on in stages. Sweeping
     /// the list twice keeps every channel within one report of its neighbours and still repeats
     /// the sequence, which is what the controller needs: it silently drops commands that arrive
@@ -513,9 +513,9 @@ internal sealed class AuraDevice : IDisposable
 
             // The controller needs a moment between commands, otherwise later channels are
             // dropped. The requested value is 8 ms; Windows' timer resolution rounds a Sleep this
-            // short up to whatever a scheduler tick actually is on the machine (measured ~16.7 ms
-            // on the reference machine) - that rounded-up gap is what has been tested against the
-            // hardware, so it is left alone rather than "corrected" down to the requested number.
+            // short up to whatever a scheduler tick actually is on the machine (about 16.7 ms
+            // by default) - that rounded-up gap is what the hardware is known to tolerate, so it
+            // is left alone rather than "corrected" down to the requested number.
             Thread.Sleep(ReportGapMs);
         }
         catch (IOException ex)
