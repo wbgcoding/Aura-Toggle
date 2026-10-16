@@ -157,7 +157,8 @@ $textPatterns = @(
     '\.Text\s*=\s*[$]?"',
     'AccessibleName\s*=\s*[$]?"',
     'SetToolTip\([^,]+,\s*[$]?"',
-    'MessageBox\.Show\(\s*[$]?"'
+    'MessageBox\.Show\(\s*[$]?"',
+    '\bFilter\s*=\s*[$]?"'
 )
 
 foreach ($line in $sources) {

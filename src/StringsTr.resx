@@ -281,6 +281,9 @@
   <data name="CustomPresetImport" xml:space="preserve">
     <value>İçe aktar</value>
   </data>
+  <data name="FileFilterJson" xml:space="preserve">
+    <value>JSON dosyaları (*.json)|*.json</value>
+  </data>
   <data name="CustomPresetExportError" xml:space="preserve">
     <value>Dosya kaydedilemedi.</value>
   </data>

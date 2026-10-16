@@ -786,7 +786,7 @@ internal sealed class CustomPresetEditor : PopupForm
         string name = _name.Text.Trim();
         using var dialog = new SaveFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = Strings.FileFilterJson,
             FileName = (name.Length > 0 ? SanitiseFileName(name) : "preset") + ".json",
             InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         };
@@ -845,7 +845,7 @@ internal sealed class CustomPresetEditor : PopupForm
     {
         using var dialog = new OpenFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = Strings.FileFilterJson,
             InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         };
 
