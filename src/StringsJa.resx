@@ -128,6 +128,12 @@
   <data name="ErrorControllerBusy" xml:space="preserve">
     <value>Aura LEDコントローラーは別のプログラム（Armoury Crate、OpenRGB、SignalRGB）で使用中です。そのプログラムを閉じてからもう一度試してください。</value>
   </data>
+  <data name="ErrorControllerOpen" xml:space="preserve">
+    <value>LEDコントローラーを開けません（Windows エラー {0}）。</value>
+  </data>
+  <data name="ErrorDeviceList" xml:space="preserve">
+    <value>Windows が接続されたデバイスを一覧表示できませんでした（エラー {0}）。</value>
+  </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>Auraコントローラーへの書き込みに失敗しました（コマンド 0x{0}）: {1}</value>
   </data>
@@ -195,7 +201,7 @@
     <value>日本語</value>
   </data>
   <data name="DeviceFallbackName" xml:space="preserve">
-    <value>Aura コントローラー #{0}</value>
+    <value>Auraコントローラー #{0}</value>
   </data>
   <data name="ChannelAll" xml:space="preserve">
     <value>すべてのチャンネル</value>
@@ -318,7 +324,7 @@
     <value>プリセットも対象です。よろしいですか？</value>
   </data>
   <data name="ErrorResetBackupFailed" xml:space="preserve">
-    <value>リセットは行われませんでした。設定とプリセットのバックアップを書き込めませんでした。ディスクの空き容量を増やして、もう一度お試しください。</value>
+    <value>リセットは行われませんでした。設定とプリセットのバックアップを書き込めませんでした。ディスクの空き容量を増やして、もう一度試してください。</value>
   </data>
   <data name="ErrorResetIncomplete" xml:space="preserve">
     <value>別のプログラムが使用中のため、一部のファイルをリセットできませんでした。そのプログラムを閉じてからもう一度試してください。</value>

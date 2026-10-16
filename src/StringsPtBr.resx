@@ -128,6 +128,12 @@
   <data name="ErrorControllerBusy" xml:space="preserve">
     <value>O controlador LED Aura está sendo usado por outro programa (Armoury Crate, OpenRGB, SignalRGB). Feche-o e tente novamente.</value>
   </data>
+  <data name="ErrorControllerOpen" xml:space="preserve">
+    <value>Não é possível abrir o controlador LED (erro do Windows {0}).</value>
+  </data>
+  <data name="ErrorDeviceList" xml:space="preserve">
+    <value>O Windows não conseguiu listar os dispositivos conectados (erro {0}).</value>
+  </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>Falha ao gravar no controlador Aura (comando 0x{0}): {1}</value>
   </data>

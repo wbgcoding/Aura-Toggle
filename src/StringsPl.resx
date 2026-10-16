@@ -128,6 +128,12 @@
   <data name="ErrorControllerBusy" xml:space="preserve">
     <value>Kontroler LED Aura jest używany przez inny program (Armoury Crate, OpenRGB, SignalRGB). Zamknij go i spróbuj ponownie.</value>
   </data>
+  <data name="ErrorControllerOpen" xml:space="preserve">
+    <value>Nie można otworzyć kontrolera LED (błąd systemu Windows {0}).</value>
+  </data>
+  <data name="ErrorDeviceList" xml:space="preserve">
+    <value>System Windows nie mógł wyświetlić listy podłączonych urządzeń (błąd {0}).</value>
+  </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>Nie udało się zapisać do kontrolera Aura (polecenie 0x{0}): {1}</value>
   </data>

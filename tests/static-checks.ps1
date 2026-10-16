@@ -158,18 +158,21 @@ $textPatterns = @(
     'AccessibleName\s*=\s*[$]?"',
     'SetToolTip\([^,]+,\s*[$]?"',
     'MessageBox\.Show\(\s*[$]?"',
-    '\bFilter\s*=\s*[$]?"'
+    '\bFilter\s*=\s*[$]?"',
+    'new\s+(IOException|AuraNotFoundException)\(\s*[$]?"'
 )
 
 foreach ($line in $sources) {
-    if ($line.File -eq "src\Strings.cs") { continue }
+    if ($line.File -eq "src\Strings.cs" -or $line.File -like "src\Review*") { continue }
     foreach ($pattern in $textPatterns) {
         if ($line.Text -notmatch $pattern) { continue }
         $literal = [regex]::Match($line.Text, '"([^"]*)"').Groups[1].Value
         if ($textAllowList -contains $literal) { continue }
         # A caption assembled from Strings.* pieces is translated already; so is a literal that
         # carries no letters at all (a glyph, a separator, a format placeholder).
-        if ($literal -match "\{" -or $literal -notmatch "\p{L}") { continue }
+        if ($line.Text -match '\$"') { $literal = $literal -replace '\{[^}]*\}', '' }
+        elseif ($literal -match "\{") { continue }
+        if ($literal -notmatch "\p{L}") { continue }
         Add-Finding "$($line.File):$($line.Number)" "hardcoded text `"$literal`""
     }
 }

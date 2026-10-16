@@ -128,6 +128,12 @@
   <data name="ErrorControllerBusy" xml:space="preserve">
     <value>Aura LED 控制器正被其他程序占用（Armoury Crate、OpenRGB、SignalRGB）。请关闭后重试。</value>
   </data>
+  <data name="ErrorControllerOpen" xml:space="preserve">
+    <value>无法打开 LED 控制器（Windows 错误 {0}）。</value>
+  </data>
+  <data name="ErrorDeviceList" xml:space="preserve">
+    <value>Windows 无法列出已连接的设备（错误 {0}）。</value>
+  </data>
   <data name="ErrorWriteFailed" xml:space="preserve">
     <value>写入 Aura 控制器失败（命令 0x{0}）：{1}</value>
   </data>
@@ -165,7 +171,7 @@
     <value>关闭</value>
   </data>
   <data name="SettingCloseAfterStart" xml:space="preserve">
-    <value>应用后关闭应用</value>
+    <value>应用后关闭程序</value>
   </data>
   <data name="SettingCloseAfterStartHotkeyNote" xml:space="preserve">
     <value>热键仅在应用运行时有效。</value>

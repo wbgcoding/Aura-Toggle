@@ -75,6 +75,10 @@ internal static class Strings
 
     public static string ErrorControllerBusy => Get("ErrorControllerBusy");
 
+    public static string ErrorControllerOpen => Get("ErrorControllerOpen");
+
+    public static string ErrorDeviceList => Get("ErrorDeviceList");
+
     public static string ErrorWriteFailed => Get("ErrorWriteFailed");
 
     public static string ErrorWriteBusy => Get("ErrorWriteBusy");

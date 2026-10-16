@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -100,7 +101,7 @@ internal static class Hid
         IntPtr set = SetupDiGetClassDevs(ref hidGuid, IntPtr.Zero, IntPtr.Zero, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
         if (set == IntPtr.Zero || set == new IntPtr(-1))
         {
-            throw new IOException("SetupDiGetClassDevs failed: " + Marshal.GetLastWin32Error());
+            throw new IOException(string.Format(CultureInfo.CurrentCulture, Strings.ErrorDeviceList, Marshal.GetLastWin32Error()));
         }
 
         try
@@ -228,7 +229,7 @@ internal static class Hid
             // was never there.
             if (error != ERROR_SHARING_VIOLATION)
             {
-                throw new IOException($"Cannot open the LED controller (Windows error {error}).");
+                throw new IOException(string.Format(CultureInfo.CurrentCulture, Strings.ErrorControllerOpen, error));
             }
 
             throw new HidAccessException(error);
