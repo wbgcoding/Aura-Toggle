@@ -285,8 +285,7 @@ internal sealed class EffectButton : FlatControl
     /// Works the label out once for a given text, font and letter gap. At 30 fps the state word is
     /// the same three characters on every frame, and each one would otherwise cost a
     /// <see cref="TextRenderer.MeasureText(Graphics, string, Font, Size, TextFormatFlags)"/> - a
-    /// GDI call - plus a string per character per pass, five passes deep for the shadow. Measured on this machine: 61 us and 275 bytes per frame
-    /// that this cache turns into nothing.
+    /// GDI call - plus a string per character per pass, five passes deep for the shadow - work this cache turns into nothing.
     /// </summary>
     private void MeasureLabel(Graphics g, int spacing)
     {
@@ -573,8 +572,8 @@ internal sealed class TextField : FlatControl
         };
 
         // Typing changes the inner box, not this control, so without passing the event on a host
-        // watching TextChanged never hears a keystroke - which is what left the preset editor's
-        // Create button greyed out however much was typed into it.
+        // watching TextChanged never hears a keystroke - the preset editor's Create button would stay
+        // greyed out however much was typed into it.
         _box.TextChanged += (_, _) => OnTextChanged(EventArgs.Empty);
         _box.KeyDown += (_, e) => Accepted?.Invoke(this, e);
         Controls.Add(_box);
@@ -814,7 +813,7 @@ internal sealed class ColourPickerPopup : PopupForm
     private readonly TextField _hex;
 
     // Computed rather than stored: WinForms scales the window itself for the display it opens on,
-    // and these are painted inside it - held as fixed 96 dpi rectangles they left the picker in
+    // and these are painted inside it - held as fixed 96 dpi rectangles they would leave the picker in
     // the top left corner of a window twice their size.
     private Rectangle SvRect => new(this.Scaled(Pad), this.Scaled(Pad), this.Scaled(SvSize), this.Scaled(SvSize));
 

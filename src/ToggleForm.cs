@@ -264,9 +264,8 @@ internal sealed partial class ToggleForm : Form
         // A display-scale change reaches these two in their own time: WinForms updates a child's
         // own dpi and replaces its font after this window has already been told, so the widths
         // measured in between are still the old display's - and consistently so, which is why no
-        // check could tell. Re-measuring when the control itself reports the change is what an
-        // unrelated later action (the switch, another move) was doing by accident every time it
-        // appeared to fix itself.
+        // check could tell. Re-measuring when the control itself reports the change keeps them
+        // current.
         foreach (Control control in new Control[] { _effects, _channel })
         {
             control.DpiChangedAfterParent += (_, _) => QueueSettle();
@@ -355,11 +354,8 @@ internal sealed partial class ToggleForm : Form
 
         _topRow = new Layout
         {
-            // Not AutoSize: that would make the row's own preferred width - swayed by whatever
-            // _effects last measured, including a stale figure surviving a display-scale change -
-            // a floor Dock=Fill can grow past but never shrink below. A log from the field caught
-            // exactly that: "effects w=243 preferred=209", the panel refusing to give the row back
-            // to 209 even though the window was already sized for it, pushing the gear off the edge.
+            // Not AutoSize: AutoSize would make a stale preferred width a floor the row cannot
+            // shrink below, pushing the gear off the edge after a display-scale change.
             // Only Height is ever read from this row (ResizeToContent), and GetPreferredSize()
             // answers that without opting the row's own width into the same floor.
             Dock = DockStyle.Fill,
@@ -748,7 +744,7 @@ internal sealed partial class ToggleForm : Form
             {
                 // A name already at AuraFiles.MaxPresetName leaves no room for the suffix -
                 // AuraCustomPresets.Load re-caps every name to that length on the next read, which
-                // silently dropped the suffix back off and left two presets sharing one name.
+                // silently drops the suffix back off and leaves two presets sharing one name.
                 // AuraFiles.Caption, not a raw range - a plain cut can land inside a surrogate
                 // pair (an emoji in the name) and hand Utf8JsonWriter half of one on save.
                 string suffixText = $" ({suffix})";
@@ -1094,7 +1090,7 @@ internal sealed partial class ToggleForm : Form
         {
             // Kept as narrow as its own longest label: the effect list takes the rest of the row,
             // and that is where a long preset name would otherwise be cut off. The list it opens
-            // is exactly as wide as its longest row, pencil included - a fixed minimum left a
+            // is exactly as wide as its longest row, pencil included - a fixed minimum would leave a
             // short list of channels sitting in a panel far wider than anything in it. The bounds
             // are scaled because what they bound is not: the measured label width grows with the
             // display, so a limit written for 96 dpi would clip every name on a 150 % screen.
@@ -1687,7 +1683,7 @@ internal sealed partial class ToggleForm : Form
 #if REVIEW
     /// <summary>
     /// The settings panel's placement against the window edge, the gear and the big toggle button
-    /// it opened from - the regression proof for two complaints: a strip of the button left visible
+    /// it opened from - it checks two conditions: a strip of the button left visible
     /// next to the panel (anything but a positive <c>panel.Right - toggle.Right</c>), and the panel
     /// landing nowhere near the gear at all (the multi-monitor case where
     /// <see cref="SettingsPopup.Open"/> clamped against the wrong monitor's bounds - a gap far
@@ -1823,9 +1819,8 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Re-applies every dpi-dependent measurement, then checks what the complaint is actually
-    /// about - whether anything is short of room, the effect list's own text included - instead of
-    /// trusting that one pass was enough. Runs while the window is still being dragged, on
+    /// Re-applies every dpi-dependent measurement, then checks whether anything is short of
+    /// room, the effect list's own text included, instead of trusting that one pass was enough. Runs while the window is still being dragged, on
     /// purpose - see <see cref="_userMoving"/> - so the layout catches up to the new monitor
     /// immediately instead of only once the mouse button comes back up.
     /// </summary>
@@ -2333,9 +2328,8 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Measured on the VM (no controller, so the fastest hardware call there is the one that
-    /// fails outright): a brightness commit held <see cref="_busy"/> for about 188 ms end to end.
-    /// Greying every control out and back in for that long reads as a flash, not feedback - so the
+    /// A typical brightness commit holds <see cref="_busy"/> for under 200 ms; greying out for that
+    /// long reads as a flash, not feedback - so the
     /// visible part of being busy waits <see cref="BusyFlashDelayMs"/> before it shows at all, and
     /// never shows for anything that finishes inside that delay.
     /// </summary>
@@ -2692,9 +2686,8 @@ internal sealed partial class ToggleForm : Form
         // dock pass for them afterwards. The effect list is then a few pixels narrower than the
         // width this window was just sized for and ellipsises its own longest entry - "cut off on
         // the right after moving to the other monitor", with nothing actually sticking out of the
-        // window, which is why every overflow check missed it. Measured on the review harness
-        // (-review layout 100 from a 150 % display): 473 px of panel inside a 479 px content box,
-        // effect list 237 where it needed 243. One layout pass here brings both up to date.
+        // window, which is why every overflow check missed it. One layout pass here brings both up
+        // to date.
         PerformLayout();
     }
 
@@ -2722,7 +2715,7 @@ internal sealed partial class ToggleForm : Form
             yield return (name, right, right - (ClientSize.Width - Padding.Right));
         }
 
-        // The other shape of the same complaint: everything sits inside the window, but the effect
+        // The other way to be short of room: everything sits inside the window, but the effect
         // list was handed less room than its longest entry needs and cuts the text off itself.
         // Reported in the same pixels-too-few units so one check covers both, and only while the
         // window can still grow at all - at the maximum width a shortened entry is the intended
@@ -2742,11 +2735,9 @@ internal sealed partial class ToggleForm : Form
     /// </summary>
     /// <remarks>
     /// A window lying across two displays is left exactly where it is. Pulling it onto the display
-    /// it happened to overlap most put it fully on the other monitor, which changed the display
-    /// scale, which re-measured and pulled it back - the window ping-ponged between the two for as
-    /// long as it took to land, and every measurement in between was taken mid-flight. That is
-    /// what left the layout wrong until something later (the on/off switch) measured it again on a
-    /// window that had finally stopped moving.
+    /// it happens to overlap most would put it fully on the other monitor, which changes the display
+    /// scale, which re-measures and pulls it back - the window would ping-pong between the two for
+    /// as long as it took to land, and every measurement in between would be taken mid-flight.
     /// </remarks>
     private void KeepOnScreen()
     {
@@ -2795,8 +2786,8 @@ internal sealed partial class ToggleForm : Form
 
 #if REVIEW
     /// <summary>
-    /// Every measurement the window's width depends on, as text - the regression proof for a
-    /// layout complaint that can only be judged at a real display scale. Reports the room the top
+    /// Every measurement the window's width depends on, as text - the check for a layout
+    /// fit that can only be judged at a real display scale. Reports the room the top
     /// row actually needs against the room it was given, so "cut off on the right" is a number
     /// here rather than a guess from a screenshot.
     /// </summary>
@@ -2843,8 +2834,7 @@ internal sealed partial class ToggleForm : Form
                     : " - STALE, still on the display this window came from"),
         };
 
-        // The real question behind the complaint: does anything actually stick out past the right
-        // edge of the window's content box?
+        // Does anything actually stick out past the right edge of the window's content box?
         foreach ((string name, int right, int rightOverflow) in RightOverflow())
         {
             if (rightOverflow > 0)
@@ -2915,7 +2905,7 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
         }
 
         // A rounded highlight set in from the menu's edges, matching the rows of the window's own
-        // lists, instead of the square bar that ran into the rounded corners.
+        // lists, instead of a square bar that runs into the rounded corners.
         Rectangle row = new(Point.Empty, e.Item.Size);
         int inset = Math.Max(2, row.Height / 8);
         var area = new RectangleF(inset, 1, row.Width - (inset * 2) - 1, row.Height - 3);

@@ -28,7 +28,7 @@ namespace AuraToggle;
 /// </param>
 /// <param name="IsHint">
 /// A line of explanation rather than a choice: muted, not selectable, skipped by the keyboard.
-/// Used to say why some effects are missing from the list.
+/// Used for a short explanation among the choices.
 /// </param>
 internal sealed record SelectItem(string Key, string Text, byte? Mode, Color[]? CustomColours = null,
     bool Editable = false, bool IsAction = false, bool Renamable = false, bool IsHint = false,
@@ -708,7 +708,7 @@ internal sealed class SelectPopup : PopupForm
 #if REVIEW
     /// <summary>
     /// Review mode only: shows the tooltip on the first row that has one, the same way hovering it
-    /// would - so the dark-tooltip fix can be screenshotted directly instead of trusted by reading
+    /// would - so the tooltip's dark theme can be checked in a screenshot instead of trusted by reading
     /// the code, and the effect list itself does not need a mouse hover the review harness cannot
     /// send reliably against these controls.
     /// </summary>
@@ -1149,7 +1149,7 @@ internal sealed class SelectPopup : PopupForm
     /// The glyphs below take their line weight from the box they are handed rather than from a
     /// flat number of pixels. The box has already grown with the display, so deriving from it is
     /// what keeps a pencil or a cross the same weight relative to its button at every scale -
-    /// a fixed 1.6f drew a hairline inside a doubled button.
+    /// a fixed 1.6f would draw a hairline inside a doubled button.
     /// </summary>
     private static Pen GlyphPen(Rectangle box, Color colour, float weight) =>
         new(colour, Math.Max(1f, box.Width * weight)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
