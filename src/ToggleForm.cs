@@ -772,7 +772,9 @@ internal sealed partial class ToggleForm : Form
     {
         // Locked and re-read, like every other read-modify-write of state.json: the cached copy
         // here can be older than what a command line switch wrote a moment ago, and saving it
-        // back would undo that.
+        // back would undo that. A switch keeps state.json between its read and its save under
+        // the hardware lock alone, so that lock is taken first.
+        using IDisposable hardware = AuraFiles.HardwareLock();
         using IDisposable guard = AuraFiles.Lock();
 
         AuraState state = AuraState.Load();
@@ -2485,6 +2487,7 @@ internal sealed partial class ToggleForm : Form
         // is written back: loading the freshly deleted file would show first-run defaults while
         // the controller keeps running something else. The custom presets are gone, so the name
         // of the running one goes with them - the effect itself carries on.
+        using (AuraFiles.HardwareLock())
         using (AuraFiles.Lock())
         {
             _state = _state with { CustomPreset = "" };

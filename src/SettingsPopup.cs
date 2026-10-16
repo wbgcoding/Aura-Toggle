@@ -379,14 +379,22 @@ internal sealed class SettingsPopup : PopupForm
 
     /// <summary>The arm/confirm timing and text swap live in <see cref="ArmedButton"/>; this
     /// is just the action itself, run once the second click confirms it.</summary>
-    private void OnResetConfirmed()
+    private async void OnResetConfirmed()
     {
-        AuraFiles.ResetResult result = AuraFiles.ResetAll();
+        // ResetAll waits for a switch that is still talking to the controller, which can take
+        // seconds; the window stays responsive meanwhile.
+        _reset.Enabled = false;
+        AuraFiles.ResetResult result = await System.Threading.Tasks.Task.Run(AuraFiles.ResetAll);
         if (result == AuraFiles.ResetResult.BackupFailed)
         {
             // Nothing was deleted, so the Run key, the window and the settings all stay as they
             // are; the user is told why and can try again.
-            ShowResetError(Strings.ErrorResetBackupFailed);
+            if (!IsDisposed)
+            {
+                _reset.Enabled = true;
+                ShowResetError(Strings.ErrorResetBackupFailed);
+            }
+
             return;
         }
 
@@ -396,7 +404,12 @@ internal sealed class SettingsPopup : PopupForm
         AuraSettings.AutoStart = false;
 
         Reset?.Invoke(this, EventArgs.Empty);
+        if (IsDisposed)
+        {
+            return;
+        }
 
+        _reset.Enabled = true;
         if (result == AuraFiles.ResetResult.Incomplete)
         {
             // What could be deleted is gone and the window has picked that up; the user hears
