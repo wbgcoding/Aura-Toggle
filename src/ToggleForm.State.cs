@@ -24,6 +24,11 @@ internal sealed partial class ToggleForm
         private T? _value;
         private DateTime _stamp;
         private long _length = -2;
+        private uint _hash;
+
+        // The data files are a few hundred bytes; a bigger one is not hashed, the stamp and
+        // length alone decide for it.
+        private const long HashLimit = 256 * 1024;
 
         public FileCache(string name, Func<T> load)
         {
@@ -37,16 +42,43 @@ internal sealed partial class ToggleForm
             DateTime stamp = file.Exists ? file.LastWriteTimeUtc : DateTime.MinValue;
             long length = file.Exists ? file.Length : -1;
 
+            // The stamp follows the system clock tick, so two writes of the same length within
+            // one tick look alike; the content hash tells them apart.
+            uint hash = length is >= 0 and <= HashLimit ? HashOf(file.FullName) : 0;
+
             // Stamped before the read: a write landing in between leaves a stale stamp, which
             // only costs one more read next time.
-            if (_length != length || _stamp != stamp)
+            if (_length != length || _stamp != stamp || _hash != hash)
             {
                 _value = _load();
                 _stamp = stamp;
                 _length = length;
+                _hash = hash;
             }
 
             return _value!;
+        }
+
+        /// <summary>FNV-1a over the file's bytes; 0 when the file cannot be read right now.</summary>
+        private static uint HashOf(string path)
+        {
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete);
+                uint hash = 2166136261;
+                int next;
+                while ((next = stream.ReadByte()) >= 0)
+                {
+                    hash = (hash ^ (uint)next) * 16777619;
+                }
+
+                return hash;
+            }
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
+            {
+                return 0;
+            }
         }
     }
 
