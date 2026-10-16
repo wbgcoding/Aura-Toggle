@@ -50,8 +50,9 @@ New-Item -ItemType Directory -Force $dataDir | Out-Null
 # A copy on disk next to the data folder, taken before the first write: the in-memory copy below
 # is gone when this script is killed or the console closes, and the suite rewrites every file the
 # user keeps. Removed only after the restore at the end succeeded.
-$backupDir = Join-Path $env:LOCALAPPDATA ("aura-toggle-test-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+$backupDir = Join-Path $env:LOCALAPPDATA ("aura-toggle-test-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss-fff"))
 Copy-Item $dataDir $backupDir -Recurse -Force
+Write-Host "  data backup: $backupDir"
 
 $backups = @{}
 foreach ($name in $dataFiles + $logFiles) {
