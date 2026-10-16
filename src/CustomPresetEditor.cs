@@ -684,7 +684,7 @@ internal sealed class CustomPresetEditor : PopupForm
     {
         foreach (ChannelRow row in _rows)
         {
-            CustomPresetEntry? entry = MatchEntry(preset.Entries, row);
+            CustomPresetEntry? entry = Program.ResolveEntry(preset.Entries, row.DeviceKey, row.Channel);
 
             if (entry == null)
             {
@@ -706,13 +706,6 @@ internal sealed class CustomPresetEditor : PopupForm
         NormaliseEngine();
         FitToContent();
     }
-
-    /// <summary>
-    /// The entry a row is seeded from. An entry saved before presets went per-channel carries
-    /// channel -1 and stands for the whole controller, so it seeds every channel of that controller.
-    /// </summary>
-    private static CustomPresetEntry? MatchEntry(List<CustomPresetEntry> entries, ChannelRow row) =>
-        entries.Find(e => e.DeviceKey == row.DeviceKey && (e.Channel == row.Channel || e.Channel < 0));
 
     private void SaveAndClose()
     {
@@ -968,7 +961,7 @@ internal sealed class CustomPresetEditor : PopupForm
         {
             ChannelRow row = _rows[i];
             CustomPresetEntry? entry = sameMachine
-                ? MatchEntry(imported, row)
+                ? Program.ResolveEntry(imported, row.DeviceKey, row.Channel)
                 : i < imported.Count ? imported[i] : null;
 
             if (entry == null)
