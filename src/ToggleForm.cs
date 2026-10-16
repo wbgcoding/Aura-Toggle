@@ -2463,6 +2463,17 @@ internal sealed partial class ToggleForm : Form
             }
         }
 
+        // Windows of their own keep the language they were built in unless told.
+        foreach (CustomPresetEditor editor in Application.OpenForms.OfType<CustomPresetEditor>())
+        {
+            editor.Relocalise();
+        }
+
+        foreach (ErrorDialog dialog in Application.OpenForms.OfType<ErrorDialog>())
+        {
+            dialog.Relocalise();
+        }
+
         Render();
     }
 

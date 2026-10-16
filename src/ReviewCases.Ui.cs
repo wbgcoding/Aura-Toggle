@@ -14,6 +14,29 @@ internal static partial class Program
     private static void ReviewUiCases(Action<string, string, string> check)
     {
         EditorKeepsAbsentCases(check);
+        EditorRelocaliseCases(check);
+    }
+
+    /// <summary>An open editor says its texts again when the language changes.</summary>
+    private static void EditorRelocaliseCases(Action<string, string, string> check)
+    {
+        string before = Strings.Override;
+        try
+        {
+            Strings.Override = "en";
+            using var editor = new CustomPresetEditor(null, ReviewControllers(), AuraState.Load());
+            string english = editor.ReviewTexts();
+
+            Strings.Override = "de";
+            string expected = $"{Strings.CustomPresetNew}|{Strings.ChannelOnboard}|{Strings.CustomPresetCreate}";
+            editor.Relocalise();
+            check("editor relocalise: texts follow the language", expected, editor.ReviewTexts());
+            check("editor relocalise: differs from the old language", "True", (english != editor.ReviewTexts()).ToString());
+        }
+        finally
+        {
+            Strings.Override = before;
+        }
     }
 
     /// <summary>A preset saved from the editor keeps the entries of a controller that is not attached.</summary>
