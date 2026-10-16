@@ -28,7 +28,10 @@ internal static partial class Program
             string english = editor.ReviewTexts();
 
             Strings.Override = "de";
-            string expected = $"{Strings.CustomPresetNew}|{Strings.ChannelOnboard}|{Strings.CustomPresetCreate}";
+            // Two stand-in controllers are attached, so the row caption names its controller.
+            string caption = string.Format(System.Globalization.CultureInfo.CurrentCulture, Strings.ChannelQualified,
+                "Aura Controller 1", Strings.ChannelOnboard);
+            string expected = $"{Strings.CustomPresetNew}|{caption}|{Strings.CustomPresetCreate}";
             editor.Relocalise();
             check("editor relocalise: texts follow the language", expected, editor.ReviewTexts());
             check("editor relocalise: differs from the old language", "True", (english != editor.ReviewTexts()).ToString());
