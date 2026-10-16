@@ -999,12 +999,23 @@ internal sealed class CustomPresetEditor : PopupForm
             return;
         }
 
+        bool written;
         using (IDisposable guard = AuraFiles.Lock())
         {
             List<CustomPreset> presets = AuraCustomPresets.Load();
             presets.RemoveAll(p => p.Name == _editing);
-            AuraCustomPresets.Save(presets);
-            AuraSettings.FollowPresetRename(_editing, null);
+            written = AuraCustomPresets.Save(presets);
+            if (written)
+            {
+                AuraSettings.FollowPresetRename(_editing, null);
+            }
+        }
+
+        if (!written)
+        {
+            // The preset is still on disk: staying open keeps it editable, and nothing behind is told it is gone.
+            ErrorDialog.Report(new IOException(Strings.ErrorSaveFailed), "Delete preset", this);
+            return;
         }
 
         // Deleted first: it clears _state.CustomPreset if this was the active one, so the render

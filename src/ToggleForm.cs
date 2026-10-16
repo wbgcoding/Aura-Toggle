@@ -692,6 +692,7 @@ internal sealed partial class ToggleForm : Form
     /// </summary>
     private void DeleteCustomPreset(string name)
     {
+        bool written;
         using (IDisposable guard = AuraFiles.Lock())
         {
             List<CustomPreset> presets = AuraCustomPresets.Load();
@@ -700,8 +701,18 @@ internal sealed partial class ToggleForm : Form
                 return;
             }
 
-            AuraCustomPresets.Save(presets);
-            AuraSettings.FollowPresetRename(name, null);
+            written = AuraCustomPresets.Save(presets);
+            if (written)
+            {
+                AuraSettings.FollowPresetRename(name, null);
+            }
+        }
+
+        if (!written)
+        {
+            // The preset is still on disk, so the start action, the active state and the list stay as they are.
+            ErrorDialog.Report(new IOException(Strings.ErrorSaveFailed), "Delete preset", this);
+            return;
         }
 
         ClearActiveCustomPreset(name);
