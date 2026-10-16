@@ -148,10 +148,20 @@ internal static class AuraFiles
     /// <see cref="ResetResult.BackupFailed"/> when the backup could not be written: nothing is
     /// deleted then, since a reset the user cannot take back is only acceptable with the net
     /// underneath it. <see cref="ResetResult.Incomplete"/> when some file would not go (another
-    /// program holds it) - the rest is gone and the caller says so.
+    /// program holds it) - the rest is gone and the caller says so; also when a running switch
+    /// kept the hardware lock for the whole wait, in which case nothing was deleted.
     /// </returns>
     public static ResetResult ResetAll()
     {
+        // A switch that is still talking to the controller owns state.json for its whole burst;
+        // deleting under it would be undone by its save. Without the lock nothing is deleted.
+        using IDisposable? hardware = TryHardwareLock();
+        if (hardware == null)
+        {
+            AuraLog.Warn("Reset: a switch was still running, nothing was deleted");
+            return ResetResult.Incomplete;
+        }
+
         using IDisposable held = Lock();
 
         if (!BackUpBeforeReset())
