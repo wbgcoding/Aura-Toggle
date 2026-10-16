@@ -10,7 +10,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
 
-// Native libraries load from System32 only, so a hid.dll or dwmapi.dll planted beside a portable exe is never picked up.
+// The tool's own P/Invoke calls load their libraries from System32 only, so a hid.dll or dwmapi.dll
+// planted beside a portable exe is never picked up by them.
 [assembly: DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 
 namespace AuraToggle;
@@ -136,6 +137,11 @@ internal static partial class Program
         return 0;
     }
 
+    // A custom preset's name is the user's own text and the log ends up pasted into public
+    // issues, so it is logged by kind only.
+    private static string LogName(string action) =>
+        action.StartsWith(AuraSettings.StartActionCustomPrefix, StringComparison.Ordinal) ? "custom preset" : action;
+
     /// <summary>
     /// The headless half of autostart. A controller can still be enumerating when the logon
     /// launch arrives, so a missing one is retried for a while before giving up; the outcome is
@@ -155,7 +161,7 @@ internal static partial class Program
                 {
                     if (ApplyStartAction(action) == null)
                     {
-                        AuraLog.Info($"Start action \"{action}\" names nothing that exists any more, left the lighting alone.");
+                        AuraLog.Info($"Start action \"{LogName(action)}\" names nothing that exists any more, left the lighting alone.");
                         return 0;
                     }
 
@@ -164,7 +170,7 @@ internal static partial class Program
                     snapshot = LightingRecords();
                 }
 
-                AuraLog.Info($"Start action \"{action}\" applied.");
+                AuraLog.Info($"Start action \"{LogName(action)}\" applied.");
                 foreach (int pause in ReassertPausesMs)
                 {
                     Thread.Sleep(pause);
@@ -1698,7 +1704,7 @@ internal static partial class Program
             // all has already thrown above). A controller's key is its device path, which can
             // change when the header lands on another port, so the preset needs saving again and
             // no amount of waiting at logon will fix that.
-            AuraLog.Warn($"Custom preset \"{preset.Name}\" names no attached controller, re-save it in the window.");
+            AuraLog.Warn("A custom preset names no attached controller, re-save it in the window.");
 
             if (restoreOthers)
             {
