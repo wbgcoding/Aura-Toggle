@@ -1399,6 +1399,15 @@ internal static partial class Program
     }
 
     /// <summary>
+    /// The entry of a preset that decides one channel: one written for that channel wins over one
+    /// that covers the whole controller, and between two of the same kind the later one wins. The
+    /// preview and the real apply both read it from here, so the editor shows what Save sends.
+    /// </summary>
+    internal static CustomPresetEntry? ResolveEntry(List<CustomPresetEntry> entries, string deviceKey, int channel) =>
+        entries.FindLast(e => e.DeviceKey == deviceKey && e.Channel == channel) ??
+        entries.FindLast(e => e.DeviceKey == deviceKey && e.Channel < 0);
+
+    /// <summary>
     /// Applies a named bundle of per-device effects. The remembered state mirrors the first
     /// entry, which is what the button and the effect list show while the preset is active.
     /// </summary>
@@ -1445,39 +1454,36 @@ internal static partial class Program
         {
             Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
 
-            foreach (CustomPresetEntry entry in preset.Entries)
+            foreach (AuraDevice device in devices)
             {
-                // A brightness override means "forget every per-channel brightness", so it is
-                // recorded as 0 (follow the board) rather than the transient override value -
-                // the same "0 means follow the board" rule channel-state.json follows everywhere
-                // else.
-                var look = new ChannelLighting(entry.Mode, entry.Red, entry.Green, entry.Blue,
-                    On: true, brightnessOverride.HasValue ? (byte)0 : entry.Brightness);
-
-                foreach (AuraDevice device in devices.FindAll(d => d.Key == entry.DeviceKey))
+                foreach (AuraChannel affected in device.Channels)
                 {
+                    if (ResolveEntry(preset.Entries, device.Key, affected.Index) is not CustomPresetEntry entry)
+                    {
+                        continue;
+                    }
+
+                    // A brightness override means "forget every per-channel brightness", so it is
+                    // recorded as 0 (follow the board) rather than the transient override value -
+                    // the same "0 means follow the board" rule channel-state.json follows everywhere
+                    // else.
+                    var look = new ChannelLighting(entry.Mode, entry.Red, entry.Green, entry.Blue,
+                        On: true, brightnessOverride.HasValue ? (byte)0 : entry.Brightness);
+
                     // Each channel is dimmed to its own brightness - a preset carries an effect and
                     // a colour, not a brightness, so what the channel was given keeps applying.
-                    foreach (AuraChannel affected in device.Channels)
-                    {
-                        if (entry.Channel >= 0 && affected.Index != entry.Channel)
-                        {
-                            continue;
-                        }
+                    // The preset's own brightness for that channel, or - when it carries none -
+                    // whatever the channel is already dimmed to.
+                    byte percent = brightnessOverride ?? (entry.Brightness != 0
+                        ? entry.Brightness
+                        : Brightness(AuraChannelStates.Get(remembered, device.Key, affected.Index), state));
 
-                        // The preset's own brightness for that channel, or - when it carries none -
-                        // whatever the channel is already dimmed to.
-                        byte percent = brightnessOverride ?? (entry.Brightness != 0
-                            ? entry.Brightness
-                            : Brightness(AuraChannelStates.Get(remembered, device.Key, affected.Index), state));
+                    (byte red, byte green, byte blue) =
+                        AuraState.Dim(entry.Red, entry.Green, entry.Blue, percent);
 
-                        (byte red, byte green, byte blue) =
-                            AuraState.Dim(entry.Red, entry.Green, entry.Blue, percent);
-
-                        AddLook(device.Key, affected.Index, entry.Mode, red, green, blue);
-                        applied.Add((device.Key, affected.Index, look));
-                        named.Add((device.Key, affected.Index));
-                    }
+                    AddLook(device.Key, affected.Index, entry.Mode, red, green, blue);
+                    applied.Add((device.Key, affected.Index, look));
+                    named.Add((device.Key, affected.Index));
                 }
             }
 
@@ -1770,8 +1776,7 @@ internal static partial class Program
 
                 foreach (AuraChannel channel in device.Channels)
                 {
-                    CustomPresetEntry? entry = preset.Entries.Find(
-                        e => e.DeviceKey == device.Key && (e.Channel == channel.Index || e.Channel < 0));
+                    CustomPresetEntry? entry = ResolveEntry(preset.Entries, device.Key, channel.Index);
 
                     if (entry == null)
                     {

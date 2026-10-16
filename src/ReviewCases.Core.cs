@@ -16,6 +16,31 @@ internal static partial class Program
     private static void ReviewCoreCases(Action<string, string, string> check)
     {
         DamagedFileCases(check);
+        EntryResolutionCases(check);
+    }
+
+    private static void EntryResolutionCases(Action<string, string, string> check)
+    {
+        var whole = new CustomPresetEntry("review-1", -1, "All", 1, 10, 0, 0);
+        var one = new CustomPresetEntry("review-1", 2, "ARGB 2", 5, 0, 20, 0);
+        var other = new CustomPresetEntry("review-2", -1, "All", 3, 0, 0, 30);
+
+        foreach (var order in new[] { new[] { whole, one, other }, new[] { one, whole, other } })
+        {
+            var entries = order.ToList();
+            check("entry: channel entry wins over whole controller", "5",
+                ResolveEntry(entries, "review-1", 2)?.Mode.ToString() ?? "none");
+            check("entry: other channel takes the whole controller entry", "1",
+                ResolveEntry(entries, "review-1", 0)?.Mode.ToString() ?? "none");
+            check("entry: other controller keeps its entry", "3",
+                ResolveEntry(entries, "review-2", 1)?.Mode.ToString() ?? "none");
+            check("entry: unnamed controller has none", "none",
+                ResolveEntry(entries, "review-3", 0)?.Mode.ToString() ?? "none");
+        }
+
+        var twice = new List<CustomPresetEntry> { whole, whole with { Mode = 7 } };
+        check("entry: the later of two equal kinds wins", "7",
+            ResolveEntry(twice, "review-1", 0)?.Mode.ToString() ?? "none");
     }
 
     private static void DamagedFileCases(Action<string, string, string> check)
