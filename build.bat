@@ -180,7 +180,7 @@ REM Two lines expected: the portable exe and the setup exe. "all" marching on ov
 REM else - zero, one, a half-written file from a step that errored past PowerShell's own exit
 REM code - used to report success over a checksums file nobody could actually use.
 set "SUMLINES=0"
-if exist "%ROOT%dist\SHA256SUMS.txt" for /f %%c in ('"%SystemRoot%\System32\find.exe" /c /v "" ^< "%ROOT%dist\SHA256SUMS.txt"') do set "SUMLINES=%%c"
+if exist "%ROOT%dist\SHA256SUMS.txt" for /f %%c in ('%SystemRoot%\System32\find.exe /c /v "" ^< "%ROOT%dist\SHA256SUMS.txt"') do set "SUMLINES=%%c"
 if not "%SUMLINES%"=="2" (
     echo.
     echo BUILD FAILED: SHA256SUMS.txt has %SUMLINES% line^(s^), expected 2
