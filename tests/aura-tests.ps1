@@ -47,6 +47,12 @@ $logFiles = @("log.txt", "log.old.txt")
 
 New-Item -ItemType Directory -Force $dataDir | Out-Null
 
+# A copy on disk next to the data folder, taken before the first write: the in-memory copy below
+# is gone when this script is killed or the console closes, and the suite rewrites every file the
+# user keeps. Removed only after the restore at the end succeeded.
+$backupDir = Join-Path $env:LOCALAPPDATA ("aura-toggle-test-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+Copy-Item $dataDir $backupDir -Recurse -Force
+
 $backups = @{}
 foreach ($name in $dataFiles + $logFiles) {
     $path = Join-Path $dataDir $name
@@ -1177,9 +1183,25 @@ Test-Case "picking a firmware effect shares it across the controller, a colour e
 }
 finally {
     # Runs even when a test throws or the run is interrupted: leave the machine on the default
-    # effect, switched on, with every one of the user's own files back exactly as it was.
-    [void](Invoke-Aura @("-preset", "rainbow"))
-    Restore-UserData
+    # effect, switched on, with every one of the user's own files back exactly as it was. The
+    # files come back first, so a failing lighting call cannot leave them behind, and once more
+    # after it because that call rewrites state.json and the per-channel records.
+    $restored = $true
+    try { Restore-UserData }
+    catch { $restored = $false; Write-Host "  could not restore the data folder: $($_.Exception.Message)" }
+
+    try { [void](Invoke-Aura @("-preset", "rainbow")) }
+    catch { Write-Host "  could not set the default lighting: $($_.Exception.Message)" }
+
+    try { Restore-UserData }
+    catch { $restored = $false; Write-Host "  could not restore the data folder: $($_.Exception.Message)" }
+
+    if ($restored) {
+        Remove-Item $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    else {
+        Write-Host "  your data is kept in $backupDir"
+    }
 }
 
 Write-Host ""
