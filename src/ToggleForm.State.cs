@@ -57,9 +57,12 @@ internal sealed partial class ToggleForm
     /// <summary>
     /// <see cref="Displayed"/> worked out from the given state and records instead of the cached
     /// ones. <paramref name="remembered"/> only matters when a controller or channel is named.
+    /// <paramref name="devices"/> is passed in so a worker thread works on a snapshot taken on the
+    /// UI thread instead of reading the field.
     /// </summary>
-    private (byte Mode, Color Colour, bool On, byte Brightness) DisplayedFor(
-        AuraState state, Dictionary<string, ChannelLighting> remembered, string? deviceKey, int channel)
+    private static (byte Mode, Color Colour, bool On, byte Brightness) DisplayedFor(
+        AuraState state, Dictionary<string, ChannelLighting> remembered, List<AuraDeviceSummary> devices,
+        string? deviceKey, int channel)
     {
         var board = (state.Mode, Color.FromArgb(state.Red, state.Green, state.Blue), state.On, state.Brightness);
 
@@ -80,7 +83,7 @@ internal sealed partial class ToggleForm
         ChannelLighting? first = null;
         var anyOn = false;
 
-        foreach (AuraChannel own in _devices.Find(d => d.Key == deviceKey)?.Channels ?? new List<AuraChannel>())
+        foreach (AuraChannel own in devices.Find(d => d.Key == deviceKey)?.Channels ?? new List<AuraChannel>())
         {
             if (AuraChannelStates.Get(remembered, deviceKey, own.Index) is not ChannelLighting look)
             {
@@ -125,7 +128,8 @@ internal sealed partial class ToggleForm
 
         AuraState fresh = AuraState.Load();
         (string? deviceKey, int channel) = Target;
-        var shown = DisplayedFor(fresh, deviceKey == null ? new() : AuraChannelStates.All(), deviceKey, channel);
+        var shown = DisplayedFor(
+            fresh, deviceKey == null ? new() : AuraChannelStates.All(), _devices, deviceKey, channel);
 
         if (fresh != _state || shown != _displayed)
         {

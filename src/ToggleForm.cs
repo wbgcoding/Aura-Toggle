@@ -1374,7 +1374,7 @@ internal sealed partial class ToggleForm : Form
         get
         {
             (string? deviceKey, int channel) = Target;
-            return DisplayedFor(_state, deviceKey == null ? new() : _channelStates.Get(), deviceKey, channel);
+            return DisplayedFor(_state, deviceKey == null ? new() : _channelStates.Get(), _devices, deviceKey, channel);
         }
     }
 
@@ -1410,11 +1410,12 @@ internal sealed partial class ToggleForm : Form
         // What the button shows can be one command-line switch behind, so the decision is made
         // again from disk once the work is on its way.
         (string? deviceKey, int channel) = Target;
+        List<AuraDeviceSummary> devices = new(_devices);
         _ = Run(() =>
         {
             AuraState fresh = AuraState.Load();
             Dictionary<string, ChannelLighting> remembered = deviceKey == null ? new() : AuraChannelStates.All();
-            return Program.Switch(!DisplayedFor(fresh, remembered, deviceKey, channel).On, deviceKey, channel);
+            return Program.Switch(!DisplayedFor(fresh, remembered, devices, deviceKey, channel).On, deviceKey, channel);
         });
     }
 
