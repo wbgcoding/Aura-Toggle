@@ -15,6 +15,26 @@ All notable changes to this project are documented here. The format follows
 - Upgrading from an early 1.0 build left the old "Aura Toggle.exe" in the install folder, and an autostart entry pointing at it kept starting that old build at logon, which ignored the start lighting. The setup now removes it and points the entry at the current exe
 - Autostart did nothing when it had once been disabled in Task Manager's startup tab, although the settings showed it as on. The settings now show it as off in that case, and turning it on there (or ticking it in the setup) clears the old mark so Windows starts the tool again
 - With "Apply and close app" on, the start lighting could be gone right after logon and leave the board dark. The tool now sends it again a few times during the first minute and stops as soon as the lighting is changed by hand
+- A damaged `presets.json`, `channel-state.json` or `channel-names.json` is kept as a `.bad-` copy beside it before anything is saved over it, instead of being overwritten and losing every preset in it
+- Saving a preset while one of its controllers was unplugged dropped that controller's part of the preset. It is kept now
+- Turning the board on with a custom preset active failed with "controller not found" when the controller had been detected again under a new path, and a controller the preset does not cover stayed dark. Both now get their last lighting
+- Preview and apply could read a preset's entries differently when it held a whole-controller entry and a channel entry for the same controller. They agree now, and so does the editor
+- The window could freeze for up to two seconds when a preset was deleted or a setting changed while the lighting was being switched
+- "Reset everything" in one copy of the tool removed the autostart entry of another copy, and could run halfway while a switch was still writing. It now only touches its own entry and waits for the switch, without freezing the window
+- Renaming a channel on a board with several controllers saved the controller's name into the channel name when nothing was changed
+- Holding an arrow key in the closed effect list now ends on the effect the key stopped at, instead of jumping back
+- Deleting a preset that could not be saved still changed the start lighting and the active preset
+- Repeated failed switches opened a stack of identical error windows; one window is reused now. A tray message no longer shows a raw English system text
+- The colour strip kept its old size after moving the window to a display with another scale
+- The preset editor and the error window now switch language along with the main window
+- The window no longer reads the preset and channel files on every repaint
+- The file type in the preset import and export dialogs is translated
+- Turkish shows brightness as %50, the Italian minimise setting is shorter, and the German setup speaks to the user the same way throughout
+
+### Security
+
+- The portable exe loads Windows system libraries such as `hid.dll` only from the Windows folder, never a copy lying next to it, for example in Downloads
+- The log replaces your Windows user name in paths outside your profile folder too
 
 ## [1.5.0] - 2026-10-10
 
