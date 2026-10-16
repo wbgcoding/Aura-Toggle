@@ -1151,10 +1151,28 @@ internal sealed partial class ToggleForm : Form
         // flag - and with it every control - for the rest of the session.
         var cts = new CancellationTokenSource();
 
-        var popup = new RenamePopup(item.Text);
+        // Seeded with the channel's own name, never the controller-qualified label the list shows.
+        AuraDeviceSummary? device = _devices.Find(d => d.Key == deviceKey);
+        AuraChannel? channel = device?.Channels.Find(c => c.Index == channelIndex);
+        string seed = item.Text;
+        string defaultName = "";
+        if (device != null && channel != null)
+        {
+            seed = ChannelLabels.For(device, channel, false, AuraChannelNames.All());
+            defaultName = ChannelLabels.For(device, channel, false, new Dictionary<string, string>());
+        }
+
+        var popup = new RenamePopup(seed);
         popup.Renamed += (_, name) =>
         {
-            AuraChannelNames.Set(deviceKey, channelIndex, name);
+            // The default label is stored as no name at all, so a later language change still
+            // relabels the channel.
+            if (name == seed)
+            {
+                return;
+            }
+
+            AuraChannelNames.Set(deviceKey, channelIndex, name == defaultName ? "" : name);
             SetUpChannelSelector();
             Render();
         };
