@@ -10,6 +10,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
 
+// Native libraries load from System32 only, so a hid.dll or dwmapi.dll planted beside a portable exe is never picked up.
+[assembly: DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+
 namespace AuraToggle;
 
 internal static partial class Program
