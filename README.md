@@ -346,9 +346,10 @@ throwaway sample data (`-review ids` lists them) and can write screenshots of ev
 several display scales and languages with `-shot`; nothing in your own settings, presets or
 lighting is touched.
 
-A full build empties `dist\` first, so what is left there afterwards is exactly the release:
-`AuraToggle.exe`, the `Aura On` / `Aura Off` shortcuts, `AuraToggle-Setup-<version>.exe` and
-`SHA256SUMS.txt`. A single-target run adds to `dist\` instead of clearing it, so a portable build
+A full build empties `dist\` first. What a release carries is `AuraToggle.exe`,
+`AuraToggle-Setup-<version>.exe` and `SHA256SUMS.txt`. The build also writes the `Aura On` and
+`Aura Off` shortcuts there as local conveniences; they are not part of a release, they hold paths
+of the build machine. A single-target run adds to `dist\` instead of clearing it, so a portable build
 does not throw away the setup a full build made. The version comes from the project file, not
 from anything typed twice. Set `NOPAUSE=1` to run it
 from a script without the closing keypress.
