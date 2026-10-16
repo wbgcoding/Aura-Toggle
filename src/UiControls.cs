@@ -332,9 +332,7 @@ internal sealed class ColourStrip : FlatControl
     private const int GapAt96 = 9;
     private const int InsetAt96 = 4;
 
-    // WinForms scales the control's own bounds on a display change, but nothing inside a custom
-    // paint - so the chips are laid out from the current dpi rather than from flat numbers, or
-    // they would sit in the left half of a strip that has grown to twice the width.
+    // The chips are laid out from the current dpi; the strip's own size comes from DesignSize.
     private int Chip => this.Scaled(ChipAt96);
 
     private int Gap => this.Scaled(GapAt96);
@@ -348,8 +346,9 @@ internal sealed class ColourStrip : FlatControl
 
     public ColourStrip()
     {
-        Height = Chip + (Inset * 2);
-        Width = ((Palette.Length + 1) * (Chip + Gap)) - Gap + (Inset * 2);
+        DesignSize = new Size(
+            ((Palette.Length + 1) * (ChipAt96 + GapAt96)) - GapAt96 + (InsetAt96 * 2),
+            ChipAt96 + (InsetAt96 * 2));
         AccessibleName = Strings.ColourAccessibleName;
     }
 
