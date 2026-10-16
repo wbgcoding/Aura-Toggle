@@ -31,7 +31,7 @@ job and gets out of the way.
 
 1. Download `AuraToggle.exe` or the installer from the [latest release](https://github.com/wbgcoding/Aura-Toggle/releases/latest)
 2. Run it. The portable exe needs no admin rights, and neither does the setup's "just for me"
-   install; installing for everyone asks once. The portable exe needs the
+   install (only installing a missing .NET runtime asks for it); installing for everyone asks once. The portable exe needs the
    [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0); the installer
    fetches it for you
 3. Click the big button
@@ -126,12 +126,15 @@ controller, it works.
 **Unattended installs**: verified switches, for scripted rollouts:
 
 ```bat
-AuraToggle-Setup-<version>.exe /VERYSILENT /NORESTART        :: for everyone, run from an elevated prompt
-AuraToggle-Setup-<version>.exe /VERYSILENT /CURRENTUSER      :: just the current user
+AuraToggle-Setup-<version>.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART  :: for everyone, run from an elevated prompt
+AuraToggle-Setup-<version>.exe /VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER :: just the current user
 AuraToggle-Setup-<version>.exe /VERYSILENT /LOG="install.log" :: with a log file
 AuraToggle-Setup-<version>.exe /LANG=ja                      :: force the setup language
 unins000.exe /VERYSILENT                                     :: silent uninstall
 ```
+
+`/SUPPRESSMSGBOXES` answers the setup's questions without stopping: a copy installed in another
+folder is kept, and a missing .NET runtime is downloaded.
 
 The setup speaks the same ten languages as the program and picks the one Windows is set to, so it
 never opens with a language question in front of the wizard. `/LANG=` overrides that with any of
@@ -322,7 +325,7 @@ Start-up, version and every error land in a plain text file:
 ```
 
 Paste that path into the Explorer address bar or into Win+R. It rolls over to `log.old.txt` past
-200 KB, holds no personal data (your Windows user name is replaced in paths) and the last
+200 KB, holds no personal data (your Windows user name is replaced in paths, preset names are left out) and the last
 few lines are usually enough to say why a controller could not be reached. Attach them to a
 [bug report](https://github.com/wbgcoding/Aura-Toggle/issues).
 

@@ -9,7 +9,7 @@ All notable changes to this project are documented here. The format follows
 ## [1.6.0] - 2026-10-16
 
 A safer and steadier release. Damaged settings files no longer take your presets with them, the
-portable exe ignores a planted copy of a Windows library next to it, autostart behaves when it was
+tool's own Windows library calls ignore a planted copy next to the exe, autostart behaves when it was
 once disabled in Task Manager, and a long list of small fixes makes the window, the preset editor
 and the translations more reliable.
 
@@ -34,14 +34,19 @@ and the translations more reliable.
 - Repeated failed switches opened a stack of identical error windows; one window is reused now. A tray message no longer shows a raw English system text
 - The colour strip kept its old size after moving the window to a display with another scale
 - The preset editor and the error window now switch language along with the main window
-- The window no longer reads the preset and channel files on every repaint
+- The window no longer parses the preset and channel files again on every repaint unless they changed
 - The file type in the preset import and export dialogs is translated
 - Turkish shows brightness as %50, the Italian minimise setting is shorter, and the German setup speaks to the user the same way throughout
 
 ### Security
 
-- The portable exe loads Windows system libraries such as `hid.dll` only from the Windows folder, never a copy lying next to it, for example in Downloads
-- The log replaces your Windows user name in paths outside your profile folder too
+- The tool's own calls into Windows libraries such as `hid.dll` load them only from the Windows folder, never from a copy lying next to the exe, for example in Downloads
+- The log replaces your Windows user name in paths outside your profile folder too, and no longer names your custom presets
+- Removing an old copy through the new setup question keeps the autostart entry of a portable copy
+
+### Upgrade note
+
+- Close every running copy of an older version before installing 1.6.0. The two versions guard the controller with differently named locks, so an old and a new copy switching at the same moment are not kept apart
 
 ## [1.5.0] - 2026-10-10
 
