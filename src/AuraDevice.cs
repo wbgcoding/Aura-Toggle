@@ -226,6 +226,18 @@ internal sealed class AuraDevice : IDisposable
                     $"{ex.GetType().Name}: {ex.Message}");
                 stream?.Dispose();
             }
+            catch
+            {
+                // Anything unexpected ends the sweep and the caller never sees the list, so the
+                // controllers opened so far are closed here.
+                stream?.Dispose();
+                foreach (AuraDevice opened in devices)
+                {
+                    opened.Dispose();
+                }
+
+                throw;
+            }
         }
 
         // One line per sweep, not per interface: enough to tell "no Aura hardware on this machine"
