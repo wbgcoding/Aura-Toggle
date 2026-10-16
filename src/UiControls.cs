@@ -1027,6 +1027,15 @@ internal sealed class ColourPickerPopup : PopupForm
 
         if (Theme.TryParseHex(_hex.Text, out Color colour))
         {
+            // Leaving the field untouched, or typing the colour already shown, changes nothing:
+            // raising it anyway would send the same colour to the controller again.
+            Color shown = Current;
+            if (colour.R == shown.R && colour.G == shown.G && colour.B == shown.B)
+            {
+                _hex.Text = Hex(shown);
+                return;
+            }
+
             (_hue, _saturation, _value) = Theme.ToHsv(colour);
             RebuildSvBitmap();
             Invalidate();
