@@ -1,5 +1,7 @@
 #if REVIEW
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AuraToggle;
 
@@ -11,6 +13,35 @@ internal static partial class Program
     /// </summary>
     private static void ReviewUiCases(Action<string, string, string> check)
     {
+        EditorKeepsAbsentCases(check);
+    }
+
+    /// <summary>A preset saved from the editor keeps the entries of a controller that is not attached.</summary>
+    private static void EditorKeepsAbsentCases(Action<string, string, string> check)
+    {
+        const string name = "engine-absent";
+        var original = new CustomPreset(name, new List<CustomPresetEntry>
+        {
+            new("review-1", 0, "Onboard", 1, 0, 0, 255, 100),
+            new("review-9", 0, "Onboard", 11, 0, 0, 0),
+            new("review-9", 1, "ARGB 1", 1, 255, 0, 0, 80),
+        });
+        AuraCustomPresets.Save(new List<CustomPreset>(AuraCustomPresets.Load()) { original });
+
+        using (var editor = new CustomPresetEditor(original, ReviewControllers(), AuraState.Load()))
+        {
+            editor.ReviewSave();
+        }
+
+        CustomPreset? stored = AuraCustomPresets.Load().Find(p => p.Name == name);
+        check("editor save: absent controller entries kept", "review-9/0 review-9/1",
+            string.Join(" ", stored?.Entries.Where(e => e.DeviceKey == "review-9").Select(e => $"{e.DeviceKey}/{e.Channel}") ?? []));
+        check("editor save: attached controller written once", "1",
+            (stored?.Entries.Count(e => e.DeviceKey == "review-1" && e.Channel == 0) ?? 0).ToString());
+
+        List<CustomPreset> rest = AuraCustomPresets.Load();
+        rest.RemoveAll(p => p.Name == name);
+        AuraCustomPresets.Save(rest);
     }
 }
 #endif

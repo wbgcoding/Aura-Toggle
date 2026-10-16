@@ -34,6 +34,10 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly ArmedButton _deleteArm;
     private readonly string? _editing;
 
+    /// <summary>Entries of the preset being edited whose controller has no row here (unplugged).
+    /// Saving keeps them, so editing on another machine state does not drop their lighting.</summary>
+    private readonly List<CustomPresetEntry> _absent = new();
+
     /// <summary>Only use in this editor: the tooltips on the icon-only export/import buttons.</summary>
     private readonly ToolTip _tips = new();
 
@@ -268,6 +272,7 @@ internal sealed class CustomPresetEditor : PopupForm
 
         if (preset != null)
         {
+            _absent.AddRange(preset.Entries.Where(e => !_rows.Any(r => r.DeviceKey == e.DeviceKey)));
             Fill(preset);
         }
 
@@ -568,6 +573,9 @@ internal sealed class CustomPresetEditor : PopupForm
         EffectChosen(_rows[rowIndex]);
     }
 
+    /// <summary>Review build: saves the way the Save button does.</summary>
+    internal void ReviewSave() => SaveAndClose();
+
     /// <summary>Review build: every row's controller, channel and effect key.</summary>
     internal List<(string DeviceKey, int Channel, string Effect)> ReviewRows() =>
         _rows.Select(r => (r.DeviceKey, r.Channel, r.Effect.Selected?.Key ?? "")).ToList();
@@ -702,6 +710,8 @@ internal sealed class CustomPresetEditor : PopupForm
         {
             return;
         }
+
+        entries.AddRange(_absent);
 
         CustomPreset saved;
         bool written;
