@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build release
+        run: dotnet build AuraToggle.csproj -c Release -warnaserror -nologo
+
+      - name: Build review
+        run: dotnet build AuraToggle.csproj -c Review -warnaserror -nologo
+
+      - name: Static checks
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\static-checks.ps1
