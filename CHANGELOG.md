@@ -36,6 +36,7 @@ and the translations more reliable.
 - The preset editor and the error window now switch language along with the main window
 - The window no longer parses the preset and channel files again on every repaint unless they changed
 - The file type in the preset import and export dialogs is translated
+- Tooltips in dark mode flashed white for a moment before turning dark
 - Turkish shows brightness as %50, the Italian minimise setting is shorter, and the German setup speaks to the user the same way throughout
 
 ### Security
