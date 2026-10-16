@@ -451,7 +451,7 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>F2/Delete work on a custom preset row without any control of its own to hang a
     /// tooltip off - shown and hidden by hand as the hovered row changes instead.</summary>
-    private readonly ToolTip _shortcutTip = new();
+    private readonly ThemedTip _shortcutTip = new();
     private int _tipRow = -1;
 
     /// <param name="dpi">
@@ -472,10 +472,6 @@ internal sealed class SelectPopup : PopupForm
 
         Font = font;
         Measure();
-
-        // Left at its default, the tooltip is the system's own plain white box - jarring next to
-        // this list's own dark, rounded surface.
-        Theme.StyleToolTip(_shortcutTip);
 
         // A placeholder height, good enough until Open() knows which screen this actually opens
         // on and sizes it for real - the constructor cannot know that yet, and guessing the

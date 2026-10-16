@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -1878,5 +1879,190 @@ internal sealed class RenamePopup : PopupForm
         }
 
         base.Dispose(disposing);
+    }
+}
+
+/// <summary>
+/// The dark tooltip. The system one shows its window before its owner draw runs, so every dark
+/// tooltip opened with a short white flash; this one is painted while the compositor still keeps
+/// it hidden and only then uncovered. <see cref="SetToolTip"/> gives a control a hover tip,
+/// <see cref="Show"/> and <see cref="Hide"/> place one by hand.
+/// </summary>
+internal sealed class ThemedTip : IDisposable
+{
+    private readonly Dictionary<Control, string> _texts = new();
+    private readonly System.Windows.Forms.Timer _delay = new() { Interval = SystemInformation.MouseHoverTime };
+    private readonly System.Windows.Forms.Timer _expire = new();
+    private TipWindow? _window;
+    private Control? _hovered;
+
+    public ThemedTip()
+    {
+        _delay.Tick += (_, _) =>
+        {
+            _delay.Stop();
+            if (_hovered is { IsDisposed: false, Visible: true } control && _texts.TryGetValue(control, out string? text))
+            {
+                Point at = control.PointToClient(Cursor.Position);
+                Show(text, control, at.X + control.Scaled(12), at.Y + control.Scaled(20), 5000);
+            }
+        };
+        _expire.Tick += (_, _) =>
+        {
+            _expire.Stop();
+            _window?.Hide();
+        };
+    }
+
+    public void SetToolTip(Control control, string text)
+    {
+        if (!_texts.ContainsKey(control))
+        {
+            control.MouseEnter += OnEnter;
+            control.MouseLeave += OnLeave;
+            control.MouseDown += OnLeave;
+        }
+
+        _texts[control] = text;
+    }
+
+    public void Show(string text, Control owner, int x, int y, int durationMs)
+    {
+        _window ??= new TipWindow();
+        _window.ShowAt(text, owner, owner.PointToScreen(new Point(x, y)));
+        _expire.Stop();
+        _expire.Interval = durationMs;
+        _expire.Start();
+    }
+
+    public void Hide(Control owner)
+    {
+        _expire.Stop();
+        _window?.Hide();
+    }
+
+    private void OnEnter(object? sender, EventArgs e)
+    {
+        _hovered = sender as Control;
+        _delay.Stop();
+        _delay.Start();
+    }
+
+    private void OnLeave(object? sender, EventArgs e)
+    {
+        _delay.Stop();
+        _hovered = null;
+        Hide((Control)sender!);
+    }
+
+    public void Dispose()
+    {
+        foreach (Control control in _texts.Keys)
+        {
+            control.MouseEnter -= OnEnter;
+            control.MouseLeave -= OnLeave;
+            control.MouseDown -= OnLeave;
+        }
+
+        _delay.Dispose();
+        _expire.Dispose();
+        _window?.Dispose();
+    }
+
+    private sealed class TipWindow : Form
+    {
+        private const int WsExToolWindow = 0x00000080;
+        private const int WsExNoActivate = 0x08000000;
+        private const int CsDropShadow = 0x00020000;
+        private const int WmNcHitTest = 0x0084;
+        private const int HtTransparent = -1;
+
+        private string _text = "";
+        private Control? _owner;
+
+        public TipWindow()
+        {
+            FormBorderStyle = FormBorderStyle.None;
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.Manual;
+            AutoScaleMode = AutoScaleMode.None;
+            BackColor = Theme.Surface;
+            DoubleBuffered = true;
+            // As a property, not an extended style: WinForms clears a style-only topmost on Show,
+            // which left the tip behind the list it belongs to.
+            TopMost = true;
+        }
+
+        protected override bool ShowWithoutActivation => true;
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams parameters = base.CreateParams;
+                parameters.ExStyle |= WsExToolWindow | WsExNoActivate;
+                parameters.ClassStyle |= CsDropShadow;
+                return parameters;
+            }
+        }
+
+        public void ShowAt(string text, Control owner, Point screen)
+        {
+            _text = text;
+            _owner = owner;
+            Font = owner.Font;
+            BackColor = Theme.Surface;
+
+            Size measured = TextRenderer.MeasureText(text, Font);
+            var size = new Size(measured.Width + owner.Scaled(12), measured.Height + owner.Scaled(8));
+            Rectangle area = Screen.FromPoint(screen).WorkingArea;
+            var bounds = new Rectangle(
+                Math.Max(area.Left, Math.Min(screen.X, area.Right - size.Width)),
+                Math.Max(area.Top, Math.Min(screen.Y, area.Bottom - size.Height)),
+                size.Width, size.Height);
+
+            if (!IsHandleCreated)
+            {
+                CreateHandle();
+            }
+
+            Theme.Cloak(Handle, true);
+            // Twice: moving onto a display at another scale resizes the window to its own guess.
+            Bounds = bounds;
+            Bounds = bounds;
+            if (!Visible)
+            {
+                Show();
+            }
+
+            Invalidate();
+            Update();
+            Theme.Cloak(Handle, false);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            using var fill = new SolidBrush(Theme.Surface);
+            e.Graphics.FillRectangle(fill, ClientRectangle);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Theme.PaintToolTip(new DrawToolTipEventArgs(e.Graphics, this, _owner ?? this, ClientRectangle,
+                _text, Theme.Surface, Theme.Text, Font));
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            // The pointer passes through to the list underneath, as with the system tooltip, so
+            // the tip never takes the hover away from the row it describes.
+            if (m.Msg == WmNcHitTest)
+            {
+                m.Result = HtTransparent;
+                return;
+            }
+
+            base.WndProc(ref m);
+        }
     }
 }

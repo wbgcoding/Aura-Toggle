@@ -45,7 +45,7 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly List<CustomPresetEntry> _absent = new();
 
     /// <summary>Only use in this editor: the tooltips on the icon-only export/import buttons.</summary>
-    private readonly ToolTip _tips = new();
+    private readonly ThemedTip _tips = new();
 
     /// <summary>Every scaled distance this editor sets, so a display-scale change can put them all
     /// back at the new scale instead of leaving the rows measured for the old one.</summary>
@@ -80,7 +80,6 @@ internal sealed class CustomPresetEditor : PopupForm
         ForeColor = Theme.Text;
         Font = Theme.Ui;
         AccessibleName = Strings.CustomPresetAccessibleName;
-        Theme.StyleToolTip(_tips);
         _metrics.Add(() =>
             Padding = new Padding(this.Scaled(16), this.Scaled(14), this.Scaled(16), this.Scaled(14)));
 

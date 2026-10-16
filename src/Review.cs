@@ -112,7 +112,15 @@ internal static partial class Program
                 // for anyone testing this by hand, but %TEMP%\aura-tip.png below is what actually
                 // proves the colours: RenderTipForReview calls the exact same drawing code onto a
                 // bitmap, with nothing about window focus in the way.
-                popup.ShowTipForReview();
+                // Shown a while after the list, as a hover does, so a recording of the screen can
+                // tell the tooltip's own first frames apart from the list appearing.
+                var later = new System.Windows.Forms.Timer { Interval = 1500 };
+                later.Tick += (_, _) =>
+                {
+                    later.Dispose();
+                    popup.ShowTipForReview();
+                };
+                later.Start();
 
                 using var bmp = new Bitmap(280, 40);
                 using (Graphics g = Graphics.FromImage(bmp))

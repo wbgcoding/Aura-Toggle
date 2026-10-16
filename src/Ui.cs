@@ -281,6 +281,18 @@ internal static class Theme
     }
 
     /// <summary>
+    /// Hides a window from the screen while it stays shown for everything else, so it can be
+    /// painted before anyone sees it. Does nothing before Windows 8.
+    /// </summary>
+    public static void Cloak(IntPtr window, bool cloaked)
+    {
+        const int DwmCloak = 13;
+
+        int value = cloaked ? 1 : 0;
+        DwmSetWindowAttribute(window, DwmCloak, ref value, sizeof(int));
+    }
+
+    /// <summary>
     /// Turns a length written against the 96 dpi baseline into pixels on the display
     /// <paramref name="control"/> is currently on.
     /// </summary>
@@ -385,26 +397,7 @@ internal static class Theme
         return path;
     }
 
-    /// <summary>
-    /// Makes a <see cref="ToolTip"/> draw itself in this theme's colours instead of the plain
-    /// white system tooltip. <c>BackColor</c>/<c>ForeColor</c> alone do not reach it: Windows
-    /// ignores both while visual styles are active (the normal case) unless the tooltip is
-    /// owner-drawn - so both are still set here too, for the one case they do apply, and so
-    /// nobody mistakes the <see cref="PaintToolTip"/> subscription below as dead code later.
-    /// </summary>
-    public static void StyleToolTip(ToolTip tip)
-    {
-        tip.BackColor = Surface;
-        tip.ForeColor = Text;
-        tip.OwnerDraw = true;
-        // The fade-in renders the tooltip once through the system's own painting, which is the
-        // plain white one, and only the first real paint after it goes through Draw below - a
-        // white flash before every dark tooltip.
-        tip.UseFading = false;
-        tip.UseAnimation = false;
-        tip.Draw += (_, e) => PaintToolTip(e);
-    }
-
+    /// <summary>The face of every tooltip, drawn by <see cref="ThemedTip"/>.</summary>
     public static void PaintToolTip(DrawToolTipEventArgs e)
     {
         using var fill = new SolidBrush(Surface);
