@@ -201,6 +201,22 @@ internal sealed record AuraSettings(
 #endif
 
     /// <summary>
+    /// The exe a Run value starts, or null for a value this type could not have written. Hand-edited
+    /// values do not start with a quote the way the setter below always writes one - treated as
+    /// belonging to someone else, not matched.
+    /// </summary>
+    private static string? RunTarget(string value)
+    {
+        if (value.Length == 0 || value[0] != '"')
+        {
+            return null;
+        }
+
+        int closingQuote = value.IndexOf('"', 1);
+        return closingQuote < 0 ? null : value[1..closingQuote];
+    }
+
+    /// <summary>
     /// Whether Windows starts the tool at logon. Backed by the per-user Run key, so no
     /// administrator rights and no scheduled task are involved, and removing it is one click.
     /// </summary>
@@ -228,20 +244,7 @@ internal sealed record AuraSettings(
                     return false;
                 }
 
-                // Hand-edited values do not start with a quote the way this type's own setter
-                // below always writes one - treated as belonging to someone else, not matched.
-                if (value.Length == 0 || value[0] != '"')
-                {
-                    return false;
-                }
-
-                int closingQuote = value.IndexOf('"', 1);
-                if (closingQuote < 0)
-                {
-                    return false;
-                }
-
-                return string.Equals(value[1..closingQuote], exe, StringComparison.OrdinalIgnoreCase) &&
+                return string.Equals(RunTarget(value), exe, StringComparison.OrdinalIgnoreCase) &&
                     !DisabledInWindows();
             }
             catch (Exception ex) when (AuraFiles.IsExpected(ex))
@@ -275,9 +278,16 @@ internal sealed record AuraSettings(
                 {
                     key.SetValue(RunValue, $"\"{exe}\" {AutoStartArgument}");
                 }
-                else
+                else if (key.GetValue(RunValue) is string stored &&
+                    string.Equals(RunTarget(stored), Environment.ProcessPath, StringComparison.OrdinalIgnoreCase))
                 {
                     key.DeleteValue(RunValue, throwOnMissingValue: false);
+                }
+                else
+                {
+                    // The entry belongs to another copy of the tool, an installed one say, whose
+                    // autostart a portable copy must not switch off.
+                    return;
                 }
 
                 // Turning autostart on here is the user's own explicit choice, so an older
