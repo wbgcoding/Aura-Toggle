@@ -155,6 +155,9 @@ internal sealed partial class ToggleForm : Form
     /// closed list pick one effect per press; applying each would drop all but the first.
     /// </summary>
     private (string Key, string Text, string? DeviceKey, int Channel, Color Colour)? _pendingEffect;
+
+    /// <summary>The error dialog on screen, if any: a second failure brings it forward instead of stacking another.</summary>
+    private ErrorDialog? _errorDialog;
     private bool _exiting;
     private bool _dark = Theme.Dark;
     private long _themeEchoUntil;
@@ -711,7 +714,7 @@ internal sealed partial class ToggleForm : Form
         if (!written)
         {
             // The preset is still on disk, so the start action, the active state and the list stay as they are.
-            ErrorDialog.Report(new IOException(Strings.ErrorSaveFailed), "Delete preset", this);
+            ShowError(new IOException(Strings.ErrorSaveFailed), "Delete preset");
             return;
         }
 
@@ -953,7 +956,7 @@ internal sealed partial class ToggleForm : Form
             // Report logs it as well; a window nobody can see just gets the log line.
             if (!IsDisposed && Visible)
             {
-                ErrorDialog.Report(ex, "Discover", this);
+                ShowError(ex, "Discover");
             }
             else
             {
@@ -1443,6 +1446,20 @@ internal sealed partial class ToggleForm : Form
 
         _pendingEffect = null;
         ApplyEffect(pick.Key, pick.Text, pick.DeviceKey, pick.Channel, pick.Colour);
+    }
+
+    /// <summary>Shows the error dialog, or brings the one already open forward; the failure is logged either way.</summary>
+    private void ShowError(Exception ex, string context)
+    {
+        if (_errorDialog is { IsDisposed: false } open)
+        {
+            AuraLog.Error(context, ex);
+            open.Activate();
+            open.BringToFront();
+            return;
+        }
+
+        _errorDialog = ErrorDialog.Report(ex, context, this, onClosed: () => _errorDialog = null);
     }
 
     /// <summary>What picking an effect does, whether it was picked in the window or in the tray menu.</summary>
@@ -2209,7 +2226,7 @@ internal sealed partial class ToggleForm : Form
                     }
                     else if (!IsDisposed && Visible)
                     {
-                        ErrorDialog.Report(ex, "Preview", this);
+                        ShowError(ex, "Preview");
                     }
                     else
                     {
@@ -2295,12 +2312,14 @@ internal sealed partial class ToggleForm : Form
             }
             else if (Visible)
             {
-                ErrorDialog.Report(ex, "Switch", this);
+                ShowError(ex, "Switch");
             }
             else
             {
                 AuraLog.Error("Switch", ex);
-                _tray.ShowBalloonTip(4000, Strings.WindowTitle, ex.Message, ToolTipIcon.Warning);
+                // Same rule as the dialog: only the curated messages are fit to show, the rest is a bug.
+                string balloon = ex is AuraNotFoundException or IOException ? ex.Message : Strings.ErrorUnexpected;
+                _tray.ShowBalloonTip(4000, Strings.WindowTitle, balloon, ToolTipIcon.Warning);
             }
         }
         finally
