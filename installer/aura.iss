@@ -618,11 +618,16 @@ var
   Uninstaller: String;
   Current: String;
   Foreign: String;
+  OtherVersion: String;
+  Packed: Int64;
+  Waited: Integer;
 begin
   Result := True;
   Foreign := '';
   if not OtherInstall(Root, Dir, Uninstaller) then
     Exit;
+  if not RegQueryStringValue(Root, UninstallKey, 'DisplayVersion', OtherVersion) then
+    OtherVersion := '';
 
   case SuppressibleMsgBox(FmtMessage(CustomMessage('OtherInstall'), [Dir]), mbConfirmation,
     MB_YESNOCANCEL, IDNO) of
@@ -638,13 +643,27 @@ begin
           Foreign := Current;
 
         if not UninstallOther(Root, Uninstaller) then
+        begin
           SuppressibleMsgBox(FmtMessage(CustomMessage('OtherUninstallFailed'), [Dir]), mbError,
             MB_OK, IDOK);
+          Exit;
+        end;
 
         { Uninstallers up to 1.5.0 delete the entry whatever it names, so one that started a
-          portable copy is written back as it was. }
-        if (Foreign <> '') and not RegValueExists(HKEY_CURRENT_USER, RunKey, 'AuraToggle') then
-          WriteRunValue(Foreign);
+          portable copy is written back as it was. They do it in their very last step, after
+          the key and their own exe are gone, so the delete is waited for first. }
+        if (Foreign <> '') and StrToVersion(OtherVersion, Packed) and
+           (ComparePackedVersion(Packed, PackVersionComponents(1, 6, 0, 0)) < 0) then
+        begin
+          Waited := 0;
+          while RegValueExists(HKEY_CURRENT_USER, RunKey, 'AuraToggle') and (Waited < 15000) do
+          begin
+            Sleep(250);
+            Waited := Waited + 250;
+          end;
+          if not RegValueExists(HKEY_CURRENT_USER, RunKey, 'AuraToggle') then
+            WriteRunValue(Foreign);
+        end;
       end;
   end;
 end;
