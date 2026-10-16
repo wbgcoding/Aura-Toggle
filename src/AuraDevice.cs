@@ -272,42 +272,21 @@ internal sealed class AuraDevice : IDisposable
     /// </summary>
     public static List<AuraDeviceSummary> ListDevices(out int errorExitCode)
     {
-        errorExitCode = 0;
         List<AuraDevice> devices;
-        try
-        {
-            // Two sweeps at once answer each other's handshakes, so listing waits for whoever
-            // else is talking to the controller.
-            using IDisposable guard = AuraFiles.HardwareLock();
-            devices = DiscoverAll();
-        }
-        catch (AuraNotFoundException ex)
-        {
-            errorExitCode = ex.ExitCode;
-            return new List<AuraDeviceSummary>();
-        }
-        catch (IOException)
-        {
-            errorExitCode = 5;
-            return new List<AuraDeviceSummary>();
-        }
 
-        try
+        // Two sweeps at once answer each other's handshakes, so listing waits for whoever
+        // else is talking to the controller.
+        using (AuraFiles.HardwareLock())
         {
-            // Unnamed devices of the same kind are numbered, so two Aura Controllers on one
-            // machine are still distinguishable in the list.
-            var unnamed = 0;
-            var summaries = new List<AuraDeviceSummary>();
-            foreach (AuraDevice device in devices)
+            if (!TryDiscoverAll(out devices, out errorExitCode))
             {
-                string name = device.Name.Length > 0
-                    ? device.Name
-                    : string.Format(CultureInfo.CurrentCulture, Strings.DeviceFallbackName, ++unnamed);
-
-                summaries.Add(new AuraDeviceSummary(device.Key, name, device.Channels));
+                return new List<AuraDeviceSummary>();
             }
+        }
 
-            return summaries;
+        try
+        {
+            return Summarize(devices);
         }
         finally
         {
@@ -316,6 +295,52 @@ internal sealed class AuraDevice : IDisposable
                 device.Dispose();
             }
         }
+    }
+
+    /// <summary>
+    /// <see cref="DiscoverAll"/> for callers that report a missing controller by exit code: false
+    /// with <paramref name="errorExitCode"/> set to 3 (not found), 4 (busy) or 5 (would not
+    /// answer) instead of throwing. The caller holds the hardware lock and disposes the devices.
+    /// </summary>
+    internal static bool TryDiscoverAll(out List<AuraDevice> devices, out int errorExitCode)
+    {
+        errorExitCode = 0;
+
+        try
+        {
+            devices = DiscoverAll();
+            return true;
+        }
+        catch (AuraNotFoundException ex)
+        {
+            errorExitCode = ex.ExitCode;
+        }
+        catch (IOException)
+        {
+            errorExitCode = 5;
+        }
+
+        devices = new List<AuraDevice>();
+        return false;
+    }
+
+    /// <summary>The summaries of devices already open; does not dispose them.</summary>
+    internal static List<AuraDeviceSummary> Summarize(List<AuraDevice> devices)
+    {
+        // Unnamed devices of the same kind are numbered, so two Aura Controllers on one
+        // machine are still distinguishable in the list.
+        var unnamed = 0;
+        var summaries = new List<AuraDeviceSummary>();
+        foreach (AuraDevice device in devices)
+        {
+            string name = device.Name.Length > 0
+                ? device.Name
+                : string.Format(CultureInfo.CurrentCulture, Strings.DeviceFallbackName, ++unnamed);
+
+            summaries.Add(new AuraDeviceSummary(device.Key, name, device.Channels));
+        }
+
+        return summaries;
     }
 
     /// <summary>Confirms this interface speaks the Aura protocol and reads its channel layout.</summary>

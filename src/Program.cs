@@ -428,15 +428,47 @@ internal static partial class Program
             return 0;
         }
 
-        if (!TryResolveTarget(deviceArg, channelArg, out string? targetDevice, out int targetChannel,
-                out int targetingError))
+        if (deviceArg == null && channelArg == null)
         {
-            return targetingError;
+            return RunApply(command, rest, null, -1, null, null);
         }
 
+        // One discovery serves both the lookup of the named target and the action, under one
+        // hardware lock, so the controllers are not handshaken again for every step.
+        using IDisposable guard = AuraFiles.HardwareLock();
+        if (!AuraDevice.TryDiscoverAll(out List<AuraDevice> devices, out int discoverError))
+        {
+            WriteError(ListErrorText(discoverError));
+            return discoverError;
+        }
+
+        try
+        {
+            List<AuraDeviceSummary> summaries = AuraDevice.Summarize(devices);
+            if (!TryResolveTarget(deviceArg, channelArg, summaries, out string? targetDevice,
+                    out int targetChannel, out int targetingError))
+            {
+                return targetingError;
+            }
+
+            return RunApply(command, rest, targetDevice, targetChannel, devices, summaries);
+        }
+        finally
+        {
+            Close(devices);
+        }
+    }
+
+    /// <summary>
+    /// The on/off/toggle/preset/brightness commands. <paramref name="devices"/> are the controllers
+    /// a targeted call already opened (null for the whole board); the caller disposes them.
+    /// </summary>
+    private static int RunApply(string command, List<string> rest, string? targetDevice, int targetChannel,
+        List<AuraDevice>? devices, List<AuraDeviceSummary>? summaries)
+    {
         if (rest.Count == 1 && command is "on" or "off")
         {
-            Switch(command == "on", targetDevice, targetChannel);
+            Switch(command == "on", targetDevice, targetChannel, devices);
             return 0;
         }
 
@@ -450,10 +482,10 @@ internal static partial class Program
                 ? AuraChannelStates.Get(AuraChannelStates.All(), targetDevice!, targetChannel)?.On
                     ?? AuraState.Load().On
                 : !string.IsNullOrEmpty(targetDevice)
-                    ? ControllerIsOn(targetDevice)
+                    ? ControllerIsOn(targetDevice, summaries!)
                     : AuraState.Load().On;
 
-            Switch(!currentlyOn, targetDevice, targetChannel);
+            Switch(!currentlyOn, targetDevice, targetChannel, devices);
             return 0;
         }
 
@@ -476,7 +508,7 @@ internal static partial class Program
                 colour = parsed;
             }
 
-            ApplyPreset(preset, colour, targetDevice, targetChannel);
+            ApplyPreset(preset, colour, targetDevice, targetChannel, devices);
             return 0;
         }
 
@@ -491,7 +523,7 @@ internal static partial class Program
             // Below the floor is clamped rather than rejected: "-brightness 0" reads as "as dim as
             // this tool goes", not a typo worth an error - unlike a value above the ceiling, which
             // is far more likely to be one.
-            SetBrightness(Math.Max(percent, AuraState.MinBrightness), targetDevice, targetChannel);
+            SetBrightness(Math.Max(percent, AuraState.MinBrightness), targetDevice, targetChannel, devices);
             return 0;
         }
 
@@ -537,29 +569,14 @@ internal static partial class Program
 
     /// <summary>
     /// Turns <c>-device</c>/<c>-channel</c> into the (deviceKey, channel) pair every apply method
-    /// already takes. Does no hardware discovery at all when neither flag was given, which is the
-    /// overwhelmingly common case - <c>-on</c>/<c>-off</c>/<c>-preset</c>/<c>-brightness</c> stay
-    /// exactly as cheap for anyone not targeting a single channel or controller.
+    /// already takes, against the controllers the caller already discovered.
     /// </summary>
-    private static bool TryResolveTarget(string? deviceArg, string? channelArg, out string? deviceKey,
-        out int channel, out int errorExitCode)
+    private static bool TryResolveTarget(string? deviceArg, string? channelArg,
+        List<AuraDeviceSummary> devices, out string? deviceKey, out int channel, out int errorExitCode)
     {
         deviceKey = null;
         channel = -1;
         errorExitCode = 0;
-
-        if (deviceArg == null && channelArg == null)
-        {
-            return true;
-        }
-
-        List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int listErrorExitCode);
-        if (devices.Count == 0)
-        {
-            WriteError(ListErrorText(listErrorExitCode));
-            errorExitCode = listErrorExitCode;
-            return false;
-        }
 
         List<ChannelEntry> entries = FlattenChannels(devices);
 
@@ -917,7 +934,11 @@ internal static partial class Program
     /// re-applied when switching every device on at once.
     /// </param>
     /// <param name="channel">One channel of that controller, or -1 for all of them.</param>
-    public static AuraState Switch(bool on, string? deviceKey = null, int channel = -1)
+    public static AuraState Switch(bool on, string? deviceKey = null, int channel = -1) =>
+        Switch(on, deviceKey, channel, null);
+
+    /// <param name="open">Controllers the caller already discovered and disposes itself; null discovers here.</param>
+    private static AuraState Switch(bool on, string? deviceKey, int channel, List<AuraDevice>? open)
     {
         // Locked around the whole read-modify-write: a command-line switch and one from the
         // window running at the same time would otherwise each save their own copy of
@@ -950,8 +971,8 @@ internal static partial class Program
         bool anyOn = on
             // Each channel comes back to its own last look, not to one colour smeared across the
             // board - and without rewriting what is remembered, which a plain Send would do.
-            ? Restore(state, deviceKey, channel)
-            : Send(AuraState.ModeOff, state, deviceKey, channel);
+            ? Restore(state, deviceKey, channel, open)
+            : Send(AuraState.ModeOff, state, deviceKey, channel, open);
 
         // An unmatched preset is dropped from the state: the board runs the plain records, and
         // the window must not claim the preset is active (nor warn again on the next switch).
@@ -966,9 +987,9 @@ internal static partial class Program
     /// rather than writing it, so switching off and on again cannot flatten it.
     /// </summary>
     /// <returns>Whether any channel on the machine is on afterwards.</returns>
-    private static bool Restore(AuraState state, string? deviceKey, int channel)
+    private static bool Restore(AuraState state, string? deviceKey, int channel, List<AuraDevice>? open)
     {
-        var devices = AuraDevice.DiscoverAll();
+        List<AuraDevice> devices = open ?? AuraDevice.DiscoverAll();
 
         try
         {
@@ -980,7 +1001,10 @@ internal static partial class Program
         }
         finally
         {
-            Close(devices);
+            if (open == null)
+            {
+                Close(devices);
+            }
         }
     }
 
@@ -1221,9 +1245,9 @@ internal static partial class Program
     /// switch it off again and never on. An unlisted controller falls back to the board-wide flag,
     /// and the switch that follows reports why it cannot be reached.
     /// </summary>
-    private static bool ControllerIsOn(string deviceKey)
+    private static bool ControllerIsOn(string deviceKey, List<AuraDeviceSummary> listed)
     {
-        AuraDeviceSummary? summary = AuraDevice.ListDevices().Find(d => d.Key == deviceKey);
+        AuraDeviceSummary? summary = listed.Find(d => d.Key == deviceKey);
         AuraState state = AuraState.Load();
 
         if (summary == null)
@@ -1300,7 +1324,11 @@ internal static partial class Program
 
     /// <summary>Switches to a lighting effect and remembers it as the state to restore.</summary>
     public static AuraState ApplyPreset(AuraPreset preset, Color? colour = null, string? deviceKey = null,
-        int channel = -1)
+        int channel = -1) => ApplyPreset(preset, colour, deviceKey, channel, null);
+
+    /// <param name="open">Controllers the caller already discovered and disposes itself; null discovers here.</param>
+    private static AuraState ApplyPreset(AuraPreset preset, Color? colour, string? deviceKey, int channel,
+        List<AuraDevice>? open)
     {
         using IDisposable guard = AuraFiles.HardwareLock();
 
@@ -1311,7 +1339,7 @@ internal static partial class Program
         byte green = colour?.G ?? state.Green;
         byte blue = colour?.B ?? state.Blue;
 
-        Send(preset.Mode, state with { Red = red, Green = green, Blue = blue }, deviceKey, channel);
+        Send(preset.Mode, state with { Red = red, Green = green, Blue = blue }, deviceKey, channel, open);
 
         // Mode and colour only move into the board-wide record when the whole board was the
         // target - a single channel or controller picking its own effect must not silently
@@ -1338,7 +1366,11 @@ internal static partial class Program
     /// command carries. Effects the firmware colours itself - the spectrum and rainbow modes -
     /// therefore cannot be dimmed at all, and the window hides the slider for them.
     /// </remarks>
-    public static AuraState SetBrightness(byte percent, string? deviceKey = null, int channel = -1)
+    public static AuraState SetBrightness(byte percent, string? deviceKey = null, int channel = -1) =>
+        SetBrightness(percent, deviceKey, channel, null);
+
+    /// <param name="open">Controllers the caller already discovered and disposes itself; null discovers here.</param>
+    private static AuraState SetBrightness(byte percent, string? deviceKey, int channel, List<AuraDevice>? open)
     {
         using IDisposable guard = AuraFiles.HardwareLock();
 
@@ -1367,7 +1399,7 @@ internal static partial class Program
             return ApplyCustomPreset(preset, brightnessOverride: percent);
         }
 
-        var devices = AuraDevice.DiscoverAll();
+        List<AuraDevice> devices = open ?? AuraDevice.DiscoverAll();
 
         try
         {
@@ -1386,7 +1418,10 @@ internal static partial class Program
         }
         finally
         {
-            Close(devices);
+            if (open == null)
+            {
+                Close(devices);
+            }
         }
 
         state.Save();
@@ -1695,9 +1730,10 @@ internal static partial class Program
     }
 
     /// <returns>Whether any channel on the machine is on afterwards.</returns>
-    private static bool Send(byte mode, AuraState state, string? deviceKey, int channel)
+    private static bool Send(byte mode, AuraState state, string? deviceKey, int channel,
+        List<AuraDevice>? open = null)
     {
-        var devices = AuraDevice.DiscoverAll();
+        List<AuraDevice> devices = open ?? AuraDevice.DiscoverAll();
 
         try
         {
@@ -1722,7 +1758,10 @@ internal static partial class Program
         }
         finally
         {
-            Close(devices);
+            if (open == null)
+            {
+                Close(devices);
+            }
         }
     }
 
