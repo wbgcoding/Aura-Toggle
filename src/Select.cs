@@ -703,6 +703,17 @@ internal sealed class SelectPopup : PopupForm
     private static string ShortcutHintFor(SelectItem item) =>
         item.Editable ? Strings.PresetShortcutHint : Strings.ChannelShortcutHint;
 
+    /// <summary>Drops the hovered row's tip when the row under it changes without the pointer
+    /// moving: the list resynced, scrolled, or the keyboard took over.</summary>
+    private void HideRowTip()
+    {
+        if (_tipRow >= 0)
+        {
+            _tipRow = -1;
+            _shortcutTip.Hide(this);
+        }
+    }
+
 #if REVIEW
     /// <summary>
     /// Review mode only: shows the tooltip on the first row that has one, the same way hovering it
@@ -724,7 +735,6 @@ internal sealed class SelectPopup : PopupForm
         _shortcutTip.Show(tip, this, rect.Left + this.Scaled(12), rect.Top + this.Scaled(20), 4000);
     }
 
-#if REVIEW
     /// <summary>
     /// Surface tool only: paints the list with <paramref name="hovered"/> lit onto
     /// <paramref name="onto"/> (a fresh bitmap when null), limited to <paramref name="clip"/>
@@ -742,18 +752,6 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>Surface tool only: what a hover change on <paramref name="row"/> invalidates.</summary>
     internal Rectangle HoverAreaForReview(int row) => Rectangle.Inflate(RowRect(row), this.Scaled(2), this.Scaled(2));
-#endif
-
-    /// <summary>Drops the hovered row's tip when the row under it changes without the pointer
-    /// moving: the list resynced, scrolled, or the keyboard took over.</summary>
-    private void HideRowTip()
-    {
-        if (_tipRow >= 0)
-        {
-            _tipRow = -1;
-            _shortcutTip.Hide(this);
-        }
-    }
 
     /// <summary>
     /// Review mode only: renders exactly what <see cref="Theme.PaintToolTip"/> paints for a real
