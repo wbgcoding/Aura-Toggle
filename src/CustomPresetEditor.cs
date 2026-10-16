@@ -292,12 +292,14 @@ internal sealed class CustomPresetEditor : PopupForm
     /// </summary>
     private void UpdateSaveState()
     {
-        bool named = _name.Text.Trim().Length > 0;
+        // Compared as it will be stored, so a pasted line break cannot hide a clash.
+        string name = AuraFiles.Caption(_name.Text.Trim(), AuraFiles.MaxPresetName);
+        bool named = name.Length > 0;
         _save.Enabled = named && _rows.Count > 0;
 
         // Saving onto a name that already belongs to another preset replaces it, so the button
         // says that rather than "Create".
-        bool replaces = named && _name.Text.Trim() != _editing && _existingNames.Contains(_name.Text.Trim());
+        bool replaces = named && name != _editing && _existingNames.Contains(name);
 
         _save.Text = replaces
             ? Strings.CustomPresetReplace
@@ -666,10 +668,7 @@ internal sealed class CustomPresetEditor : PopupForm
     {
         foreach (ChannelRow row in _rows)
         {
-            // An entry saved before presets went per-channel carries channel -1 and stands for
-            // the whole controller, so it seeds every channel of that controller.
-            CustomPresetEntry? entry = preset.Entries.FirstOrDefault(
-                e => e.DeviceKey == row.DeviceKey && (e.Channel == row.Channel || e.Channel < 0));
+            CustomPresetEntry? entry = MatchEntry(preset.Entries, row);
 
             if (entry == null)
             {
@@ -691,6 +690,13 @@ internal sealed class CustomPresetEditor : PopupForm
         NormaliseEngine();
         FitToContent();
     }
+
+    /// <summary>
+    /// The entry a row is seeded from. An entry saved before presets went per-channel carries
+    /// channel -1 and stands for the whole controller, so it seeds every channel of that controller.
+    /// </summary>
+    private static CustomPresetEntry? MatchEntry(List<CustomPresetEntry> entries, ChannelRow row) =>
+        entries.Find(e => e.DeviceKey == row.DeviceKey && (e.Channel == row.Channel || e.Channel < 0));
 
     private void SaveAndClose()
     {
@@ -946,7 +952,7 @@ internal sealed class CustomPresetEditor : PopupForm
         {
             ChannelRow row = _rows[i];
             CustomPresetEntry? entry = sameMachine
-                ? imported.Find(e => e.DeviceKey == row.DeviceKey && e.Channel == row.Channel)
+                ? MatchEntry(imported, row)
                 : i < imported.Count ? imported[i] : null;
 
             if (entry == null)
