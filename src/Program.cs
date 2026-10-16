@@ -926,6 +926,7 @@ internal static partial class Program
         using IDisposable guard = AuraFiles.HardwareLock();
 
         AuraState state = AuraState.Load();
+        bool presetUnmatched = false;
 
         if (on && string.IsNullOrEmpty(deviceKey) && state.CustomPreset.Length > 0)
         {
@@ -939,6 +940,8 @@ internal static partial class Program
                 {
                     return applied;
                 }
+
+                presetUnmatched = true;
             }
         }
 
@@ -950,7 +953,9 @@ internal static partial class Program
             ? Restore(state, deviceKey, channel)
             : Send(AuraState.ModeOff, state, deviceKey, channel);
 
-        AuraState next = state with { On = anyOn };
+        // An unmatched preset is dropped from the state: the board runs the plain records, and
+        // the window must not claim the preset is active (nor warn again on the next switch).
+        AuraState next = state with { On = anyOn, CustomPreset = presetUnmatched ? "" : state.CustomPreset };
         next.Save();
         return next;
     }
