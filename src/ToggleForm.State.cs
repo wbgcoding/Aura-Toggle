@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 
 namespace AuraToggle;
 
@@ -11,11 +13,56 @@ namespace AuraToggle;
 internal sealed partial class ToggleForm
 {
     /// <summary>
+    /// A data file read once and read again only when it changes on disk. The command line and
+    /// other windows write these files too, so the file's own stamp and length decide, not an
+    /// event of this window.
+    /// </summary>
+    private sealed class FileCache<T>
+    {
+        private readonly string _name;
+        private readonly Func<T> _load;
+        private T? _value;
+        private DateTime _stamp;
+        private long _length = -2;
+
+        public FileCache(string name, Func<T> load)
+        {
+            _name = name;
+            _load = load;
+        }
+
+        public T Get()
+        {
+            var file = new FileInfo(AuraFiles.PathTo(_name));
+            DateTime stamp = file.Exists ? file.LastWriteTimeUtc : DateTime.MinValue;
+            long length = file.Exists ? file.Length : -1;
+
+            // Stamped before the read: a write landing in between leaves a stale stamp, which
+            // only costs one more read next time.
+            if (_length != length || _stamp != stamp)
+            {
+                _value = _load();
+                _stamp = stamp;
+                _length = length;
+            }
+
+            return _value!;
+        }
+    }
+
+    private readonly FileCache<List<CustomPreset>> _customPresets = new(AuraCustomPresets.FileName, AuraCustomPresets.Load);
+    private readonly FileCache<Dictionary<string, ChannelLighting>> _channelStates =
+        new(AuraChannelStates.FileName, AuraChannelStates.All);
+
+    /// <summary>
     /// <see cref="Displayed"/> worked out from the given state and records instead of the cached
     /// ones. <paramref name="remembered"/> only matters when a controller or channel is named.
+    /// <paramref name="devices"/> is passed in so a worker thread works on a snapshot taken on the
+    /// UI thread instead of reading the field.
     /// </summary>
-    private (byte Mode, Color Colour, bool On, byte Brightness) DisplayedFor(
-        AuraState state, Dictionary<string, ChannelLighting> remembered, string? deviceKey, int channel)
+    private static (byte Mode, Color Colour, bool On, byte Brightness) DisplayedFor(
+        AuraState state, Dictionary<string, ChannelLighting> remembered, List<AuraDeviceSummary> devices,
+        string? deviceKey, int channel)
     {
         var board = (state.Mode, Color.FromArgb(state.Red, state.Green, state.Blue), state.On, state.Brightness);
 
@@ -36,7 +83,7 @@ internal sealed partial class ToggleForm
         ChannelLighting? first = null;
         var anyOn = false;
 
-        foreach (AuraChannel own in _devices.Find(d => d.Key == deviceKey)?.Channels ?? new List<AuraChannel>())
+        foreach (AuraChannel own in devices.Find(d => d.Key == deviceKey)?.Channels ?? new List<AuraChannel>())
         {
             if (AuraChannelStates.Get(remembered, deviceKey, own.Index) is not ChannelLighting look)
             {
@@ -81,7 +128,8 @@ internal sealed partial class ToggleForm
 
         AuraState fresh = AuraState.Load();
         (string? deviceKey, int channel) = Target;
-        var shown = DisplayedFor(fresh, deviceKey == null ? new() : AuraChannelStates.All(), deviceKey, channel);
+        var shown = DisplayedFor(
+            fresh, deviceKey == null ? new() : AuraChannelStates.All(), _devices, deviceKey, channel);
 
         if (fresh != _state || shown != _displayed)
         {

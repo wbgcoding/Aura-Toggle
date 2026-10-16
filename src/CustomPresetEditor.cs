@@ -32,7 +32,17 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly TransferButton _import = new();
     private readonly Label _transferHint = new();
     private readonly ArmedButton _deleteArm;
+    private readonly Label _heading = new();
+    private readonly DeleteButton _discard = new();
+    private Label? _noDevices;
+
+    /// <summary>The text of the transfer hint on show, so a language change can say it again.</summary>
+    private Func<string>? _hintText;
     private readonly string? _editing;
+
+    /// <summary>Entries of the preset being edited whose controller has no row here (unplugged).
+    /// Saving keeps them, so editing on another machine state does not drop their lighting.</summary>
+    private readonly List<CustomPresetEntry> _absent = new();
 
     /// <summary>Only use in this editor: the tooltips on the icon-only export/import buttons.</summary>
     private readonly ToolTip _tips = new();
@@ -115,24 +125,20 @@ internal sealed class CustomPresetEditor : PopupForm
         _header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         _header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        var heading = new Label
-        {
-            Anchor = AnchorStyles.Left,
-            AutoSize = true,
-            Text = preset == null ? Strings.CustomPresetNew : Strings.CustomPresetEdit,
-            Font = Theme.Heading,
-            ForeColor = Theme.Text,
-            BackColor = Theme.Surface,
-        };
+        Label heading = _heading;
+        heading.Anchor = AnchorStyles.Left;
+        heading.AutoSize = true;
+        heading.Text = preset == null ? Strings.CustomPresetNew : Strings.CustomPresetEdit;
+        heading.Font = Theme.Heading;
+        heading.ForeColor = Theme.Text;
+        heading.BackColor = Theme.Surface;
         _metrics.Add(() => heading.Margin = new Padding(this.Scaled(2), this.Scaled(2), 0, 0));
         _header.Controls.Add(heading, 0, 0);
 
-        var discard = new DeleteButton
-        {
-            Anchor = AnchorStyles.Right,
-            AccessibleName = Strings.CustomPresetDiscard,
-            Margin = new Padding(0),
-        };
+        DeleteButton discard = _discard;
+        discard.Anchor = AnchorStyles.Right;
+        discard.AccessibleName = Strings.CustomPresetDiscard;
+        discard.Margin = new Padding(0);
         discard.Click += (_, _) => Close();
         _header.Controls.Add(discard, 1, 0);
 
@@ -209,6 +215,7 @@ internal sealed class CustomPresetEditor : PopupForm
                 ForeColor = Theme.TextMuted,
                 BackColor = Theme.Surface,
             };
+            _noDevices = empty;
             _metrics.Add(() => empty.Margin = new Padding(this.Scaled(2), 0, 0, this.Scaled(10)));
             AddRootRow(empty);
         }
@@ -268,6 +275,7 @@ internal sealed class CustomPresetEditor : PopupForm
 
         if (preset != null)
         {
+            _absent.AddRange(preset.Entries.Where(e => !_rows.Any(r => r.DeviceKey == e.DeviceKey)));
             Fill(preset);
         }
 
@@ -287,12 +295,14 @@ internal sealed class CustomPresetEditor : PopupForm
     /// </summary>
     private void UpdateSaveState()
     {
-        bool named = _name.Text.Trim().Length > 0;
+        // Compared as it will be stored, so a pasted line break cannot hide a clash.
+        string name = AuraFiles.Caption(_name.Text.Trim(), AuraFiles.MaxPresetName);
+        bool named = name.Length > 0;
         _save.Enabled = named && _rows.Count > 0;
 
         // Saving onto a name that already belongs to another preset replaces it, so the button
         // says that rather than "Create".
-        bool replaces = named && _name.Text.Trim() != _editing && _existingNames.Contains(_name.Text.Trim());
+        bool replaces = named && name != _editing && _existingNames.Contains(name);
 
         _save.Text = replaces
             ? Strings.CustomPresetReplace
@@ -306,6 +316,11 @@ internal sealed class CustomPresetEditor : PopupForm
         public required string DeviceKey;
         public required int Channel;
         public required string Label;
+        public required AuraDeviceSummary Device;
+        public required AuraChannel ChannelInfo;
+        public required bool NameDevice;
+        public required Label Caption;
+        public required Label BrightnessLabel;
         public required Select Effect;
         public required ColourStrip Colours;
 
@@ -478,6 +493,11 @@ internal sealed class CustomPresetEditor : PopupForm
             DeviceKey = device.Key,
             Channel = channel.Index,
             Label = label,
+            Device = device,
+            ChannelInfo = channel,
+            NameDevice = nameDevice,
+            Caption = caption,
+            BrightnessLabel = brightnessLabel,
             Effect = effect,
             Colours = colours,
             BrightnessRow = brightnessRow,
@@ -567,6 +587,12 @@ internal sealed class CustomPresetEditor : PopupForm
         _rows[rowIndex].Effect.ShowSelection(key);
         EffectChosen(_rows[rowIndex]);
     }
+
+    /// <summary>Review build: the heading and the first channel's caption as shown.</summary>
+    internal string ReviewTexts() => $"{_heading.Text}|{_rows[0].Caption.Text}|{_save.Text}";
+
+    /// <summary>Review build: saves the way the Save button does.</summary>
+    internal void ReviewSave() => SaveAndClose();
 
     /// <summary>Review build: every row's controller, channel and effect key.</summary>
     internal List<(string DeviceKey, int Channel, string Effect)> ReviewRows() =>
@@ -658,10 +684,7 @@ internal sealed class CustomPresetEditor : PopupForm
     {
         foreach (ChannelRow row in _rows)
         {
-            // An entry saved before presets went per-channel carries channel -1 and stands for
-            // the whole controller, so it seeds every channel of that controller.
-            CustomPresetEntry? entry = preset.Entries.FirstOrDefault(
-                e => e.DeviceKey == row.DeviceKey && (e.Channel == row.Channel || e.Channel < 0));
+            CustomPresetEntry? entry = MatchEntry(preset.Entries, row);
 
             if (entry == null)
             {
@@ -684,6 +707,13 @@ internal sealed class CustomPresetEditor : PopupForm
         FitToContent();
     }
 
+    /// <summary>
+    /// The entry a row is seeded from. An entry saved before presets went per-channel carries
+    /// channel -1 and stands for the whole controller, so it seeds every channel of that controller.
+    /// </summary>
+    private static CustomPresetEntry? MatchEntry(List<CustomPresetEntry> entries, ChannelRow row) =>
+        entries.Find(e => e.DeviceKey == row.DeviceKey && (e.Channel == row.Channel || e.Channel < 0));
+
     private void SaveAndClose()
     {
         // Stored exactly as every reader will see it again: a pasted tab or line break would
@@ -702,6 +732,8 @@ internal sealed class CustomPresetEditor : PopupForm
         {
             return;
         }
+
+        entries.AddRange(_absent);
 
         CustomPreset saved;
         bool written;
@@ -776,7 +808,7 @@ internal sealed class CustomPresetEditor : PopupForm
         string name = _name.Text.Trim();
         using var dialog = new SaveFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = Strings.FileFilterJson,
             FileName = (name.Length > 0 ? SanitiseFileName(name) : "preset") + ".json",
             InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         };
@@ -818,7 +850,7 @@ internal sealed class CustomPresetEditor : PopupForm
         catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
             AuraLog.Error("PresetExport", ex);
-            ShowTransferHint(Strings.CustomPresetExportError);
+            ShowTransferHint(() => Strings.CustomPresetExportError);
         }
     }
 
@@ -835,7 +867,7 @@ internal sealed class CustomPresetEditor : PopupForm
     {
         using var dialog = new OpenFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = Strings.FileFilterJson,
             InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         };
 
@@ -847,7 +879,7 @@ internal sealed class CustomPresetEditor : PopupForm
         List<CustomPresetEntry>? imported = TryReadPresetFile(dialog.FileName, out string? importedName);
         if (imported == null)
         {
-            ShowTransferHint(Strings.CustomPresetImportError);
+            ShowTransferHint(() => Strings.CustomPresetImportError);
             return;
         }
 
@@ -936,7 +968,7 @@ internal sealed class CustomPresetEditor : PopupForm
         {
             ChannelRow row = _rows[i];
             CustomPresetEntry? entry = sameMachine
-                ? imported.Find(e => e.DeviceKey == row.DeviceKey && e.Channel == row.Channel)
+                ? MatchEntry(imported, row)
                 : i < imported.Count ? imported[i] : null;
 
             if (entry == null)
@@ -959,9 +991,10 @@ internal sealed class CustomPresetEditor : PopupForm
         NormaliseEngine();
     }
 
-    private void ShowTransferHint(string text)
+    private void ShowTransferHint(Func<string> text)
     {
-        _transferHint.Text = text;
+        _hintText = text;
+        _transferHint.Text = text();
         _transferHint.Visible = true;
         FitToContent();
     }
@@ -989,12 +1022,23 @@ internal sealed class CustomPresetEditor : PopupForm
             return;
         }
 
+        bool written;
         using (IDisposable guard = AuraFiles.Lock())
         {
             List<CustomPreset> presets = AuraCustomPresets.Load();
             presets.RemoveAll(p => p.Name == _editing);
-            AuraCustomPresets.Save(presets);
-            AuraSettings.FollowPresetRename(_editing, null);
+            written = AuraCustomPresets.Save(presets);
+            if (written)
+            {
+                AuraSettings.FollowPresetRename(_editing, null);
+            }
+        }
+
+        if (!written)
+        {
+            // The preset is still on disk: staying open keeps it editable, and nothing behind is told it is gone.
+            ErrorDialog.Report(new IOException(Strings.ErrorSaveFailed), "Delete preset", this);
+            return;
         }
 
         // Deleted first: it clears _state.CustomPreset if this was the active one, so the render
@@ -1029,6 +1073,51 @@ internal sealed class CustomPresetEditor : PopupForm
         // The rows are seeded from what each channel is already running, so the first preview is
         // usually a no-op - but not when an existing preset was loaded into them.
         RaisePreview();
+    }
+
+    /// <summary>
+    /// Says everything again in the language that was just chosen: the heading, labels, tooltips,
+    /// every channel's caption and effect names, then the layout, since the wording changes widths.
+    /// </summary>
+    public void Relocalise()
+    {
+        AccessibleName = Strings.CustomPresetAccessibleName;
+        _heading.Text = _editing == null ? Strings.CustomPresetNew : Strings.CustomPresetEdit;
+        _discard.AccessibleName = Strings.CustomPresetDiscard;
+        _name.PlaceholderText = Strings.CustomPresetNamePlaceholder;
+        _name.AccessibleName = Strings.CustomPresetNamePlaceholder;
+        _export.AccessibleName = Strings.CustomPresetExport;
+        _import.AccessibleName = Strings.CustomPresetImport;
+        _tips.SetToolTip(_export, Strings.CustomPresetExport);
+        _tips.SetToolTip(_import, Strings.CustomPresetImport);
+
+        if (_hintText != null)
+        {
+            _transferHint.Text = _hintText();
+        }
+
+        if (_noDevices != null)
+        {
+            _noDevices.Text = Strings.CustomPresetNoDevices;
+        }
+
+        Dictionary<string, string> chosen = AuraChannelNames.All();
+        foreach (ChannelRow row in _rows)
+        {
+            row.Label = ChannelLabels.For(row.Device, row.ChannelInfo, row.NameDevice, chosen);
+            row.Caption.Text = row.Label;
+            row.Effect.AccessibleName = row.Label;
+            row.Effect.SetItems(AuraPresets.All.Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode)));
+            row.Colours.AccessibleName = Strings.ColourAccessibleName;
+            row.BrightnessLabel.Text = Strings.SettingBrightness;
+            row.Brightness.AccessibleName = $"{row.Label} - {Strings.SettingBrightness}";
+            ShowBrightnessValue(row);
+        }
+
+        _deleteArm.Relabel(Strings.CustomPresetDelete, Strings.CustomPresetConfirmDelete);
+        UpdateSaveState();
+        _metrics.Reapply();
+        FitToContent();
     }
 
     /// <summary>Dragged onto a display with a different scale: the height and width this was

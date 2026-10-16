@@ -281,6 +281,9 @@
   <data name="CustomPresetImport" xml:space="preserve">
     <value>Importar</value>
   </data>
+  <data name="FileFilterJson" xml:space="preserve">
+    <value>Arquivos JSON (*.json)|*.json</value>
+  </data>
   <data name="CustomPresetExportError" xml:space="preserve">
     <value>Não foi possível salvar o arquivo.</value>
   </data>

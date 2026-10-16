@@ -237,7 +237,7 @@
     <value>Onaltılık değer olarak renk</value>
   </data>
   <data name="BrightnessValue" xml:space="preserve">
-    <value>{0}%</value>
+    <value>%{0}</value>
   </data>
   <data name="ButtonNewCustomPreset" xml:space="preserve">
     <value>Yeni ön ayar</value>
@@ -280,6 +280,9 @@
   </data>
   <data name="CustomPresetImport" xml:space="preserve">
     <value>İçe aktar</value>
+  </data>
+  <data name="FileFilterJson" xml:space="preserve">
+    <value>JSON dosyaları (*.json)|*.json</value>
   </data>
   <data name="CustomPresetExportError" xml:space="preserve">
     <value>Dosya kaydedilemedi.</value>

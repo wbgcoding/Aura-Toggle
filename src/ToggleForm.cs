@@ -149,6 +149,15 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>The latest request that arrived during a quiet hold, see <see cref="Run"/>.</summary>
     private Func<AuraState>? _afterQuiet;
+
+    /// <summary>
+    /// The newest effect picked while a switch was running, applied once it ends. Arrow keys on the
+    /// closed list pick one effect per press; applying each would drop all but the first.
+    /// </summary>
+    private (string Key, string Text, string? DeviceKey, int Channel, Color Colour)? _pendingEffect;
+
+    /// <summary>The error dialog on screen, if any: a second failure brings it forward instead of stacking another.</summary>
+    private ErrorDialog? _errorDialog;
     private bool _exiting;
     private bool _dark = Theme.Dark;
     private long _themeEchoUntil;
@@ -255,9 +264,8 @@ internal sealed partial class ToggleForm : Form
         // A display-scale change reaches these two in their own time: WinForms updates a child's
         // own dpi and replaces its font after this window has already been told, so the widths
         // measured in between are still the old display's - and consistently so, which is why no
-        // check could tell. Re-measuring when the control itself reports the change is what an
-        // unrelated later action (the switch, another move) was doing by accident every time it
-        // appeared to fix itself.
+        // check could tell. Re-measuring when the control itself reports the change keeps them
+        // current.
         foreach (Control control in new Control[] { _effects, _channel })
         {
             control.DpiChangedAfterParent += (_, _) => QueueSettle();
@@ -346,11 +354,8 @@ internal sealed partial class ToggleForm : Form
 
         _topRow = new Layout
         {
-            // Not AutoSize: that would make the row's own preferred width - swayed by whatever
-            // _effects last measured, including a stale figure surviving a display-scale change -
-            // a floor Dock=Fill can grow past but never shrink below. A log from the field caught
-            // exactly that: "effects w=243 preferred=209", the panel refusing to give the row back
-            // to 209 even though the window was already sized for it, pushing the gear off the edge.
+            // Not AutoSize: AutoSize would make a stale preferred width a floor the row cannot
+            // shrink below, pushing the gear off the edge after a display-scale change.
             // Only Height is ever read from this row (ResizeToContent), and GetPreferredSize()
             // answers that without opting the row's own width into the same floor.
             Dock = DockStyle.Fill,
@@ -686,6 +691,7 @@ internal sealed partial class ToggleForm : Form
     /// </summary>
     private void DeleteCustomPreset(string name)
     {
+        bool written;
         using (IDisposable guard = AuraFiles.Lock())
         {
             List<CustomPreset> presets = AuraCustomPresets.Load();
@@ -694,8 +700,18 @@ internal sealed partial class ToggleForm : Form
                 return;
             }
 
-            AuraCustomPresets.Save(presets);
-            AuraSettings.FollowPresetRename(name, null);
+            written = AuraCustomPresets.Save(presets);
+            if (written)
+            {
+                AuraSettings.FollowPresetRename(name, null);
+            }
+        }
+
+        if (!written)
+        {
+            // The preset is still on disk, so the start action, the active state and the list stay as they are.
+            ShowError(new IOException(Strings.ErrorSaveFailed), "Delete preset");
+            return;
         }
 
         ClearActiveCustomPreset(name);
@@ -728,7 +744,7 @@ internal sealed partial class ToggleForm : Form
             {
                 // A name already at AuraFiles.MaxPresetName leaves no room for the suffix -
                 // AuraCustomPresets.Load re-caps every name to that length on the next read, which
-                // silently dropped the suffix back off and left two presets sharing one name.
+                // silently drops the suffix back off and leaves two presets sharing one name.
                 // AuraFiles.Caption, not a raw range - a plain cut can land inside a surrogate
                 // pair (an emoji in the name) and hand Utf8JsonWriter half of one on save.
                 string suffixText = $" ({suffix})";
@@ -936,7 +952,7 @@ internal sealed partial class ToggleForm : Form
             // Report logs it as well; a window nobody can see just gets the log line.
             if (!IsDisposed && Visible)
             {
-                ErrorDialog.Report(ex, "Discover", this);
+                ShowError(ex, "Discover");
             }
             else
             {
@@ -1074,7 +1090,7 @@ internal sealed partial class ToggleForm : Form
         {
             // Kept as narrow as its own longest label: the effect list takes the rest of the row,
             // and that is where a long preset name would otherwise be cut off. The list it opens
-            // is exactly as wide as its longest row, pencil included - a fixed minimum left a
+            // is exactly as wide as its longest row, pencil included - a fixed minimum would leave a
             // short list of channels sitting in a panel far wider than anything in it. The bounds
             // are scaled because what they bound is not: the measured label width grows with the
             // display, so a limit written for 96 dpi would clip every name on a 150 % screen.
@@ -1151,10 +1167,28 @@ internal sealed partial class ToggleForm : Form
         // flag - and with it every control - for the rest of the session.
         var cts = new CancellationTokenSource();
 
-        var popup = new RenamePopup(item.Text);
+        // Seeded with the channel's own name, never the controller-qualified label the list shows.
+        AuraDeviceSummary? device = _devices.Find(d => d.Key == deviceKey);
+        AuraChannel? channel = device?.Channels.Find(c => c.Index == channelIndex);
+        string seed = item.Text;
+        string defaultName = "";
+        if (device != null && channel != null)
+        {
+            seed = ChannelLabels.For(device, channel, false, AuraChannelNames.All());
+            defaultName = ChannelLabels.For(device, channel, false, new Dictionary<string, string>());
+        }
+
+        var popup = new RenamePopup(seed);
         popup.Renamed += (_, name) =>
         {
-            AuraChannelNames.Set(deviceKey, channelIndex, name);
+            // The default label is stored as no name at all, so a later language change still
+            // relabels the channel.
+            if (name == seed)
+            {
+                return;
+            }
+
+            AuraChannelNames.Set(deviceKey, channelIndex, name == defaultName ? "" : name);
             SetUpChannelSelector();
             Render();
         };
@@ -1336,8 +1370,7 @@ internal sealed partial class ToggleForm : Form
         get
         {
             (string? deviceKey, int channel) = Target;
-            return DisplayedFor(
-                _state, deviceKey == null ? new() : AuraChannelStates.All(), deviceKey, channel);
+            return DisplayedFor(_state, deviceKey == null ? new() : _channelStates.Get(), _devices, deviceKey, channel);
         }
     }
 
@@ -1373,11 +1406,12 @@ internal sealed partial class ToggleForm : Form
         // What the button shows can be one command-line switch behind, so the decision is made
         // again from disk once the work is on its way.
         (string? deviceKey, int channel) = Target;
+        List<AuraDeviceSummary> devices = new(_devices);
         _ = Run(() =>
         {
             AuraState fresh = AuraState.Load();
             Dictionary<string, ChannelLighting> remembered = deviceKey == null ? new() : AuraChannelStates.All();
-            return Program.Switch(!DisplayedFor(fresh, remembered, deviceKey, channel).On, deviceKey, channel);
+            return Program.Switch(!DisplayedFor(fresh, remembered, devices, deviceKey, channel).On, deviceKey, channel);
         });
     }
 
@@ -1391,7 +1425,37 @@ internal sealed partial class ToggleForm : Form
         // The colour that goes with a built-in effect is the one on show, which for a single
         // channel is that channel's own rather than whatever was last set board-wide.
         (string? deviceKey, int channel) = Target;
-        ApplyEffect(_effects.Selected.Key, _effects.Selected.Text, deviceKey, channel, _displayed.Colour);
+        _pendingEffect = (_effects.Selected.Key, _effects.Selected.Text, deviceKey, channel, _displayed.Colour);
+        ApplyPendingEffect();
+    }
+
+    /// <summary>
+    /// Applies the newest pick unless a switch is still running; <see cref="SetBusy"/> calls this
+    /// again when it ends, so only the last of several quick picks reaches the controller.
+    /// </summary>
+    private void ApplyPendingEffect()
+    {
+        if (_busy || IsDisposed || _pendingEffect is not { } pick)
+        {
+            return;
+        }
+
+        _pendingEffect = null;
+        ApplyEffect(pick.Key, pick.Text, pick.DeviceKey, pick.Channel, pick.Colour);
+    }
+
+    /// <summary>Shows the error dialog, or brings the one already open forward; the failure is logged either way.</summary>
+    private void ShowError(Exception ex, string context)
+    {
+        if (_errorDialog is { IsDisposed: false } open)
+        {
+            AuraLog.Error(context, ex);
+            open.Activate();
+            open.BringToFront();
+            return;
+        }
+
+        _errorDialog = ErrorDialog.Report(ex, context, this, onClosed: () => _errorDialog = null);
     }
 
     /// <summary>What picking an effect does, whether it was picked in the window or in the tray menu.</summary>
@@ -1619,7 +1683,7 @@ internal sealed partial class ToggleForm : Form
 #if REVIEW
     /// <summary>
     /// The settings panel's placement against the window edge, the gear and the big toggle button
-    /// it opened from - the regression proof for two complaints: a strip of the button left visible
+    /// it opened from - it checks two conditions: a strip of the button left visible
     /// next to the panel (anything but a positive <c>panel.Right - toggle.Right</c>), and the panel
     /// landing nowhere near the gear at all (the multi-monitor case where
     /// <see cref="SettingsPopup.Open"/> clamped against the wrong monitor's bounds - a gap far
@@ -1755,9 +1819,8 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Re-applies every dpi-dependent measurement, then checks what the complaint is actually
-    /// about - whether anything is short of room, the effect list's own text included - instead of
-    /// trusting that one pass was enough. Runs while the window is still being dragged, on
+    /// Re-applies every dpi-dependent measurement, then checks whether anything is short of
+    /// room, the effect list's own text included, instead of trusting that one pass was enough. Runs while the window is still being dragged, on
     /// purpose - see <see cref="_userMoving"/> - so the layout catches up to the new monitor
     /// immediately instead of only once the mouse button comes back up.
     /// </summary>
@@ -2158,7 +2221,7 @@ internal sealed partial class ToggleForm : Form
                     }
                     else if (!IsDisposed && Visible)
                     {
-                        ErrorDialog.Report(ex, "Preview", this);
+                        ShowError(ex, "Preview");
                     }
                     else
                     {
@@ -2244,12 +2307,14 @@ internal sealed partial class ToggleForm : Form
             }
             else if (Visible)
             {
-                ErrorDialog.Report(ex, "Switch", this);
+                ShowError(ex, "Switch");
             }
             else
             {
                 AuraLog.Error("Switch", ex);
-                _tray.ShowBalloonTip(4000, Strings.WindowTitle, ex.Message, ToolTipIcon.Warning);
+                // Same rule as the dialog: only the curated messages are fit to show, the rest is a bug.
+                string balloon = ex is AuraNotFoundException or IOException ? ex.Message : Strings.ErrorUnexpected;
+                _tray.ShowBalloonTip(4000, Strings.WindowTitle, balloon, ToolTipIcon.Warning);
             }
         }
         finally
@@ -2263,9 +2328,8 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Measured on the VM (no controller, so the fastest hardware call there is the one that
-    /// fails outright): a brightness commit held <see cref="_busy"/> for about 188 ms end to end.
-    /// Greying every control out and back in for that long reads as a flash, not feedback - so the
+    /// A typical brightness commit holds <see cref="_busy"/> for under 200 ms; greying out for that
+    /// long reads as a flash, not feedback - so the
     /// visible part of being busy waits <see cref="BusyFlashDelayMs"/> before it shows at all, and
     /// never shows for anything that finishes inside that delay.
     /// </summary>
@@ -2309,6 +2373,11 @@ internal sealed partial class ToggleForm : Form
 
         _busyTimer.Stop();
         ApplyBusyVisuals(busy: false);
+
+        if (_pendingEffect != null && !IsDisposed)
+        {
+            BeginInvoke(ApplyPendingEffect);
+        }
     }
 
     /// <summary>
@@ -2388,6 +2457,17 @@ internal sealed partial class ToggleForm : Form
             }
         }
 
+        // Windows of their own keep the language they were built in unless told.
+        foreach (CustomPresetEditor editor in Application.OpenForms.OfType<CustomPresetEditor>())
+        {
+            editor.Relocalise();
+        }
+
+        foreach (ErrorDialog dialog in Application.OpenForms.OfType<ErrorDialog>())
+        {
+            dialog.Relocalise();
+        }
+
         Render();
     }
 
@@ -2447,7 +2527,7 @@ internal sealed partial class ToggleForm : Form
             effectKey = CustomKey(_state.CustomPreset);
             usesColour = false;
 
-            if (FindCustomPreset(_state.CustomPreset) is CustomPreset active &&
+            if (_customPresets.Get().Find(p => p.Name == _state.CustomPreset) is CustomPreset active &&
                 MostUsed(active) is CustomPresetEntry common)
             {
                 painted = common.Mode;
@@ -2476,7 +2556,12 @@ internal sealed partial class ToggleForm : Form
         _toggle.Show(on, painted, Color.FromArgb(red, green, blue));
 
         _effects.Colour = colour;
-        _effects.ShowSelection(effectKey);
+
+        // A newer pick is still waiting for its turn: snapping the list back would undo it.
+        if (_pendingEffect == null)
+        {
+            _effects.ShowSelection(effectKey);
+        }
 
         _colours.Colour = colour;
         _colours.Visible = usesColour;
@@ -2601,9 +2686,8 @@ internal sealed partial class ToggleForm : Form
         // dock pass for them afterwards. The effect list is then a few pixels narrower than the
         // width this window was just sized for and ellipsises its own longest entry - "cut off on
         // the right after moving to the other monitor", with nothing actually sticking out of the
-        // window, which is why every overflow check missed it. Measured on the review harness
-        // (-review layout 100 from a 150 % display): 473 px of panel inside a 479 px content box,
-        // effect list 237 where it needed 243. One layout pass here brings both up to date.
+        // window, which is why every overflow check missed it. One layout pass here brings both up
+        // to date.
         PerformLayout();
     }
 
@@ -2631,7 +2715,7 @@ internal sealed partial class ToggleForm : Form
             yield return (name, right, right - (ClientSize.Width - Padding.Right));
         }
 
-        // The other shape of the same complaint: everything sits inside the window, but the effect
+        // The other way to be short of room: everything sits inside the window, but the effect
         // list was handed less room than its longest entry needs and cuts the text off itself.
         // Reported in the same pixels-too-few units so one check covers both, and only while the
         // window can still grow at all - at the maximum width a shortened entry is the intended
@@ -2651,11 +2735,9 @@ internal sealed partial class ToggleForm : Form
     /// </summary>
     /// <remarks>
     /// A window lying across two displays is left exactly where it is. Pulling it onto the display
-    /// it happened to overlap most put it fully on the other monitor, which changed the display
-    /// scale, which re-measured and pulled it back - the window ping-ponged between the two for as
-    /// long as it took to land, and every measurement in between was taken mid-flight. That is
-    /// what left the layout wrong until something later (the on/off switch) measured it again on a
-    /// window that had finally stopped moving.
+    /// it happens to overlap most would put it fully on the other monitor, which changes the display
+    /// scale, which re-measures and pulls it back - the window would ping-pong between the two for
+    /// as long as it took to land, and every measurement in between would be taken mid-flight.
     /// </remarks>
     private void KeepOnScreen()
     {
@@ -2704,8 +2786,8 @@ internal sealed partial class ToggleForm : Form
 
 #if REVIEW
     /// <summary>
-    /// Every measurement the window's width depends on, as text - the regression proof for a
-    /// layout complaint that can only be judged at a real display scale. Reports the room the top
+    /// Every measurement the window's width depends on, as text - the check for a layout
+    /// fit that can only be judged at a real display scale. Reports the room the top
     /// row actually needs against the room it was given, so "cut off on the right" is a number
     /// here rather than a guess from a screenshot.
     /// </summary>
@@ -2752,8 +2834,7 @@ internal sealed partial class ToggleForm : Form
                     : " - STALE, still on the display this window came from"),
         };
 
-        // The real question behind the complaint: does anything actually stick out past the right
-        // edge of the window's content box?
+        // Does anything actually stick out past the right edge of the window's content box?
         foreach ((string name, int right, int rightOverflow) in RightOverflow())
         {
             if (rightOverflow > 0)
@@ -2824,7 +2905,7 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
         }
 
         // A rounded highlight set in from the menu's edges, matching the rows of the window's own
-        // lists, instead of the square bar that ran into the rounded corners.
+        // lists, instead of a square bar that runs into the rounded corners.
         Rectangle row = new(Point.Empty, e.Item.Size);
         int inset = Math.Max(2, row.Height / 8);
         var area = new RectangleF(inset, 1, row.Width - (inset * 2) - 1, row.Height - 3);

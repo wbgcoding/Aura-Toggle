@@ -186,9 +186,9 @@ internal sealed class SettingsPopup : PopupForm
 
     /// <summary>
     /// Width measured too, not just height: the labels are translated and do not ellipsise, so a
-    /// fixed 276 clipped the longer German ones once the font grew with the display scale. Called
+    /// fixed 276 would clip the longer German ones once the font grows with the display scale. Called
     /// again whenever a row is shown or hidden - the hotkey field only exists while the switch
-    /// above it is on, and an empty row left the panel taller than it needed to be.
+    /// above it is on, and an empty row leaves the panel taller than it needs to be.
     /// </summary>
     private void FitToContent()
     {
@@ -204,9 +204,9 @@ internal sealed class SettingsPopup : PopupForm
         // left one where a differently sized panel had been placed. Two things resize the panel
         // after it was placed: switching the hotkey on adds a whole row (near the bottom of the
         // screen that pushes Reset under the taskbar), and being shown on a monitor at
-        // another scale than the one it was created on re-fits it at that scale. The second one is
-        // what left the panel roughly centred under the gear on a second monitor - it was placed at
-        // its old, narrower width and then grew rightwards past the window. Before the first Open
+        // another scale than the one it was created on re-fits it at that scale. The second one
+        // matters most: the panel is placed at its old, narrower width and then grows rightwards
+        // past the window. Before the first Open
         // there is no anchor to hold yet, so the panel only has to stay on screen.
         if (_anchored)
         {

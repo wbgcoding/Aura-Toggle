@@ -35,9 +35,14 @@ internal sealed class ErrorDialog : PopupForm
 
     private readonly string _detailText;
 
-    private ErrorDialog(string bodyText, string detailText)
+    /// <summary>True when the body is the generic message, which is ours to say again in another
+    /// language; a curated exception message was worded at the moment it was raised.</summary>
+    private readonly bool _genericBody;
+
+    private ErrorDialog(string bodyText, string detailText, bool genericBody)
     {
         _detailText = detailText;
+        _genericBody = genericBody;
 
         AutoScaleMode = AutoScaleMode.Dpi;
         ForeColor = Theme.Text;
@@ -149,7 +154,8 @@ internal sealed class ErrorDialog : PopupForm
             return null;
         }
 
-        string body = ex is AuraNotFoundException or IOException ? ex.Message : Strings.ErrorUnexpected;
+        bool curated = ex is AuraNotFoundException or IOException;
+        string body = curated ? ex.Message : Strings.ErrorUnexpected;
 
         string details = AuraFiles.Redact(string.Join(Environment.NewLine,
             $"Aura Toggle {Program.VersionText}",
@@ -157,7 +163,7 @@ internal sealed class ErrorDialog : PopupForm
             "",
             ex.ToString()));
 
-        var dialog = new ErrorDialog(body, details);
+        var dialog = new ErrorDialog(body, details, genericBody: !curated);
         if (onClosed != null)
         {
             dialog.FormClosed += (_, _) => onClosed();
@@ -177,6 +183,23 @@ internal sealed class ErrorDialog : PopupForm
         {
             return -1;
         }
+    }
+
+    /// <summary>Says the dialog's own wording again in the language that was just chosen.</summary>
+    public void Relocalise()
+    {
+        _heading.Text = Strings.ErrorTitle;
+
+        if (_genericBody)
+        {
+            _body.Text = Strings.ErrorUnexpected;
+        }
+
+        _detailsToggle.Text = (_details.Visible ? "▾ " : "▸ ") + Strings.ErrorDetails;
+        _copy.Text = Strings.ErrorCopyDetails;
+        _openLog.Text = Strings.ErrorOpenLog;
+        _close.Text = Strings.ErrorClose;
+        Reflow();
     }
 
     private void ToggleDetails()
@@ -222,7 +245,7 @@ internal sealed class ErrorDialog : PopupForm
         _close.FitToText(18);
 
         // The three buttons are translated text, so their combined width is not known until they
-        // are all sized - a fixed dialog width clipped or overlapped them in German. The body
+        // are all sized - a fixed dialog width would clip or overlap them in German. The body
         // still wraps at the plain DialogWidth; that only leaves it narrower than a wider dialog,
         // never overlapping. The heading is folded in the same way, for the same reason.
         int gap = this.Scaled(8);

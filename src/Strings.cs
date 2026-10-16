@@ -187,6 +187,7 @@ internal static class Strings
     public static string CustomPresetAccessibleName => Get("CustomPresetAccessibleName");
     public static string CustomPresetExport => Get("CustomPresetExport");
     public static string CustomPresetImport => Get("CustomPresetImport");
+    public static string FileFilterJson => Get("FileFilterJson");
     public static string CustomPresetExportError => Get("CustomPresetExportError");
     public static string CustomPresetImportError => Get("CustomPresetImportError");
 
