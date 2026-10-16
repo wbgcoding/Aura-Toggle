@@ -410,6 +410,8 @@ State lives in `%LOCALAPPDATA%\aura-toggle`:
 - `reset-backup.zip`: written only when you reset everything in the gear, holding copies of the
   files that reset is about to delete, so nothing is lost by accident. Delete it whenever you
   like; nothing reads it
+- `<name>.bad-<date>.json`: written only when one of the files above was damaged and could not
+  be read, holding it as it was before the next save replaced it. At most three are kept
 
 The per-channel files are keyed by the controller's device path, so the entries survive a reboot. Portable and installed builds share the folder, every write goes through a
 temporary file so an interrupted save cannot corrupt one, and uninstalling offers to delete it.
