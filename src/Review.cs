@@ -676,6 +676,45 @@ internal static partial class Program
     /// editor's row sync. No controller is touched and no window is shown. PASS/FAIL per case,
     /// also written to %TEMP%\aura-engine.txt; exit 0 when all pass, 1 otherwise.
     /// </summary>
+    /// <summary>
+    /// The tooltip after its list is gone: a mouse move queued for a closing list reached a
+    /// disposed tip window and took the app down, and so did a tip window closed from outside.
+    /// </summary>
+    private static void ReviewTipCases(Action<string, string, string> check)
+    {
+        static string Outcome(Action action)
+        {
+            try
+            {
+                action();
+                return "ok";
+            }
+            catch (Exception e)
+            {
+                return e.GetType().Name;
+            }
+        }
+
+        using var host = new Form { ShowInTaskbar = false, StartPosition = FormStartPosition.Manual, Location = new Point(-2000, -2000) };
+        host.Show();
+
+        var tip = new ThemedTip();
+        check("tip: shows", "ok", Outcome(() => tip.Show("tip", host, 4, 4, 1000)));
+        tip.Dispose();
+        check("tip: show after dispose", "ok", Outcome(() => tip.Show("tip", host, 4, 4, 1000)));
+        check("tip: hide after dispose", "ok", Outcome(() => tip.Hide(host)));
+        check("tip: dispose twice", "ok", Outcome(tip.Dispose));
+
+        using var live = new ThemedTip();
+        live.Show("tip", host, 4, 4, 1000);
+        foreach (Form form in Application.OpenForms.Cast<Form>().Where(f => f != host).ToList())
+        {
+            form.Close();
+        }
+
+        check("tip: show after its window closed", "ok", Outcome(() => live.Show("tip", host, 4, 4, 1000)));
+    }
+
     private static int ReviewEngine()
     {
         ApplicationConfiguration.Initialize();
@@ -802,6 +841,7 @@ internal static partial class Program
 
         ReviewCoreCases(Check);
         ReviewUiCases(Check);
+        ReviewTipCases(Check);
 
         lines.Add(failed == 0 ? "engine: all passed" : $"engine: {failed} failed");
         File.WriteAllLines(Path.Combine(Path.GetTempPath(), "aura-engine.txt"), lines);

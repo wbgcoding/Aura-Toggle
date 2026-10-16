@@ -1895,6 +1895,7 @@ internal sealed class ThemedTip : IDisposable
     private readonly System.Windows.Forms.Timer _expire = new();
     private TipWindow? _window;
     private Control? _hovered;
+    private bool _disposed;
 
     public ThemedTip()
     {
@@ -1910,7 +1911,10 @@ internal sealed class ThemedTip : IDisposable
         _expire.Tick += (_, _) =>
         {
             _expire.Stop();
-            _window?.Hide();
+            if (_window is { IsDisposed: false })
+            {
+                _window.Hide();
+            }
         };
     }
 
@@ -1928,7 +1932,19 @@ internal sealed class ThemedTip : IDisposable
 
     public void Show(string text, Control owner, int x, int y, int durationMs)
     {
-        _window ??= new TipWindow();
+        if (_disposed || owner.IsDisposed)
+        {
+            return;
+        }
+
+        // A list that closes on a click disposes its tips, yet a mouse move already queued for it
+        // still arrives; that one is dropped above. A tip window closed any other way is disposed
+        // with it, so a fresh one replaces it rather than taking the app down.
+        if (_window is null || _window.IsDisposed)
+        {
+            _window = new TipWindow();
+        }
+
         _window.ShowAt(text, owner, owner.PointToScreen(new Point(x, y)));
         _expire.Stop();
         _expire.Interval = durationMs;
@@ -1938,7 +1954,10 @@ internal sealed class ThemedTip : IDisposable
     public void Hide(Control owner)
     {
         _expire.Stop();
-        _window?.Hide();
+        if (_window is { IsDisposed: false })
+        {
+            _window.Hide();
+        }
     }
 
     private void OnEnter(object? sender, EventArgs e)
@@ -1957,6 +1976,12 @@ internal sealed class ThemedTip : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         foreach (Control control in _texts.Keys)
         {
             control.MouseEnter -= OnEnter;
