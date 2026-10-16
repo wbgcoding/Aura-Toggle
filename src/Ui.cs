@@ -397,6 +397,11 @@ internal static class Theme
         tip.BackColor = Surface;
         tip.ForeColor = Text;
         tip.OwnerDraw = true;
+        // The fade-in renders the tooltip once through the system's own painting, which is the
+        // plain white one, and only the first real paint after it goes through Draw below - a
+        // white flash before every dark tooltip.
+        tip.UseFading = false;
+        tip.UseAnimation = false;
         tip.Draw += (_, e) => PaintToolTip(e);
     }
 
