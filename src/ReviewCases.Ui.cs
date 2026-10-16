@@ -1,6 +1,8 @@
 #if REVIEW
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
 using System.Linq;
 
 namespace AuraToggle;
@@ -15,6 +17,53 @@ internal static partial class Program
     {
         EditorKeepsAbsentCases(check);
         EditorRelocaliseCases(check);
+        ListHoverRepaintCases(check);
+    }
+
+    /// <summary>
+    /// A hover change repaints only the two rows it touches. Painting the old hover in full and
+    /// then just those two rows with the new one must give the same picture as painting the new
+    /// hover in full, or a row would keep a stale highlight or icon on screen.
+    /// </summary>
+    private static void ListHoverRepaintCases(Action<string, string, string> check)
+    {
+        var items = AuraPresets.All
+            .Select(p => new SelectItem(p.Key, p.DisplayName, p.Mode, Hint: p.HintText))
+            .ToList();
+        foreach (int dpi in new[] { 96, 144 })
+        {
+            using var popup = new SelectPopup(items, items[0], Color.White, 260, Theme.Ui, dpi);
+            var all = new Rectangle(Point.Empty, popup.ClientSize);
+            int differing = 0;
+            for (int from = 1; from + 1 < items.Count; from++)
+            {
+                int to = from + 1;
+                using Bitmap expected = popup.PaintForReview(to, null, all);
+                using Bitmap partial = popup.PaintForReview(from, null, all);
+                popup.PaintForReview(to, partial, popup.HoverAreaForReview(from));
+                popup.PaintForReview(to, partial, popup.HoverAreaForReview(to));
+                differing += SamePixels(expected, partial) ? 0 : 1;
+            }
+
+            check($"list: hover repaint matches a full paint at {dpi} dpi", "0",
+                differing.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static bool SamePixels(Bitmap a, Bitmap b)
+    {
+        for (int y = 0; y < a.Height; y++)
+        {
+            for (int x = 0; x < a.Width; x++)
+            {
+                if (a.GetPixel(x, y) != b.GetPixel(x, y))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /// <summary>An open editor says its texts again when the language changes.</summary>

@@ -565,6 +565,7 @@ internal sealed class SelectPopup : PopupForm
 
         _confirming = -1;
         _hovered = -1;
+        HideRowTip();
         _highlighted = Math.Clamp(_highlighted, 0, Math.Max(0, _items.Count - 1));
 
         Fit(Screen.FromControl(this).WorkingArea);
@@ -628,6 +629,7 @@ internal sealed class SelectPopup : PopupForm
             _wheelRemainder -= notches * 120;
             _scroll = Math.Clamp(_scroll - (notches * _rowHeight), 0, _maxScroll);
             _hovered = IndexAt(e.Location);
+            HideRowTip();
             Invalidate();
         }
 
@@ -722,12 +724,40 @@ internal sealed class SelectPopup : PopupForm
         _shortcutTip.Show(tip, this, rect.Left + this.Scaled(12), rect.Top + this.Scaled(20), 4000);
     }
 
+#if REVIEW
+    /// <summary>
+    /// Surface tool only: paints the list with <paramref name="hovered"/> lit onto
+    /// <paramref name="onto"/> (a fresh bitmap when null), limited to <paramref name="clip"/>
+    /// the way a partial invalidation limits a real repaint.
+    /// </summary>
+    internal Bitmap PaintForReview(int hovered, Bitmap? onto, Rectangle clip)
+    {
+        Bitmap bitmap = onto ?? new Bitmap(ClientSize.Width, ClientSize.Height);
+        _hovered = hovered;
+        using Graphics g = Graphics.FromImage(bitmap);
+        g.SetClip(clip);
+        OnPaint(new PaintEventArgs(g, clip));
+        return bitmap;
+    }
+
+    /// <summary>Surface tool only: what a hover change on <paramref name="row"/> invalidates.</summary>
+    internal Rectangle HoverAreaForReview(int row) => Rectangle.Inflate(RowRect(row), this.Scaled(2), this.Scaled(2));
+#endif
+
+    /// <summary>Drops the hovered row's tip when the row under it changes without the pointer
+    /// moving: the list resynced, scrolled, or the keyboard took over.</summary>
+    private void HideRowTip()
+    {
+        if (_tipRow >= 0)
+        {
+            _tipRow = -1;
+            _shortcutTip.Hide(this);
+        }
+    }
+
     /// <summary>
     /// Review mode only: renders exactly what <see cref="Theme.PaintToolTip"/> paints for a real
-    /// tooltip, onto a bitmap instead of a live system tooltip window - a manually shown
-    /// <see cref="ToolTip"/> only ever paints for the foreground window, which a headless/automated
-    /// session does not reliably hand a newly opened one, and <see cref="ShowTipForReview"/> alone
-    /// could not be proven on that surface. This calls the same drawing code either way.
+    /// tooltip onto a bitmap, so the tip's face can be checked without capturing its window.
     /// </summary>
     internal void RenderTipForReview(Graphics g, Rectangle bounds, string text)
     {
@@ -869,6 +899,7 @@ internal sealed class SelectPopup : PopupForm
             _hovered = -1;
             _confirming = -1;
             _keyboard = true;
+            HideRowTip();
             ScrollTo(_highlighted);
             Invalidate();
         }
@@ -884,11 +915,7 @@ internal sealed class SelectPopup : PopupForm
             Invalidate();
         }
 
-        if (_tipRow >= 0)
-        {
-            _tipRow = -1;
-            _shortcutTip.Hide(this);
-        }
+        HideRowTip();
 
         base.OnMouseLeave(e);
     }
@@ -1049,6 +1076,12 @@ internal sealed class SelectPopup : PopupForm
                 using var separator = new Pen(Theme.Border);
                 int y = row.Y - (_actionGap / 2);
                 g.DrawLine(separator, row.X + Scale(4), y, row.Right - Scale(4), y);
+            }
+
+            // A hover change invalidates two rows; the rest keep what is on screen, icons included.
+            if (!e.ClipRectangle.IntersectsWith(Rectangle.Inflate(row, Scale(2), Scale(2))))
+            {
+                continue;
             }
 
             if (active)
