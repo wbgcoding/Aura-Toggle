@@ -9,13 +9,17 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 
 - The ON/OFF label on the big button has a soft drop shadow instead of a hard dark outline, and the letters stay as sharp as the rest of the window
-- The animated button takes about a fifth less processor time: the label's shadow is drawn once instead of on every frame, and the rounded corners no longer copy the whole picture each time
+- Each frame of the animated button costs about a fifth less processor time: the label's shadow is drawn once instead of on every frame, and the rounded corners no longer copy the whole picture each time
+- The effects on the big button run at an even 60 frames a second; they stuttered along at about 21 before
+- A click on the big button switches it at once; it used to sit unchanged until the controller had been written and then grey out for a moment. If the switch fails, the button flips back
 
 ### Fixed
 
 - Opening a list, the settings or the colour picker no longer dims the window's title bar; it only turns inactive when another program takes the focus
 - Closing a list or panel by clicking back into the window could leave the whole tool without the focus, title bar greyed, until it was clicked again. Popups now close once Windows has finished handing the focus over, and give it back to their window when they close themselves
 - A second click on an open drop down or on the colour chip whose picker is open closes it, instead of opening it again
+- The settings gear never shows a background; after a click it kept one until something else took the focus
+- On a second monitor at a higher display scale than the main one, the effect and channel lists showed their text half again too large and cut the longer names short
 
 ## [1.6.0] - 2026-10-16
 
