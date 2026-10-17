@@ -1634,6 +1634,12 @@ internal sealed partial class ToggleForm : Form
     /// <summary>Surface tool only: the effect list, opened the way a click on it does.</summary>
     internal void OpenEffectsForReview() => _effects.OpenForReview();
 
+    /// <summary>Surface tool only: a plain click on the effect list, closing on deactivate as usual.</summary>
+    internal void ClickEffectsForReview() => _effects.ClickForReview();
+
+    /// <summary>Surface tool only: where the effect list's drop down sits on screen.</summary>
+    internal Rectangle EffectsOnScreenForReview => _effects.RectangleToScreen(_effects.ClientRectangle);
+
     /// <summary>Surface tool only: the channel list, opened the way a click on it does.</summary>
     internal void OpenChannelsForReview() => _channel.OpenForReview();
 
@@ -1999,9 +2005,9 @@ internal sealed partial class ToggleForm : Form
     {
 #if REVIEW
         if (m.Msg is 0x0005 or 0x0006 or 0x000F or 0x0014 or 0x0015 or 0x001A or 0x001C or 0x0046
-            or 0x0047 or 0x007E or 0x0086 or 0x02E0 or 0x031A or 0x0018)
+            or 0x0047 or 0x007E or 0x0086 or 0x02E0 or 0x031A or 0x0018 or 0x0021)
         {
-            Trace($"msg 0x{m.Msg:X4} w={m.WParam} bounds={Bounds} visible={Visible} opacity={Opacity}");
+            Trace($"msg 0x{m.Msg:X4} w={m.WParam} l={m.LParam} bounds={Bounds} visible={Visible} opacity={Opacity}");
             if (m.Msg is 0x0046 or 0x0047)
             {
                 Trace($"  flags=0x{Marshal.ReadInt32(m.LParam, WindowPosFlagsOffset):X4} " +

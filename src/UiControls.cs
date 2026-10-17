@@ -1078,7 +1078,7 @@ internal sealed class ColourPickerPopup : PopupForm
     protected override void OnDeactivate(EventArgs e)
     {
         base.OnDeactivate(e);
-        Close();
+        CloseAfterDeactivate();
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -2003,7 +2003,7 @@ internal sealed class RenamePopup : PopupForm
     protected override void OnDeactivate(EventArgs e)
     {
         base.OnDeactivate(e);
-        Close();
+        CloseAfterDeactivate();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

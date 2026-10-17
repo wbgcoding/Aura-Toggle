@@ -705,7 +705,7 @@ internal sealed class SettingsPopup : PopupForm
             return;
         }
 
-        Close();
+        CloseAfterDeactivate();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

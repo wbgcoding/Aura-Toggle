@@ -1101,6 +1101,44 @@ internal abstract class PopupForm : Form
     }
 
     /// <summary>
+    /// Hands the focus back to the window this opened from before going away. Left to Windows,
+    /// a popup closed while it had the focus (Escape, a picked row) passes it to whichever window
+    /// comes next on the desktop, and that is not always this tool's.
+    /// </summary>
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        base.OnFormClosing(e);
+
+        if (!e.Cancel && ActiveForm == this && Owner is { IsDisposed: false, Visible: true } owner)
+        {
+            owner.Activate();
+        }
+    }
+
+    /// <summary>
+    /// Closes this once the switch that took the focus away from it has finished. Closed straight
+    /// from <c>OnDeactivate</c>, the popup went away in the middle of Windows handing the focus to
+    /// the window that was clicked, and Windows then gave it to another program instead: a click
+    /// back on the main window to dismiss a list left the whole tool inactive, title bar greyed.
+    /// </summary>
+    protected void CloseAfterDeactivate()
+    {
+        if (!IsHandleCreated || IsDisposed)
+        {
+            return;
+        }
+
+        BeginInvoke(() =>
+        {
+            // Activated again in the meantime (a click straight back into it): stays open.
+            if (!IsDisposed && ActiveForm != this)
+            {
+                Close();
+            }
+        });
+    }
+
+    /// <summary>
     /// Runs once when this opened on a display whose scale differs from the one its constructor
     /// measured against. A popup that places its controls by hand lays itself out again here, the
     /// same way it does for a move to another display.

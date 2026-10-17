@@ -33,9 +33,9 @@ internal static partial class Program
     private static int RunReview(string surface, string argument)
     {
         if (surface is not ("settings" or "error" or "editor" or "rename" or "layout" or "gear"
-            or "tip" or "preview"))
+            or "tip" or "preview" or "caption"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|rename|layout|gear|tip|preview|engine|ids [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|rename|layout|gear|tip|preview|caption|engine|ids [scale%]");
             return 2;
         }
 
@@ -62,6 +62,11 @@ internal static partial class Program
         if (surface == "layout")
         {
             return ReviewLayout(argument);
+        }
+
+        if (surface == "caption")
+        {
+            return ReviewCaption();
         }
 
         if (surface == "gear")

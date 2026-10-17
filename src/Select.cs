@@ -258,6 +258,9 @@ internal sealed class Select : FlatControl
             _openPopup.KeepOpenOnDeactivate = true;
         }
     }
+
+    /// <summary>Surface tool only: exactly a click, the list closing as it does for a user.</summary>
+    internal void ClickForReview() => OnClick(EventArgs.Empty);
 #endif
 
     protected override void OnClick(EventArgs e)
@@ -783,7 +786,7 @@ internal sealed class SelectPopup : PopupForm
         }
 #endif
 
-        Close();
+        CloseAfterDeactivate();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
