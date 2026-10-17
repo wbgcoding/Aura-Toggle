@@ -30,6 +30,10 @@ internal sealed class FrameClock : IDisposable
     /// early enough to leave the rest of the frame for the paint.</summary>
     private const double AfterBlankMs = 1.0;
 
+    /// <summary>A tick unanswered this long is taken as lost, see <see cref="Run"/>. Far longer
+    /// than any paint; a UI thread that was merely stuck that long gets one extra repaint.</summary>
+    private const double LostTickMs = 500;
+
     private readonly Control _owner;
     private readonly Action _tick;
     private readonly object _gate = new();
@@ -64,7 +68,9 @@ internal sealed class FrameClock : IDisposable
                 _running = value;
                 if (value && _thread == null)
                 {
-                    _thread = new Thread(Loop) { IsBackground = true, Name = "Frame clock" };
+                    // Above normal: it only wakes, posts and sleeps again, and a wake-up the
+                    // scheduler hands out late is a frame the screen shows twice.
+                    _thread = new Thread(Loop) { IsBackground = true, Name = "Frame clock", Priority = ThreadPriority.AboveNormal };
                     _thread.Start();
                 }
             }
@@ -101,6 +107,7 @@ internal sealed class FrameClock : IDisposable
         // Paced against a running deadline rather than "a frame from now", so the time a tick
         // takes does not stretch every frame by that much.
         double last = Now();
+        double postedAt = last;
         while (true)
         {
             lock (_gate)
@@ -144,10 +151,15 @@ internal sealed class FrameClock : IDisposable
 
             last = next;
 
-            if (Interlocked.Exchange(ref _posted, 1) == 1)
+            // A tick still waiting is not posted again - unless it has waited so long that its
+            // message must have gone with a window handle that was destroyed, which would
+            // otherwise stop the animation for good.
+            if (Interlocked.Exchange(ref _posted, 1) == 1 && next - postedAt < LostTickMs)
             {
                 continue;
             }
+
+            postedAt = next;
 
             try
             {
