@@ -14,6 +14,7 @@ namespace AuraToggle;
 internal sealed class CaptionKeeper : NativeWindow
 {
     private const int WmNcActivate = 0x0086;
+    private const int WmActivateApp = 0x001C;
 
     private static readonly List<CaptionKeeper> Keepers = new();
 
@@ -58,6 +59,13 @@ internal sealed class CaptionKeeper : NativeWindow
 
     protected override void WndProc(ref Message m)
     {
+        // The tool as a whole lost the foreground. This also covers windows that are no popup
+        // of its own, such as the preset editor's file dialogs.
+        if (m.Msg == WmActivateApp && m.WParam == IntPtr.Zero)
+        {
+            Recheck();
+        }
+
         if (m.Msg == WmNcActivate && m.WParam == IntPtr.Zero && !_releasing)
         {
             // Which window takes over is not known yet at this point, so the caption stays as it
