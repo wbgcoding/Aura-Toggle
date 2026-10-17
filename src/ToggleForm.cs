@@ -151,6 +151,10 @@ internal sealed partial class ToggleForm : Form
     /// <summary>The latest request that arrived during a quiet hold, see <see cref="Run"/>.</summary>
     private Func<AuraState>? _afterQuiet;
 
+    /// <summary>A click on the big button arrived during a quiet hold - see <see cref="OnToggleClick"/>.
+    /// Only the latest of this and <see cref="_afterQuiet"/> is kept.</summary>
+    private bool _clickAfterQuiet;
+
     /// <summary>
     /// The newest effect picked while a switch was running, applied once it ends. Arrow keys on the
     /// closed list pick one effect per press; applying each would drop all but the first.
@@ -1391,7 +1395,9 @@ internal sealed partial class ToggleForm : Form
         {
             (string? deviceKey, int channel) = Target;
             var shown = DisplayedFor(_state, deviceKey == null ? new() : _channelStates.Get(), _devices, deviceKey, channel);
-            return _switchingTo is bool on ? shown with { On = on } : shown;
+            return _switchingTo is { } switching && switching.DeviceKey == deviceKey && switching.Channel == channel
+                ? shown with { On = switching.On }
+                : shown;
         }
     }
 
@@ -1400,9 +1406,10 @@ internal sealed partial class ToggleForm : Form
     /// written. Waiting for the hardware left the button sitting unchanged for the length of a
     /// discovery and a burst of reports, then greyed it out, then flipped it - a visible hitch on
     /// every click. Cleared when the switch ends; the state it returns is then painted, so a
-    /// failed switch flips back.
+    /// failed switch flips back. Carries the target it was clicked for: the selector stays live
+    /// during the switch, and another channel picked meanwhile shows its own power, not this one.
     /// </summary>
-    private bool? _switchingTo;
+    private (string? DeviceKey, int Channel, bool On)? _switchingTo;
 
     /// <summary>
     /// <see cref="Displayed"/> as of the last <see cref="Render"/>, which every click handler
@@ -1438,9 +1445,18 @@ internal sealed partial class ToggleForm : Form
         (string? deviceKey, int channel) = Target;
         List<AuraDeviceSummary> devices = new(_devices);
 
+        if (_busy && _busyQuiet)
+        {
+            // Another switch is still on its way. Parked as a bare request, this click would run
+            // later without the flip and with the grey-out; it runs as a click of its own instead.
+            _clickAfterQuiet = true;
+            _afterQuiet = null;
+            return;
+        }
+
         if (!_busy)
         {
-            _switchingTo = !_displayed.On;
+            _switchingTo = (deviceKey, channel, !_displayed.On);
             Render();
         }
 
@@ -2312,6 +2328,7 @@ internal sealed partial class ToggleForm : Form
             if (!queue && _busyQuiet)
             {
                 _afterQuiet = action;
+                _clickAfterQuiet = false;
                 return;
             }
 
@@ -2404,6 +2421,11 @@ internal sealed partial class ToggleForm : Form
         {
             _afterQuiet = null;
             BeginInvoke(() => _ = Run(parked));
+        }
+        else if (endsQuietHold && _clickAfterQuiet && !IsDisposed)
+        {
+            _clickAfterQuiet = false;
+            BeginInvoke(() => OnToggleClick(this, EventArgs.Empty));
         }
 
         if (busy && quiet)
