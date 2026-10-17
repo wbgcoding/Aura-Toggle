@@ -34,6 +34,9 @@ internal static partial class Program
     private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(Point point);
+
+    [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr window);
 
     [DllImport("user32.dll")]
@@ -96,17 +99,54 @@ internal static partial class Program
                       $"{(ActiveWindowOfThread() == form.Handle ? "window" : ActiveWindowOfThread() == IntPtr.Zero ? "none" : "popup")}");
         }
 
-        async Task Step(string name, Action act)
+        async Task Step(string name, Action act, bool? popupOpen = null)
         {
             File.AppendAllText(trace, $"=== {name}{Environment.NewLine}");
             act();
             await Task.Delay(600);
             Check(name);
+
+            foreach (Form f in Application.OpenForms)
+            {
+                if (f is ErrorDialog && f.Visible)
+                {
+                    var texts = new List<string>();
+                    void Collect(Control c)
+                    {
+                        if (!string.IsNullOrWhiteSpace(c.Text) && c is not Form) texts.Add(c.Text.Replace(Environment.NewLine, " | "));
+                        foreach (Control child in c.Controls) Collect(child);
+                    }
+
+                    Collect(f);
+                    lines.Add($"     error dialog open: {string.Join(" / ", texts)}");
+                }
+            }
+
+            if (popupOpen is bool expected)
+            {
+                bool open = false;
+                foreach (Form f in Application.OpenForms)
+                {
+                    open |= f is PopupForm and not ErrorDialog && f.Visible;
+                }
+
+                bool ok = open == expected;
+                failures += ok ? 0 : 1;
+                lines.Add($"{(ok ? "PASS" : "FAIL")} {name}: popup {(open ? "open" : "closed")}, expected {(expected ? "open" : "closed")}");
+            }
         }
 
         form.Shown += async (_, _) =>
         {
             await Task.Delay(800);
+
+            // At the top of the screen, so the effect list drops below its drop down as it does
+            // on a full-height desktop; flipped above it, the list covers the drop down and a
+            // second click on it picks a row instead.
+            Rectangle area = Screen.FromControl(form).WorkingArea;
+            form.Location = new Point(form.Left, area.Top + form.Scaled(8));
+            await Task.Delay(300);
+
             SetForegroundWindow(form.Handle);
             form.Activate();
             await Task.Delay(400);
@@ -114,11 +154,6 @@ internal static partial class Program
 
             await Step("list open", form.ClickEffectsForReview);
             await Step("list closed by Escape", () => SendKeys.SendWait("{ESC}"));
-
-            await Step("list open again", form.ClickEffectsForReview);
-            // The row already selected: a different one would switch the stand-in controllers,
-            // which have no hardware behind them and answer with an error dialog.
-            await Step("list closed by picking a row", () => SendKeys.SendWait("{ENTER}"));
 
             static void ClickAt(Point at)
             {
@@ -144,10 +179,42 @@ internal static partial class Program
             await Step("list open again", form.ClickEffectsForReview);
             await Step("list closed by a click on the window", ClickWindow);
 
-            await Step("list opened by a real click on its drop down", ClickDropDown);
-            await Step("list closed by Escape", () => SendKeys.SendWait("{ESC}"));
+            await Step("list opened by a real click on its drop down", ClickDropDown, popupOpen: true);
+            await Step("list closed by a second click on its drop down", ClickDropDown, popupOpen: false);
+            await Step("list opened by a third click on its drop down", ClickDropDown, popupOpen: true);
+            await Step("list closed by Escape", () => SendKeys.SendWait("{ESC}"), popupOpen: false);
 
-            lines.Add(failures == 0 ? "all PASS" : $"{failures} FAIL");
+            Point ChipCentre()
+            {
+                Rectangle chip = form.CustomChipOnScreenForReview;
+                return new Point(chip.Left + (chip.Width / 2), chip.Top + (chip.Height / 2));
+            }
+
+            void ClickChip() => ClickAt(ChipCentre());
+
+            await Step("colour picker opened by its chip", ClickChip, popupOpen: true);
+            // A screen too short for the picker below its chip pushes it up over the chip, and the
+            // second click then lands in the picker: nothing to prove here on such a screen.
+            if (Control.FromChildHandle(WindowFromPoint(ChipCentre())) is ColourStrip)
+            {
+                await Step("colour picker closed by a second click on its chip", ClickChip, popupOpen: false);
+            }
+            else
+            {
+                lines.Add("SKIP colour picker closed by a second click on its chip: the picker covers its chip on this screen");
+                SendKeys.SendWait("{ESC}");
+                await Task.Delay(400);
+            }
+
+            // Last: picking a row applies it to the stand-in controllers, which have no hardware
+            // behind them and answer a moment later with an error dialog that would take the
+            // focus from every step after this one.
+            await Step("list open again", form.ClickEffectsForReview);
+            await Step("list closed by picking a row", () => SendKeys.SendWait("{ENTER}"), popupOpen: false);
+
+            int skipped = lines.FindAll(line => line.StartsWith("SKIP", StringComparison.Ordinal)).Count;
+            string skips = skipped > 0 ? $", {skipped} SKIP" : "";
+            lines.Add(failures == 0 ? $"all PASS{skips}" : $"{failures} FAIL{skips}");
             string report = string.Join(Environment.NewLine, lines);
             WriteLine(report);
             try

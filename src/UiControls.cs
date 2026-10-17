@@ -481,6 +481,9 @@ internal sealed class ColourStrip : FlatControl
     };
 
     private const int ChipAt96 = 24;
+
+    /// <summary>How long after the picker closed a press on its chip still counts as closing it.</summary>
+    private const int ReopenGuardMs = 250;
     private const int GapAt96 = 9;
     private const int InsetAt96 = 4;
 
@@ -585,15 +588,55 @@ internal sealed class ColourStrip : FlatControl
         base.OnMouseLeave(e);
     }
 
+    /// <summary>The colour picker this strip opened, while it is up.</summary>
+    private ColourPickerPopup? _picker;
+
+    /// <summary>When the picker last closed, <see cref="Environment.TickCount64"/>.</summary>
+    private long _pickerClosedAt;
+
+    /// <summary>
+    /// The picker was up when the mouse went down on its chip, or had closed a moment before:
+    /// pressing the chip takes the focus from the picker, and the picker closes on that - before
+    /// or after the press itself is handled, depending on how Windows orders the two. Either way
+    /// a second click on that chip means "close it", not "open another".
+    /// </summary>
+    private bool _closeOnClick;
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        _closeOnClick = IndexAt(e.Location) == Palette.Length &&
+            (_picker is { IsDisposed: false } || Environment.TickCount64 - _pickerClosedAt < ReopenGuardMs);
+        base.OnMouseDown(e);
+    }
+
+    /// <summary>A press that was dragged off and released elsewhere never clicks; the next one
+    /// must not inherit it.</summary>
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        _closeOnClick = false;
+    }
+
     protected override void OnClick(EventArgs e)
     {
         base.OnClick(e);
+
+        if (_closeOnClick)
+        {
+            _closeOnClick = false;
+            _picker?.Close();
+            return;
+        }
+
         Choose(_hoveredChip);
     }
 
 #if REVIEW
     /// <summary>Surface tool only: the colour picker, as a click on the custom chip opens it.</summary>
     internal void OpenPickerForReview() => Choose(Palette.Length);
+
+    /// <summary>Surface tool only: where the free-choice chip sits on screen.</summary>
+    internal Rectangle CustomChipOnScreenForReview => RectangleToScreen(ChipAt(Palette.Length));
 #endif
 
     /// <summary>Picks one chip, whether the mouse or the keyboard got there.</summary>
@@ -620,7 +663,17 @@ internal sealed class ColourStrip : FlatControl
             Invalidate();
             ColourPicked?.Invoke(this, EventArgs.Empty);
         };
-        popup.FormClosed += (_, _) => popup.Dispose();
+        popup.FormClosed += (_, _) =>
+        {
+            if (_picker == popup)
+            {
+                _picker = null;
+                _pickerClosedAt = Environment.TickCount64;
+            }
+
+            popup.Dispose();
+        };
+        _picker = popup;
         popup.Open(PointToScreen(new Point(box.X, box.Bottom + this.Scaled(6))), FindForm());
     }
 

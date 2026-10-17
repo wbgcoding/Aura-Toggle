@@ -1640,6 +1640,9 @@ internal sealed partial class ToggleForm : Form
     /// <summary>Surface tool only: where the effect list's drop down sits on screen.</summary>
     internal Rectangle EffectsOnScreenForReview => _effects.RectangleToScreen(_effects.ClientRectangle);
 
+    /// <summary>Surface tool only: where the free-choice colour chip sits on screen.</summary>
+    internal Rectangle CustomChipOnScreenForReview => _colours.CustomChipOnScreenForReview;
+
     /// <summary>Surface tool only: the channel list, opened the way a click on it does.</summary>
     internal void OpenChannelsForReview() => _channel.OpenForReview();
 

@@ -263,9 +263,44 @@ internal sealed class Select : FlatControl
     internal void ClickForReview() => OnClick(EventArgs.Empty);
 #endif
 
+    /// <summary>
+    /// Whether this control's list was up when the mouse went down on it, or had closed a moment
+    /// before. A second click on a drop down means "close it", not "open it again".
+    /// </summary>
+    private bool _closeOnClick;
+
+    /// <summary>When this control's list last closed, <see cref="Environment.TickCount64"/>.</summary>
+    private long _popupClosedAt;
+
+    /// <summary>How long after the list closed a press on this control still counts as closing it:
+    /// Windows can hand the focus back, and so close the list, before the press is handled.</summary>
+    private const int ReopenGuardMs = 250;
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        _closeOnClick = _popup is { IsDisposed: false } ||
+            Environment.TickCount64 - _popupClosedAt < ReopenGuardMs;
+        base.OnMouseDown(e);
+    }
+
+    /// <summary>A press that was dragged off and released elsewhere never clicks; the next one
+    /// must not inherit it.</summary>
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        _closeOnClick = false;
+    }
+
     protected override void OnClick(EventArgs e)
     {
         base.OnClick(e);
+
+        if (_closeOnClick)
+        {
+            _closeOnClick = false;
+            _popup?.Close();
+            return;
+        }
 
         if (_items.Count == 0 || !Enabled)
         {
@@ -311,6 +346,7 @@ internal sealed class Select : FlatControl
             if (_popup == popup)
             {
                 _popup = null;
+                _popupClosedAt = Environment.TickCount64;
             }
 
             PopupClosed?.Invoke(this, EventArgs.Empty);

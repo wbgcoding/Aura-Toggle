@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 
 - Opening a list, the settings or the colour picker no longer dims the window's title bar; it only turns inactive when another program takes the focus
 - Closing a list or panel by clicking back into the window could leave the whole tool without the focus, title bar greyed, until it was clicked again. Popups now close once Windows has finished handing the focus over, and give it back to their window when they close themselves
+- A second click on an open drop down or on the colour chip whose picker is open closes it, instead of opening it again
 
 ## [1.6.0] - 2026-10-16
 
