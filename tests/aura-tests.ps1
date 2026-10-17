@@ -1189,9 +1189,9 @@ Test-Case "every effect animates evenly and a click flips the button at once" {
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
     $process = Start-Process $ReviewExe -ArgumentList "-review", "perf" -PassThru
-    if (-not $process.WaitForExit(60000)) {
+    if (-not $process.WaitForExit(120000)) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-        throw "-review perf still running after 60 s"
+        throw "-review perf still running after 120 s"
     }
     if (-not (Test-Path $report)) { throw "no aura-perf.txt was written" }
 
@@ -1202,6 +1202,10 @@ Test-Case "every effect animates evenly and a click flips the button at once" {
         $gap = [double]($Matches[2] -replace ",", ".")
         if ($fps -lt 50 -or $gap -gt 40) { throw "uneven animation: $line" }
     }
+    $rainbow = $lines | Where-Object { $_ -like "rainbow*" }
+    if ($rainbow -notmatch "gaps over 25 ms 0\b") { throw "hitches in the rainbow: $rainbow" }
+    $cover = $lines | Where-Object { $_ -like "cover*" }
+    if ($cover -notlike "*PASS") { throw "cover: $cover" }
     $click = $lines | Where-Object { $_ -like "click*" }
     if ($click -notlike "*PASS") { throw "click: $click" }
     Assert-Equal 0 $process.ExitCode "-review perf exit code"

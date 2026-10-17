@@ -59,7 +59,65 @@ internal static partial class Program
 
                 lines.Add($"mode {mode,2}  fps {(taken.Count - 1) / seconds,5:0.0}  "
                     + $"gap avg {gaps.Average(),5:0.0} p95 {gaps[(int)(gaps.Length * 0.95)],5:0.0} max {gaps[^1],5:0.0} ms  "
-                    + $"paint avg {paints.Average(),5:0.00} max {paints.Max(),5:0.00} ms");
+                    + $"paint avg {paints.Average(),5:0.00} max {paints.Max(),5:0.00} ms  "
+                    + (FrameClock.Synced ? "vblank" : "free"));
+            }
+
+            // Twenty seconds of the rainbow, the effect a hitch shows worst in: every gap over one
+            // and a half frames is listed with when it happened.
+            button.Show(true, 5, Color.FromArgb(140, 80, 255));
+            await Task.Delay(400);
+            frames.Clear();
+            await Task.Delay(20000);
+            List<(long At, double PaintMs)> run = frames.ToList();
+            var hitches = run.Zip(run.Skip(1), (a, b) => (
+                    At: Stopwatch.GetElapsedTime(run[0].At, b.At).TotalSeconds,
+                    Gap: Stopwatch.GetElapsedTime(a.At, b.At).TotalMilliseconds))
+                .Where(hitch => hitch.Gap > 25).ToList();
+            lines.Add($"rainbow 20 s  frames {run.Count}  gaps over 25 ms {hitches.Count}"
+                + string.Concat(hitches.Take(10).Select(hitch => $"  {hitch.At:0.0}s:{hitch.Gap:0}ms")));
+
+            // A window of another process laid over the button: the animation has to stop, and
+            // start again within a frame or two of that window going away.
+            Rectangle area = button.RectangleToScreen(button.ClientRectangle);
+            area.Inflate(20, 20);
+            File.Delete(Path.Combine(Path.GetTempPath(), "aura-cover.txt"));
+            using (Process cover = Process.Start(Environment.ProcessPath!,
+                       $"-review cover {area.X} {area.Y} {area.Width} {area.Height}"))
+            {
+                // A fresh process takes a few seconds to show its window on a slow machine.
+                // Its own trace says when; a window kept out of the taskbar has no MainWindowHandle.
+                string coverTrace = Path.Combine(Path.GetTempPath(), "aura-cover.txt");
+                for (int i = 0; i < 100 && !cover.HasExited && !CoverShown(coverTrace); i++)
+                {
+                    await Task.Delay(100);
+                }
+
+                await Task.Delay(500);
+                bool paused = button.Covered;
+                string coverReport = $"cover window {cover.MainWindowHandle:X} exited {cover.HasExited}"
+                    + Environment.NewLine + OcclusionWatch.DescribeProcessWindows(cover.Id)
+                    + Environment.NewLine + form.DescribeOcclusion();
+                frames.Clear();
+                await Task.Delay(1000);
+                int whileCovered = frames.Count;
+
+                frames.Clear();
+                long gone = Stopwatch.GetTimestamp();
+                cover.Kill();
+                cover.WaitForExit(5000);
+                await Task.Delay(1000);
+                double resumed = frames.Count > 0 ? Stopwatch.GetElapsedTime(gone, frames[0].At).TotalMilliseconds : -1;
+
+                // One paint is allowed while covered: the pause itself repaints the button once.
+                bool coverOk = paused && whileCovered <= 1 && !button.Covered && resumed is >= 0 and < 150;
+                lines.Add($"cover   paused {paused}  frames while covered {whileCovered}  "
+                    + $"first frame {resumed:0} ms after the window went  {(coverOk ? "PASS" : "FAIL")}");
+                exitCode |= coverOk ? 0 : 1;
+                if (!coverOk)
+                {
+                    lines.Add(coverReport);
+                }
             }
 
             // No controller behind the stand-ins, so the switch itself fails: the button has to
@@ -96,6 +154,51 @@ internal static partial class Program
 
         Application.Run(form);
         return exitCode;
+    }
+
+    private static bool CoverShown(string trace)
+    {
+        try
+        {
+            return File.Exists(trace) && File.ReadAllText(trace).Contains("shown", StringComparison.Ordinal);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>"cover x y w h": a plain opaque window at that screen rectangle, above everything,
+    /// for <c>-review perf</c> to lay over its own window from another process.</summary>
+    private static int ReviewCover(string[] args)
+    {
+        string trace = Path.Combine(Path.GetTempPath(), "aura-cover.txt");
+        File.WriteAllText(trace, $"args {string.Join(' ', args)}{Environment.NewLine}");
+        ApplicationConfiguration.Initialize();
+        int[] at = args.Skip(2).Take(4).Select(arg => int.TryParse(arg, out int value) ? value : 0).ToArray();
+        if (at.Length < 4)
+        {
+            return 2;
+        }
+
+        using var form = new Form
+        {
+            FormBorderStyle = FormBorderStyle.None,
+            StartPosition = FormStartPosition.Manual,
+            Bounds = new Rectangle(at[0], at[1], at[2], at[3]),
+            ShowInTaskbar = false,
+            BackColor = Color.DimGray,
+        };
+        form.Shown += (_, _) =>
+        {
+            // Set once the window exists: given up front, it never reached the window, which then
+            // opened behind the one it was meant to cover - a process in the background may not
+            // put its window in front by being shown.
+            form.TopMost = true;
+            File.AppendAllText(trace, $"shown {form.Bounds} topmost {form.TopMost}{Environment.NewLine}");
+        };
+        Application.Run(form);
+        return 0;
     }
 }
 #endif

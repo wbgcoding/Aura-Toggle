@@ -11,6 +11,9 @@ internal sealed partial class ToggleForm
     /// <summary>The big button, for <c>-review perf</c> to drive and time.</summary>
     internal EffectButton ToggleForReview => _toggle;
 
+    /// <summary>What the occlusion check sees right now.</summary>
+    internal string DescribeOcclusion() => _occlusion?.DescribeForReview() ?? "no occlusion watch";
+
     /// <summary>A click on the big button, as the mouse would give it.</summary>
     internal void ClickToggleForReview() => OnToggleClick(this, EventArgs.Empty);
 

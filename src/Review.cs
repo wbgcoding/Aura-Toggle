@@ -641,6 +641,11 @@ internal static partial class Program
             return ReviewPerf();
         }
 
+        if (surface == "cover")
+        {
+            return ReviewCover(args);
+        }
+
         Strings.Override = AuraSettings.Load().Language;
         return RunReview(surface, args.Length >= 3 ? args[2] : "");
     }
