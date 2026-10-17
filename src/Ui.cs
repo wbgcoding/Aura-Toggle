@@ -1181,6 +1181,7 @@ internal abstract class PopupForm : Form
     [System.Diagnostics.Conditional("REVIEW")]
     private void Trace(string what)
     {
+#if REVIEW
         if (Environment.GetEnvironmentVariable("AURA_TRACE") is { Length: > 0 } trace)
         {
             try
@@ -1192,11 +1193,14 @@ internal abstract class PopupForm : Form
                 // Not worth disturbing the popup for.
             }
         }
+#endif
     }
 
+#if REVIEW
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsWindowVisible(IntPtr window);
+#endif
 
     /// <summary>
     /// Closes this once the switch that took the focus away from it has finished. Closed straight
