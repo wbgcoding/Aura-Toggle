@@ -34,6 +34,9 @@ internal static partial class Program
 
         form.Shown += async (_, _) =>
         {
+            // Above every other program: a window some other app opened on top of this one would
+            // rightly pause the button and fail the timing for a reason that is not under test.
+            form.TopMost = true;
             await Task.Delay(1500);
             lines.Add($"button {button.Width}x{button.Height}  dpi {form.DeviceDpi}");
 
@@ -117,6 +120,8 @@ internal static partial class Program
                 if (!coverOk)
                 {
                     lines.Add(coverReport);
+                    lines.Add($"after the window went: covered {button.Covered}");
+                    lines.Add(form.DescribeOcclusion());
                 }
             }
 
