@@ -1092,19 +1092,26 @@ internal abstract class PopupForm : Form
 #if REVIEW
         // With AURA_TRACE naming a file: every show, move, resize and scale change of a popup,
         // the only way to see a panel that opens at one size and jumps to another.
-        if (m.Msg is 0x0018 or 0x0047 or 0x02E0
+        if (m.Msg is 0x0002 or 0x0005 or 0x0018 or 0x0047 or 0x02E0
             && Environment.GetEnvironmentVariable("AURA_TRACE") is { Length: > 0 } trace)
         {
             try
             {
                 File.AppendAllText(trace, $"{DateTime.Now:HH:mm:ss.fff} {GetType().Name} msg=0x{m.Msg:X4} "
-                    + $"bounds={Bounds} visible={Visible} dpi={DeviceDpi}{Environment.NewLine}");
+                    + $"bounds={Bounds} visible={Visible} dpi={DeviceDpi} from={Caller()}{Environment.NewLine}");
             }
             catch (Exception ex) when (AuraFiles.IsExpected(ex))
             {
                 // Not worth disturbing the popup for.
             }
         }
+
+        // The innermost frames of this program's own code that led to the message.
+        static string Caller() => string.Join(" < ", new System.Diagnostics.StackTrace().GetFrames()
+            .Select(frame => frame.GetMethod())
+            .Where(method => method?.DeclaringType?.Namespace == "AuraToggle" && method.Name is not ("WndProc" or "Caller"))
+            .Take(4)
+            .Select(method => $"{method!.DeclaringType!.Name}.{method.Name}"));
 #endif
     }
 
@@ -1140,11 +1147,56 @@ internal abstract class PopupForm : Form
     {
         base.OnFormClosing(e);
 
-        if (!e.Cancel && ActiveForm == this && Owner is { IsDisposed: false, Visible: true } owner)
+        if (e.Cancel)
+        {
+            return;
+        }
+
+        if (ActiveForm == this && Owner is { IsDisposed: false, Visible: true } owner)
         {
             owner.Activate();
         }
+
+        // Off the screen at once. Left to WinForms the window stays up while it disposes the
+        // controls inside it one by one, and the rows were seen collapsing - the panel shrinking
+        // for a moment before it went.
+        if (IsHandleCreated)
+        {
+            const uint HideNoActivate = 0x0080 | 0x0010 | 0x0001 | 0x0002 | 0x0004; // SWP_HIDEWINDOW|NOACTIVATE|NOSIZE|NOMOVE|NOZORDER
+            SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0, HideNoActivate);
+            Trace("hidden for close");
+        }
     }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
+
+    protected override void Dispose(bool disposing)
+    {
+        Trace("dispose");
+        base.Dispose(disposing);
+    }
+
+    [System.Diagnostics.Conditional("REVIEW")]
+    private void Trace(string what)
+    {
+        if (Environment.GetEnvironmentVariable("AURA_TRACE") is { Length: > 0 } trace)
+        {
+            try
+            {
+                File.AppendAllText(trace, $"{DateTime.Now:HH:mm:ss.fff} {GetType().Name} {what} visible={IsHandleCreated && IsWindowVisible(Handle)}{Environment.NewLine}");
+            }
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
+            {
+                // Not worth disturbing the popup for.
+            }
+        }
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr window);
 
     /// <summary>
     /// Closes this once the switch that took the focus away from it has finished. Closed straight
