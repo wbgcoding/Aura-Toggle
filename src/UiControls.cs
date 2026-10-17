@@ -18,9 +18,7 @@ namespace AuraToggle;
 /// </summary>
 internal sealed class EffectButton : FlatControl
 {
-    // 30 fps: smooth for lighting effects that never move faster than about one cycle every
-    // two seconds, and roughly halves the GDI+ and GC cost of 60 fps.
-    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 33 };
+    private readonly FrameClock _frames;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly EffectSurface _surface = new();
 
@@ -60,11 +58,11 @@ internal sealed class EffectButton : FlatControl
     private bool _animate = true;
 
     /// <summary>The bold variant of <see cref="Control.Font"/>, rebuilt only when that changes -
-    /// which happens on every repaint's font lookup otherwise, 30 times a second while animating.</summary>
+    /// which happens on every repaint's font lookup otherwise, 60 times a second while animating.</summary>
     private Font? _boldFont;
 
     // Shared rather than allocated per call: painting only ever happens on the UI thread, each
-    // call sets the colour and uses the brush immediately, and this paints at up to 30 fps.
+    // call sets the colour and uses the brush immediately, and this paints at up to 60 fps.
     private readonly SolidBrush _washBrush = new(Color.Black);
     private readonly SolidBrush _dimBrush = new(Color.Black);
     private readonly SolidBrush _fillBrush = new(Color.Black);
@@ -73,7 +71,7 @@ internal sealed class EffectButton : FlatControl
     {
         Radius = 16;
         AccessibleRole = AccessibleRole.CheckButton;
-        _timer.Tick += (_, _) => Invalidate();
+        _frames = new FrameClock(this, Invalidate);
     }
 
     /// <summary>The button is a switch: a screen reader should hear "checked" while the lighting is on.</summary>
@@ -152,7 +150,7 @@ internal sealed class EffectButton : FlatControl
     /// </summary>
     private void UpdateAnimation()
     {
-        _timer.Enabled = _on && _animate && Visible && Enabled && !_busy && !_paused &&
+        _frames.Enabled = _on && _animate && Visible && Enabled && !_busy && !_paused &&
             _mode != AuraState.ModeStatic;
         Invalidate();
     }
@@ -173,7 +171,7 @@ internal sealed class EffectButton : FlatControl
     {
         if (disposing)
         {
-            _timer.Dispose();
+            _frames.Dispose();
             _surface.Dispose();
             _boldFont?.Dispose();
             _shadowImage?.Dispose();
@@ -199,7 +197,22 @@ internal sealed class EffectButton : FlatControl
         base.OnFontChanged(e);
     }
 
+#if REVIEW
+    /// <summary>Called after every paint with how long it took, for <c>-review perf</c>.</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal Action<double>? PaintTimedForReview { get; set; }
+
     protected override void OnPaint(PaintEventArgs e)
+    {
+        long started = Stopwatch.GetTimestamp();
+        PaintButton(e);
+        PaintTimedForReview?.Invoke(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+    }
+#else
+    protected override void OnPaint(PaintEventArgs e) => PaintButton(e);
+#endif
+
+    private void PaintButton(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
         Theme.Prepare(g);
@@ -431,7 +444,7 @@ internal sealed class EffectButton : FlatControl
     }
 
     /// <summary>
-    /// Works the label out once for a given text, font and letter gap. At 30 fps the state word is
+    /// Works the label out once for a given text, font and letter gap. At 60 fps the state word is
     /// the same three characters on every frame, and each one would otherwise cost a
     /// <see cref="TextRenderer.MeasureText(Graphics, string, Font, Size, TextFormatFlags)"/> - a
     /// GDI call - plus a string per character - work this cache turns into nothing.

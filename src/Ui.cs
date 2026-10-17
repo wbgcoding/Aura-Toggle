@@ -593,7 +593,7 @@ internal static class EffectPainter
 
     // Shared rather than allocated per call: painting only ever happens on the UI thread, each
     // call sets the colour and uses the brush immediately, and animated effects call this every
-    // frame at up to 30 fps per visible control.
+    // frame at up to 60 fps per visible control.
     private static readonly SolidBrush FillBrush = new(Color.Black);
 
     private static void Fill(Graphics g, RectangleF bounds, Color colour)
