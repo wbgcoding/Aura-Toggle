@@ -199,6 +199,7 @@ internal sealed partial class ToggleForm : Form
 
         AutoScaleMode = AutoScaleMode.Dpi;
         Text = Strings.WindowTitle;
+        CaptionKeeper.Attach(this);
         Icon = LoadIcon();
         ClientSize = new Size(MinWidth, InitialHeight);   // unscaled: replaced by ResizeToContent before the window shows
         FormBorderStyle = FormBorderStyle.FixedSingle;

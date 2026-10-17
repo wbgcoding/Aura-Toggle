@@ -1066,6 +1066,18 @@ internal abstract class PopupForm : Form
         }
     }
 
+    protected override void WndProc(ref Message m)
+    {
+        // WM_ACTIVATE losing the activation: when it went to another program, the main window
+        // has to drop the active caption it kept while this was open - see CaptionKeeper.
+        if (m.Msg == 0x0006 && (m.WParam.ToInt64() & 0xFFFF) == 0)
+        {
+            CaptionKeeper.Recheck();
+        }
+
+        base.WndProc(ref m);
+    }
+
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);

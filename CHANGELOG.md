@@ -11,6 +11,10 @@ All notable changes to this project are documented here. The format follows
 - The ON/OFF label on the big button has a soft drop shadow instead of a hard dark outline, and the letters stay as sharp as the rest of the window
 - The animated button takes about a fifth less processor time: the label's shadow is drawn once instead of on every frame, and the rounded corners no longer copy the whole picture each time
 
+### Fixed
+
+- Opening a list, the settings or the colour picker no longer dims the window's title bar; it only turns inactive when another program takes the focus
+
 ## [1.6.0] - 2026-10-16
 
 A safer and steadier release. Damaged settings files no longer take your presets with them, the
