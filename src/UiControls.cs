@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -23,12 +24,11 @@ internal sealed class EffectButton : FlatControl
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly EffectSurface _surface = new();
 
-    /// <summary>The label's drop-shadow offsets, fixed - hoisted out of OnPaint so a repaint at
-    /// 30 fps does not allocate a new array every time.</summary>
-    private static readonly Point[] ShadowOffsets =
-    {
-        new(0, 1), new(1, 0), new(0, -1), new(-1, 0),
-    };
+    /// <summary>How far the label's shadow spreads and how far it sits below the letters, at
+    /// 96 dpi, and how dark it gets at its densest.</summary>
+    private const int ShadowBlurAt96 = 2;
+    private const int ShadowDropAt96 = 1;
+    private const float ShadowStrength = 0.75f;
 
     /// <summary>Gap between letters of the ON/OFF label, at 96 dpi - GDI+ has no letter-spacing
     /// of its own, so this is added by hand between characters drawn one at a time.</summary>
@@ -44,6 +44,13 @@ internal sealed class EffectButton : FlatControl
     private int[] _labelWidths = Array.Empty<int>();
     private int _labelWidth;
     private int _labelHeight;
+
+    /// <summary>The label's shadow as a finished picture, and the colour it was made for -
+    /// <see cref="RenderShadow"/>. Built once per text, font and colour, so a frame costs one
+    /// image draw for it instead of a text call per letter per shadow pass.</summary>
+    private Bitmap? _shadowImage;
+    private Color _shadowColour;
+    private int _shadowPad;
 
     private bool _on;
     private byte _mode;
@@ -169,6 +176,7 @@ internal sealed class EffectButton : FlatControl
             _timer.Dispose();
             _surface.Dispose();
             _boldFont?.Dispose();
+            _shadowImage?.Dispose();
             _washBrush.Dispose();
             _dimBrush.Dispose();
             _fillBrush.Dispose();
@@ -260,33 +268,173 @@ internal sealed class EffectButton : FlatControl
             MeasureLabel(g, spacing);
         }
 
+        // A soft shadow keeps the label legible even over the brightest frame of an effect.
+        Color colour = Enabled ? Color.White : Theme.TextMuted;
+        if (_shadowImage == null || _shadowColour != colour)
+        {
+            RenderShadow(colour);
+        }
+
         int baseX = (Width - _labelWidth) / 2;
         int baseY = (Height - _labelHeight) / 2;
+        g.DrawImageUnscaled(_shadowImage!, baseX - _shadowPad, baseY - _shadowPad);
 
-        void Draw(int dx, int dy, Color colour)
+        // The letters themselves go straight to the screen with ClearType, as sharp as any other
+        // text in the window; only their shadow comes from the picture.
+        int x = baseX;
+        for (int i = 0; i < _labelChars.Length; i++)
         {
-            int x = baseX + dx;
-            for (int i = 0; i < _labelChars.Length; i++)
+            TextRenderer.DrawText(g, _labelChars[i], _boldFont, new Point(x, baseY), colour, LabelFlags);
+            x += _labelWidths[i] + spacing;
+        }
+    }
+
+    /// <summary>
+    /// Draws the label's shadow into <see cref="_shadowImage"/>. GDI text ignores alpha, so the
+    /// letters go white on black into a scratch bitmap first and their brightness becomes the
+    /// coverage the shadow is blurred from, then dropped a pixel. Offset copies of the text in a
+    /// translucent black came out as a hard dark outline instead.
+    /// </summary>
+    private void RenderShadow(Color colour)
+    {
+        int blur = Math.Max(1, this.Scaled(ShadowBlurAt96));
+        int drop = this.Scaled(ShadowDropAt96);
+        int pad = (blur * 2) + drop;
+        int width = _labelWidth + (pad * 2);
+        int height = _labelHeight + (pad * 2);
+
+        var coverage = new float[width * height];
+        using (var scratch = new Bitmap(width, height, PixelFormat.Format32bppRgb))
+        {
+            using (Graphics sg = Graphics.FromImage(scratch))
             {
-                TextRenderer.DrawText(g, _labelChars[i], _boldFont, new Point(x, baseY + dy), colour, LabelFlags);
-                x += _labelWidths[i] + spacing;
+                sg.Clear(Color.Black);
+
+                // Grey-scale smoothing, named outright: left to the system default the outline comes
+                // out jagged wherever font smoothing is off, and the blur keeps every step of it.
+                sg.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+                int x = pad;
+                for (int i = 0; i < _labelChars.Length; i++)
+                {
+                    TextRenderer.DrawText(sg, _labelChars[i], _boldFont, new Point(x, pad), Color.White, LabelFlags);
+                    x += _labelWidths[i] + _labelSpacing;
+                }
+            }
+
+            int[] pixels = ReadPixels(scratch);
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                int p = pixels[i];
+                coverage[i] = (((p >> 16) & 0xFF) + ((p >> 8) & 0xFF) + (p & 0xFF)) / (3f * 255f);
             }
         }
 
-        // A soft shadow keeps the label legible even over the brightest frame of an effect.
-        foreach (Point offset in ShadowOffsets)
+        // Two box passes come close enough to a gaussian for a shadow.
+        float[] shadow = BoxBlur(BoxBlur(coverage, width, height, blur), width, height, blur);
+
+        // The muted label of a disabled button sits on a pale grey, where a full-strength shadow
+        // reads as a smudge rather than depth.
+        float strength = colour == Color.White ? ShadowStrength : ShadowStrength * 0.35f;
+
+        var output = new int[width * height];
+        for (int py = 0; py < height; py++)
         {
-            Draw(offset.X, offset.Y, Color.FromArgb(120, 0, 0, 0));
+            for (int px = 0; px < width; px++)
+            {
+                int above = py - drop;
+
+                // Blurring thins the shadow out, so it is doubled before the cap. Black, so in
+                // premultiplied form only its alpha is ever set.
+                float s = above >= 0 ? Math.Min(1f, shadow[(above * width) + px] * 2f) * strength : 0f;
+                output[(py * width) + px] = (int)Math.Round(s * 255) << 24;
+            }
         }
 
-        Draw(0, 0, Enabled ? Color.White : Theme.TextMuted);
+        _shadowImage?.Dispose();
+        _shadowImage = new Bitmap(width, height, PixelFormat.Format32bppPArgb);
+        BitmapData data = _shadowImage.LockBits(new Rectangle(0, 0, width, height),
+            ImageLockMode.WriteOnly, PixelFormat.Format32bppPArgb);
+        try
+        {
+            for (int row = 0; row < height; row++)
+            {
+                Marshal.Copy(output, row * width, data.Scan0 + (row * data.Stride), width);
+            }
+        }
+        finally
+        {
+            _shadowImage.UnlockBits(data);
+        }
+
+        _shadowColour = colour;
+        _shadowPad = pad;
+    }
+
+    private static int[] ReadPixels(Bitmap bitmap)
+    {
+        int width = bitmap.Width;
+        int height = bitmap.Height;
+        var pixels = new int[width * height];
+        BitmapData data = bitmap.LockBits(new Rectangle(0, 0, width, height),
+            ImageLockMode.ReadOnly, PixelFormat.Format32bppRgb);
+        try
+        {
+            for (int row = 0; row < height; row++)
+            {
+                Marshal.Copy(data.Scan0 + (row * data.Stride), pixels, row * width, width);
+            }
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+
+        return pixels;
+    }
+
+    /// <summary>One horizontal and one vertical box pass of <paramref name="radius"/>.</summary>
+    private static float[] BoxBlur(float[] source, int width, int height, int radius)
+    {
+        var across = new float[source.Length];
+        var result = new float[source.Length];
+        float scale = 1f / ((radius * 2) + 1);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float sum = 0;
+                for (int k = -radius; k <= radius; k++)
+                {
+                    sum += source[(y * width) + Math.Clamp(x + k, 0, width - 1)];
+                }
+
+                across[(y * width) + x] = sum * scale;
+            }
+        }
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float sum = 0;
+                for (int k = -radius; k <= radius; k++)
+                {
+                    sum += across[(Math.Clamp(y + k, 0, height - 1) * width) + x];
+                }
+
+                result[(y * width) + x] = sum * scale;
+            }
+        }
+
+        return result;
     }
 
     /// <summary>
     /// Works the label out once for a given text, font and letter gap. At 30 fps the state word is
     /// the same three characters on every frame, and each one would otherwise cost a
     /// <see cref="TextRenderer.MeasureText(Graphics, string, Font, Size, TextFormatFlags)"/> - a
-    /// GDI call - plus a string per character per pass, five passes deep for the shadow - work this cache turns into nothing.
+    /// GDI call - plus a string per character - work this cache turns into nothing.
     /// </summary>
     private void MeasureLabel(Graphics g, int spacing)
     {
@@ -309,6 +457,10 @@ internal sealed class EffectButton : FlatControl
 
         _labelSource = Text;
         _labelSpacing = spacing;
+
+        // The finished picture belongs to the old text, font or gap.
+        _shadowImage?.Dispose();
+        _shadowImage = null;
     }
 }
 
