@@ -126,6 +126,7 @@ internal sealed partial class ToggleForm : Form
     private readonly GlyphButton _gear = new();
     private readonly Layout _layout = new();
     private readonly NotifyIcon _tray = new();
+    private OcclusionWatch? _occlusion;
     private readonly ToolStripMenuItem _trayLighting = new();
 
     /// <summary>The built-in effects and custom presets, as in the window's list - see <see cref="RefreshTrayEffects"/>.</summary>
@@ -804,6 +805,9 @@ internal sealed partial class ToggleForm : Form
     /// <summary>Talking to the controller happens after the window is up, never before.</summary>
     private async void OnShown(object? sender, EventArgs e)
     {
+        // The big button sleeps while nothing of it can be seen.
+        _occlusion = new OcclusionWatch(this, _toggle, covered => _toggle.Covered = covered);
+
         // Backstop: whatever else happens, the window is visible within half a second - a hung
         // controller must never leave it sitting fully transparent.
         _revealTimer = new System.Windows.Forms.Timer { Interval = 500 };
@@ -1976,6 +1980,7 @@ internal sealed partial class ToggleForm : Form
         _busyTimer.Dispose();
         _revealTimer?.Stop();
         _revealTimer?.Dispose();
+        _occlusion?.Dispose();
         StopDiscoveryRetry();
         Icon?.Dispose();
         _iconOff?.Dispose();

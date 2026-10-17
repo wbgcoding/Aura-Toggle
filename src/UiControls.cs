@@ -143,15 +143,49 @@ internal sealed class EffectButton : FlatControl
         }
     }
 
+    /// <summary>Stops the animation while nothing of the button can be seen - see
+    /// <see cref="OcclusionWatch"/>.</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Covered
+    {
+        get => _covered;
+        set
+        {
+            if (_covered != value)
+            {
+                _covered = value;
+                UpdateAnimation();
+            }
+        }
+    }
+
+    private bool _covered;
+
     /// <summary>
     /// Animating an unlit board would be a lie, and it would burn cycles for nothing. A static
     /// colour has no time component either (<see cref="EffectPainter.Render"/> fills it flat), so
     /// it needs no timer; hover, press and focus repaint through their own invalidations.
     /// </summary>
+    /// <remarks>
+    /// The effect's clock stops with the frames. The last frame painted is what Windows shows
+    /// when the window comes back into view, and a clock that kept running would make the first
+    /// new frame jump ahead of it by however long the window was hidden.
+    /// </remarks>
     private void UpdateAnimation()
     {
-        _frames.Enabled = _on && _animate && Visible && Enabled && !_busy && !_paused &&
+        bool running = _on && _animate && Visible && Enabled && !_busy && !_paused && !_covered &&
             _mode != AuraState.ModeStatic;
+        _frames.Enabled = running;
+
+        if (running)
+        {
+            _clock.Start();
+        }
+        else
+        {
+            _clock.Stop();
+        }
+
         Invalidate();
     }
 
