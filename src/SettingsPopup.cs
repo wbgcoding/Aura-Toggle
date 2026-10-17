@@ -605,13 +605,20 @@ internal sealed class SettingsPopup : PopupForm
         _anchorScreen = Screen.FromHandle(owner.Handle).WorkingArea;
         _anchored = true;
 
+        // Created hidden at the spot first, so the window exists on the owner's monitor and has
+        // that monitor's scale; then fitted and placed at it, and only then shown. Shown straight
+        // away, it appeared at the size and place it had been built for and was re-fitted on the
+        // screen a moment later: a panel that opened small and in the wrong spot, then jumped.
         PlaceAtAnchor();
+        if (!IsHandleCreated)
+        {
+            CreateHandle();
+        }
+
+        _metrics.Reapply();
+        FitToContent();
         Show(owner);
         Activate();
-
-        // Showing it on the owner's monitor can put it on another scale than the one it was built
-        // at, which re-fits it to a different width - and the placement above used the old one.
-        PlaceAtAnchor();
     }
 
     /// <summary>

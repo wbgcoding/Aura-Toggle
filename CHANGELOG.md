@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows
 - A second click on an open drop down or on the colour chip whose picker is open closes it, instead of opening it again
 - The settings gear never shows a background; after a click it kept one until something else took the focus
 - On a second monitor at a higher display scale than the main one, the effect and channel lists showed their text half again too large and cut the longer names short
+- On a monitor at another display scale than the main one, the settings panel opened at the wrong size and place and then jumped into position; it now opens once, finished
 
 ## [1.6.0] - 2026-10-16
 

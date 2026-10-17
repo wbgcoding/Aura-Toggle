@@ -1076,6 +1076,24 @@ internal abstract class PopupForm : Form
         }
 
         base.WndProc(ref m);
+
+#if REVIEW
+        // With AURA_TRACE naming a file: every show, move, resize and scale change of a popup,
+        // the only way to see a panel that opens at one size and jumps to another.
+        if (m.Msg is 0x0018 or 0x0047 or 0x02E0
+            && Environment.GetEnvironmentVariable("AURA_TRACE") is { Length: > 0 } trace)
+        {
+            try
+            {
+                File.AppendAllText(trace, $"{DateTime.Now:HH:mm:ss.fff} {GetType().Name} msg=0x{m.Msg:X4} "
+                    + $"bounds={Bounds} visible={Visible} dpi={DeviceDpi}{Environment.NewLine}");
+            }
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
+            {
+                // Not worth disturbing the popup for.
+            }
+        }
+#endif
     }
 
     protected override void OnHandleCreated(EventArgs e)
