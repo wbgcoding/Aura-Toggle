@@ -1199,6 +1199,20 @@ internal static partial class Program
                         .Select(line => "SettingsPopup: " + line));
                     File.WriteAllText(Path.ChangeExtension(file, ".anchor.txt"), owner.DescribeSettingsAnchor());
                 }
+                // The effect list drops over the big button and must hide its left edge.
+                if (id == "effects" &&
+                    Application.OpenForms.OfType<ToggleForm>().FirstOrDefault() is ToggleForm window &&
+                    Application.OpenForms.OfType<SelectPopup>().FirstOrDefault() is SelectPopup list &&
+                    list.DeviceDpi == window.DeviceDpi)
+                {
+                    string anchor = window.DescribeEffectsAnchor(list);
+                    File.WriteAllText(Path.ChangeExtension(file, ".anchor.txt"), anchor);
+                    if (anchor.StartsWith("STRIP", StringComparison.Ordinal))
+                    {
+                        clipped.Add("SelectPopup: " + anchor);
+                    }
+                }
+
                 if (clipped.Count > 0)
                 {
                     File.WriteAllLines(Path.ChangeExtension(file, ".clip.txt"), clipped);

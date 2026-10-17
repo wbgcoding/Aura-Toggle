@@ -18,6 +18,18 @@ internal sealed partial class ToggleForm
     internal void ClickToggleForReview() => OnToggleClick(this, EventArgs.Empty);
 
     /// <summary>
+    /// The open effect list against the big button it drops over: a list whose left edge is not
+    /// clearly left of the button's leaves a column of the button showing beside it (STRIP).
+    /// </summary>
+    internal string DescribeEffectsAnchor(SelectPopup list)
+    {
+        System.Drawing.Rectangle toggle = _toggle.RectangleToScreen(_toggle.ClientRectangle);
+        int overhang = toggle.Left - list.Left;
+        string verdict = list.Bottom > toggle.Top && overhang < this.Scaled(2) ? "STRIP " : "";
+        return $"{verdict}list.Left {list.Left}  toggle.Left {toggle.Left}  overhang {overhang}";
+    }
+
+    /// <summary>
     /// Every measurement the window's width depends on, as text - the check for a layout
     /// fit that can only be judged at a real display scale. Reports the room the top
     /// row actually needs against the room it was given, so "cut off on the right" is a number

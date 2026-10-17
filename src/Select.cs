@@ -162,6 +162,14 @@ internal sealed class Select : FlatControl
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool TakesWhatIsLeft { get; set; }
 
+    /// <summary>
+    /// How far, in 96 dpi pixels, the list opens to the left of this control. The effect list
+    /// drops over the big button, whose left edge runs exactly under this control's: lined up
+    /// edge to edge, a column of the button still showed beside the open list.
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int PopupOverhang { get; set; }
+
     public override Size GetPreferredSize(Size proposedSize) =>
         TakesWhatIsLeft ? new Size(0, Height) : base.GetPreferredSize(proposedSize);
 
@@ -358,7 +366,7 @@ internal sealed class Select : FlatControl
         // Height + 4 below this control, and the same distance above it when there is no room
         // below - measured from this control rather than assumed, since the drop downs inside the
         // popups are shorter than the one in the window.
-        popup.Open(PointToScreen(new Point(0, Height + this.Scaled(4))), FindForm(), Height + this.Scaled(8));
+        popup.Open(PointToScreen(new Point(-this.Scaled(PopupOverhang), Height + this.Scaled(4))), FindForm(), Height + this.Scaled(8));
     }
 
     protected override void OnPaint(PaintEventArgs e)

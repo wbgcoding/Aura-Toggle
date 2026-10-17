@@ -237,6 +237,7 @@ internal sealed partial class ToggleForm : Form
         _effects.AccessibleName = Strings.PresetAccessibleName;
         _effects.Dock = DockStyle.Fill;
         _effects.TakesWhatIsLeft = true;
+        _effects.PopupOverhang = 3;
         _effects.PopupWidth = this.Scaled(276); // room for a preset name next to its duplicate, edit and delete buttons
         _effects.SelectionChanged += OnEffectChosen;
         _effects.ActionPicked += (_, _) => OpenPresetEditor(null);

@@ -281,6 +281,18 @@ internal static class Theme
     }
 
     /// <summary>
+    /// Turns off the zoom Windows plays when a window opens or closes. On a popup it read as a
+    /// panel that first came up small and grew, and shrank before it went away.
+    /// </summary>
+    public static void NoOpenCloseAnimation(IntPtr window)
+    {
+        const int TransitionsForceDisabled = 3;
+
+        int value = 1;
+        DwmSetWindowAttribute(window, TransitionsForceDisabled, ref value, sizeof(int));
+    }
+
+    /// <summary>
     /// Hides a window from the screen while it stays shown for everything else, so it can be
     /// painted before anyone sees it. Does nothing before Windows 8.
     /// </summary>
@@ -1100,6 +1112,7 @@ internal abstract class PopupForm : Form
     {
         base.OnHandleCreated(e);
         Theme.RoundWindowCorners(Handle);
+        Theme.NoOpenCloseAnimation(Handle);
 
         // Opened on a display at another scale than the one the process started on: the window is
         // created at that display's dpi straight away, so no WM_DPICHANGED ever arrives, yet every

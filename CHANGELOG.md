@@ -22,6 +22,8 @@ All notable changes to this project are documented here. The format follows
 - The settings gear never shows a background; after a click it kept one until something else took the focus
 - On a second monitor at a higher display scale than the main one, the effect and channel lists showed their text half again too large and cut the longer names short
 - On a monitor at another display scale than the main one, the settings panel opened at the wrong size and place and then jumped into position; it now opens once, finished
+- Popups no longer zoom in when they open and shrink before they close
+- The effect list now covers the left edge of the big button below it; a thin strip of the button showed beside the open list
 
 ## [1.6.0] - 2026-10-16
 
