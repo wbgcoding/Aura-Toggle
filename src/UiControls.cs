@@ -911,17 +911,14 @@ internal sealed class GlyphButton : FlatControl
         var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
         using GraphicsPath path = Theme.RoundedRectangle(bounds, Radius);
 
-        if (Hovered || Focused)
-        {
-            using var brush = new SolidBrush(Pressed ? Theme.Border : Theme.NeutralSoft);
-            g.FillPath(brush, path);
-        }
-
+        // No fill in any state: the gear keeps the focus after a click, so a hover/focus fill
+        // stayed behind once the panel closed and came and went with whatever took the focus
+        // next. Hover and press show in the gear's own ink; keyboard focus keeps its ring.
         DrawFocusRing(g, path);
 
         using GraphicsPath gear = EffectPainter.GearPath(
             new PointF(Width / 2f, Height / 2f), Math.Min(Width, Height) * 0.32f);
-        using var ink = new SolidBrush(Hovered ? Theme.Text : Theme.TextMuted);
+        using var ink = new SolidBrush(Hovered && !Pressed ? Theme.Text : Theme.TextMuted);
         g.FillPath(ink, gear);
     }
 }
