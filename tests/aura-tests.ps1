@@ -1181,6 +1181,32 @@ Test-Case "picking a firmware effect shares it across the controller, a colour e
     Assert-Equal 0 $process.ExitCode "-review engine exit code"
 }
 
+# The big button's effects stuttered at 21 fps behind a WinForms timer that asked for 30, and a
+# click left the button unchanged until the controller had been written. "-review perf" times
+# every animated effect on the real window and clicks the button with no controller behind it.
+Test-Case "every effect animates evenly and a click flips the button at once" {
+    $report = Join-Path $env:TEMP "aura-perf.txt"
+    Remove-Item $report -Force -ErrorAction SilentlyContinue
+
+    $process = Start-Process $ReviewExe -ArgumentList "-review", "perf" -PassThru
+    if (-not $process.WaitForExit(60000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        throw "-review perf still running after 60 s"
+    }
+    if (-not (Test-Path $report)) { throw "no aura-perf.txt was written" }
+
+    $lines = Get-Content $report
+    foreach ($line in $lines | Where-Object { $_ -like "mode*" }) {
+        if ($line -notmatch "fps\s+([\d.,]+).*max\s+([\d.,]+) ms\s+paint") { throw "unreadable: $line" }
+        $fps = [double]($Matches[1] -replace ",", ".")
+        $gap = [double]($Matches[2] -replace ",", ".")
+        if ($fps -lt 50 -or $gap -gt 40) { throw "uneven animation: $line" }
+    }
+    $click = $lines | Where-Object { $_ -like "click*" }
+    if ($click -notlike "*PASS") { throw "click: $click" }
+    Assert-Equal 0 $process.ExitCode "-review perf exit code"
+}
+
 }
 finally {
     # Runs even when a test throws or the run is interrupted: leave the machine on the default

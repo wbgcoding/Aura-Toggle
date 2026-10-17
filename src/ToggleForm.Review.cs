@@ -8,6 +8,12 @@ namespace AuraToggle;
 /// <summary>Review build only: what the surface tool reads back from the window.</summary>
 internal sealed partial class ToggleForm
 {
+    /// <summary>The big button, for <c>-review perf</c> to drive and time.</summary>
+    internal EffectButton ToggleForReview => _toggle;
+
+    /// <summary>A click on the big button, as the mouse would give it.</summary>
+    internal void ClickToggleForReview() => OnToggleClick(this, EventArgs.Empty);
+
     /// <summary>
     /// Every measurement the window's width depends on, as text - the check for a layout
     /// fit that can only be judged at a real display scale. Reports the room the top

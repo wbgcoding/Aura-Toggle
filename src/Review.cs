@@ -35,7 +35,7 @@ internal static partial class Program
         if (surface is not ("settings" or "error" or "editor" or "rename" or "layout" or "gear"
             or "tip" or "preview" or "caption"))
         {
-            WriteError("Usage: AuraToggle -review settings|error|editor|rename|layout|gear|tip|preview|caption|engine|ids [scale%]");
+            WriteError("Usage: AuraToggle -review settings|error|editor|rename|layout|gear|tip|preview|caption|engine|perf|ids [scale%]");
             return 2;
         }
 
@@ -636,6 +636,11 @@ internal static partial class Program
             return ReviewEngine();
         }
 
+        if (surface == "perf")
+        {
+            return ReviewPerf();
+        }
+
         Strings.Override = AuraSettings.Load().Language;
         return RunReview(surface, args.Length >= 3 ? args[2] : "");
     }
@@ -871,7 +876,7 @@ internal static partial class Program
     private static int PrintSurfaceIds()
     {
         WriteLine("Review surfaces (-review <id> [scale%]):");
-        WriteLine("  settings  error  editor  rename  layout  gear  tip  preview  follow  engine");
+        WriteLine("  settings  error  editor  rename  layout  gear  tip  preview  follow  engine  perf");
         WriteLine("");
         WriteLine("Shot surfaces (-shot [id|group ...] [scale=100,150] [lang=en,de] [out=<folder>]):");
         foreach ((string id, string description) in ShotSurfaces)
