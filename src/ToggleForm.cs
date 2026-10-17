@@ -1386,9 +1386,19 @@ internal sealed partial class ToggleForm : Form
         get
         {
             (string? deviceKey, int channel) = Target;
-            return DisplayedFor(_state, deviceKey == null ? new() : _channelStates.Get(), _devices, deviceKey, channel);
+            var shown = DisplayedFor(_state, deviceKey == null ? new() : _channelStates.Get(), _devices, deviceKey, channel);
+            return _switchingTo is bool on ? shown with { On = on } : shown;
         }
     }
+
+    /// <summary>
+    /// The power a click on the big button asked for, shown while the controller is still being
+    /// written. Waiting for the hardware left the button sitting unchanged for the length of a
+    /// discovery and a burst of reports, then greyed it out, then flipped it - a visible hitch on
+    /// every click. Cleared when the switch ends; the state it returns is then painted, so a
+    /// failed switch flips back.
+    /// </summary>
+    private bool? _switchingTo;
 
     /// <summary>
     /// <see cref="Displayed"/> as of the last <see cref="Render"/>, which every click handler
@@ -1423,12 +1433,19 @@ internal sealed partial class ToggleForm : Form
         // again from disk once the work is on its way.
         (string? deviceKey, int channel) = Target;
         List<AuraDeviceSummary> devices = new(_devices);
+
+        if (!_busy)
+        {
+            _switchingTo = !_displayed.On;
+            Render();
+        }
+
         _ = Run(() =>
         {
             AuraState fresh = AuraState.Load();
             Dictionary<string, ChannelLighting> remembered = deviceKey == null ? new() : AuraChannelStates.All();
             return Program.Switch(!DisplayedFor(fresh, remembered, devices, deviceKey, channel).On, deviceKey, channel);
-        });
+        }, quiet: true);
     }
 
     private void OnEffectChosen(object? sender, EventArgs e)
@@ -2277,7 +2294,9 @@ internal sealed partial class ToggleForm : Form
     /// holds the controller - and the editor is a window of its own, so <see cref="SetBusy"/>
     /// never disabled its Save button in the first place.
     /// </param>
-    private async Task Run(Func<AuraState> action, bool queue = false)
+    /// <param name="quiet">Holds the controller without the busy grey-out, see <see cref="SetBusy"/>:
+    /// for a request whose result is already on show.</param>
+    private async Task Run(Func<AuraState> action, bool queue = false, bool quiet = false)
     {
         if (_busy)
         {
@@ -2310,7 +2329,7 @@ internal sealed partial class ToggleForm : Form
             }
         }
 
-        SetBusy(true);
+        SetBusy(true, quiet);
         try
         {
             // Kept, so closing the window mid-switch can wait it out rather than leave the
@@ -2342,6 +2361,7 @@ internal sealed partial class ToggleForm : Form
         }
         finally
         {
+            _switchingTo = null;
             if (!IsDisposed)
             {
                 SetBusy(false);
