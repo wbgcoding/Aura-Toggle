@@ -7,7 +7,7 @@ body:
     attributes:
       label: Version
       description: Output of `AuraToggle.exe --version`
-      placeholder: 1.6.0
+      placeholder: 1.7.0
     validations:
       required: true
   - type: dropdown

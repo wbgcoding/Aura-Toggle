@@ -4,15 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.0] - 2026-10-17
+
+A smoother and calmer window. The big button now animates evenly at about 60 frames a second, rests
+while nobody can see it, and switches the moment you click. Lists, the settings and the colour
+picker open and close in one step without zooming or jumping, keep the title bar active and
+behave on a second monitor at another display scale.
 
 ### Changed
 
 - The ON/OFF label on the big button has a soft drop shadow instead of a hard dark outline, and the letters stay as sharp as the rest of the window
-- Each frame of the animated button costs about a fifth less processor time: the label's shadow is drawn once instead of on every frame, and the rounded corners no longer copy the whole picture each time
-- The effects on the big button run at an even 60 frames a second, in step with the screen; they stuttered along at about 21 before, and the rainbow still hitched now and then
-- The big button stops animating while nothing of it can be seen (covered by other windows, minimised, on another virtual desktop or with the PC locked) and carries on from the same picture when it shows again
-- A click on the big button switches it at once; it used to sit unchanged until the controller had been written and then grey out for a moment. If the switch fails, the button flips back
+- Each frame of the animated button costs less processor time: the label's shadow is drawn once instead of on every frame, and the rounded corners no longer copy the whole picture each time
+- The effects on the big button run at an even pace of about 60 frames a second, in step with the screen; they stuttered along at about 21 frames a second before, and the rainbow still hitched now and then
+- The big button stops animating while none of it is visible (hidden behind ordinary windows, minimised, on another virtual desktop or with the PC locked) and carries on from the same frame when it is shown again
+- A click on the big button switches it at once; it used to sit unchanged until the controller had been updated and then grey out for a moment. If the switch fails, the button flips back
 
 ### Fixed
 
@@ -20,9 +25,9 @@ All notable changes to this project are documented here. The format follows
 - Closing a list or panel by clicking back into the window could leave the whole tool without the focus, title bar greyed, until it was clicked again. Popups now close once Windows has finished handing the focus over, and give it back to their window when they close themselves
 - A second click on an open drop down or on the colour chip whose picker is open closes it, instead of opening it again
 - The settings gear never shows a background; after a click it kept one until something else took the focus
-- On a second monitor at a higher display scale than the main one, the effect and channel lists showed their text half again too large and cut the longer names short
-- On a monitor at another display scale than the main one, the settings panel opened at the wrong size and place and then jumped into position; it now opens once, finished
-- Popups no longer zoom in when they open, and the settings panel no longer shrinks for a moment before it closes; it goes in one step
+- On a second monitor at a higher display scale than the main one, the effect and channel lists showed their text 50% too large and cut the longer names short
+- On a monitor at another display scale than the main one, the settings panel opened at the wrong size and place and then jumped into position; it now opens in the right place at the right size
+- Popups no longer zoom in when they open, and the settings panel no longer shrinks for a moment before it closes; it closes in one step
 - The effect list now covers the left edge of the big button below it; a thin strip of the button showed beside the open list
 
 ## [1.6.0] - 2026-10-16
@@ -397,7 +402,7 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only 
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
-[Unreleased]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.6.0...HEAD
+[1.7.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.0...v1.4.1

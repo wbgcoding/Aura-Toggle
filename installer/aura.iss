@@ -9,7 +9,7 @@
 ; it checks for it and offers to fetch it from Microsoft, once, on the machines that lack it.
 
 #ifndef AppVersion
-  #define AppVersion "1.6.0"
+  #define AppVersion "1.7.0"
 #endif
 
 #define AppName "Aura Toggle"

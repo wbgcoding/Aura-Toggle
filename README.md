@@ -144,8 +144,11 @@ never opens with a language question in front of the wizard. `/LANG=` overrides 
 
 <img src="docs/preview-light.webp" alt="Light mode" width="333" align="right">
 
-1. **Big button**: shows the state and switches it. While the lighting is on it animates
-   whatever effect is running, brightness included.
+1. **Big button**: shows the state and switches it the moment you click; if the controller
+   cannot be reached, it flips back. While the lighting is on, it animates whatever effect is
+   running, brightness included, at about 60 frames a second in step with the screen. The
+   animation stops while nothing of the button can be seen (hidden behind ordinary windows,
+   minimised, on another virtual desktop, PC locked) and picks up where it left off.
 2. **Drop down**: pick a built-in effect or a saved custom preset; it applies immediately. Hover
    a built-in effect for a one-line explanation of what it does. The last row creates a preset;
    each preset of your own carries icons to duplicate it, edit it, or delete it (which asks once
