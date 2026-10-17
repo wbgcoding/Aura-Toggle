@@ -10,7 +10,8 @@ All notable changes to this project are documented here. The format follows
 
 - The ON/OFF label on the big button has a soft drop shadow instead of a hard dark outline, and the letters stay as sharp as the rest of the window
 - Each frame of the animated button costs about a fifth less processor time: the label's shadow is drawn once instead of on every frame, and the rounded corners no longer copy the whole picture each time
-- The effects on the big button run at an even 60 frames a second; they stuttered along at about 21 before
+- The effects on the big button run at an even 60 frames a second, in step with the screen; they stuttered along at about 21 before, and the rainbow still hitched now and then
+- The big button stops animating while nothing of it can be seen (covered by other windows, minimised, on another virtual desktop or with the PC locked) and carries on from the same picture when it shows again
 - A click on the big button switches it at once; it used to sit unchanged until the controller had been written and then grey out for a moment. If the switch fails, the button flips back
 
 ### Fixed
