@@ -547,6 +547,9 @@ internal sealed class SelectPopup : PopupForm
         }
 
         Fit(screen);
+
+        // Placed at its first width: a list opened near the right edge would now run past it.
+        KeepOnScreen();
         _scroll = Math.Clamp(_scroll, 0, _maxScroll);
         Invalidate();
     }
