@@ -28,8 +28,7 @@ internal sealed class OcclusionWatch : IDisposable
     private readonly Action<bool> _changed;
     private readonly WinEventProc _proc;
     private readonly System.Windows.Forms.Timer _poll = new() { Interval = 500 };
-    private readonly IntPtr _systemHook;
-    private readonly IntPtr _objectHook;
+    private readonly List<IntPtr> _hooks = new();
     private bool _queued;
     private bool _hidden;
     private bool _disposed;
@@ -43,14 +42,13 @@ internal sealed class OcclusionWatch : IDisposable
         // Kept in a field: the hook calls back through it for as long as it is installed, and
         // a delegate only referenced by native code would be collected out from under it.
         _proc = OnWinEvent;
-        _systemHook = SetWinEventHook(EventSystemForeground, EventSystemMinimizeEnd, IntPtr.Zero, _proc, 0, 0, HookFlags);
-        _objectHook = SetWinEventHook(EventObjectDestroy, EventObjectUncloaked, IntPtr.Zero, _proc, 0, 0, HookFlags);
 
         // The hooks skip this process, so its own window moving, changing size or coming to the
         // front (a click on it, Alt+Tab) is caught here.
         _form.Move += OnOwnChange;
         _form.Resize += OnOwnChange;
         _form.VisibleChanged += OnOwnChange;
+        _form.VisibleChanged += OnFormVisibleChanged;
         _form.Activated += OnOwnChange;
         _form.Deactivate += OnOwnChange;
         _target.VisibleChanged += OnOwnChange;
@@ -60,7 +58,7 @@ internal sealed class OcclusionWatch : IDisposable
         // Checks straight away rather than through Queue: a queued check whose message was lost
         // would otherwise block every later one for good.
         _poll.Tick += (_, _) => Check();
-        _poll.Start();
+        SyncHooks();
         Queue();
     }
 
@@ -75,12 +73,12 @@ internal sealed class OcclusionWatch : IDisposable
 
         _disposed = true;
         SystemEvents.SessionSwitch -= OnSessionSwitch;
+        SyncHooks();
         _poll.Dispose();
-        UnhookWinEvent(_systemHook);
-        UnhookWinEvent(_objectHook);
         _form.Move -= OnOwnChange;
         _form.Resize -= OnOwnChange;
         _form.VisibleChanged -= OnOwnChange;
+        _form.VisibleChanged -= OnFormVisibleChanged;
         _form.Activated -= OnOwnChange;
         _form.Deactivate -= OnOwnChange;
         _target.VisibleChanged -= OnOwnChange;
@@ -88,6 +86,43 @@ internal sealed class OcclusionWatch : IDisposable
     }
 
     private void OnOwnChange(object? sender, EventArgs e) => Queue();
+
+    private void OnFormVisibleChanged(object? sender, EventArgs e) => SyncHooks();
+
+    /// <summary>
+    /// The hooks and the poll only run while the window is shown. A window hidden in the
+    /// notification area is hidden whatever else happens on screen, and listening to every other
+    /// program there would wake this one up for nothing.
+    /// </summary>
+    private void SyncHooks()
+    {
+        bool wanted = !_disposed && _form.Visible;
+        if (wanted == (_hooks.Count > 0))
+        {
+            return;
+        }
+
+        if (wanted)
+        {
+            // Only the events that can change what covers the window: foreground, move/size and
+            // minimise; a window destroyed, shown, hidden, reordered, moved or (un)cloaked.
+            _hooks.Add(SetWinEventHook(EventSystemForeground, EventSystemMinimizeEnd, IntPtr.Zero, _proc, 0, 0, HookFlags));
+            _hooks.Add(SetWinEventHook(EventObjectDestroy, EventObjectReorder, IntPtr.Zero, _proc, 0, 0, HookFlags));
+            _hooks.Add(SetWinEventHook(EventObjectLocationChange, EventObjectLocationChange, IntPtr.Zero, _proc, 0, 0, HookFlags));
+            _hooks.Add(SetWinEventHook(EventObjectCloaked, EventObjectUncloaked, IntPtr.Zero, _proc, 0, 0, HookFlags));
+            _poll.Start();
+        }
+        else
+        {
+            _poll.Stop();
+            foreach (IntPtr hook in _hooks)
+            {
+                UnhookWinEvent(hook);
+            }
+
+            _hooks.Clear();
+        }
+    }
 
     /// <summary>Only a prompt to look again: whether the session is locked is read fresh on every
     /// check (<see cref="InputDesktopIsOurs"/>), so a missed unlock - a remote reconnect raises
@@ -355,6 +390,9 @@ internal sealed class OcclusionWatch : IDisposable
     private const uint EventSystemForeground = 0x0003;
     private const uint EventSystemMinimizeEnd = 0x0017;
     private const uint EventObjectDestroy = 0x8001;
+    private const uint EventObjectReorder = 0x8004;
+    private const uint EventObjectLocationChange = 0x800B;
+    private const uint EventObjectCloaked = 0x8017;
     private const uint EventObjectUncloaked = 0x8018;
     private const uint HookFlags = 0x0000 | 0x0002; // WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
     private const int ObjidWindow = 0;
