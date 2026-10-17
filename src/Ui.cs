@@ -858,6 +858,12 @@ internal sealed class EffectSurface : IDisposable
 {
     private Bitmap? _buffer;
 
+    /// <summary>Every buffer pixel the shape does not fully cover, with how much of it it does -
+    /// <see cref="ApplyMask"/> - and the size and outline it was worked out for.</summary>
+    private (int X, int Y, byte Cover)[]? _mask;
+    private Size _maskSize;
+    private PointF[] _maskPoints = Array.Empty<PointF>();
+
     /// <summary>Rounds <paramref name="bounds"/> itself, for callers that need no path of their own.</summary>
     /// <param name="outline">
     /// Optional hairline along the inside of the edge, so a pale icon still reads on a pale
@@ -911,21 +917,105 @@ internal sealed class EffectSurface : IDisposable
             draw(surface);
         }
 
-        using var brush = new TextureBrush(_buffer, WrapMode.Clamp);
-        brush.TranslateTransform(bounds.X, bounds.Y);
+        ApplyMask(shape, bounds);
 
-        // The buffer is already at the target scale, so sampling it 1:1 keeps it pin sharp;
-        // only the path's own edge is smoothed.
+        // The buffer is already at the target scale, so drawing it 1:1 keeps it pin sharp.
+        var area = new Rectangle(0, 0, bounds.Width, bounds.Height);
         InterpolationMode interpolation = g.InterpolationMode;
         g.InterpolationMode = InterpolationMode.NearestNeighbor;
-        g.FillPath(brush, shape);
+        g.DrawImage(_buffer, bounds, area, GraphicsUnit.Pixel);
         g.InterpolationMode = interpolation;
+    }
+
+    /// <summary>
+    /// Cuts the buffer to <paramref name="shape"/> in place. A texture brush filling the path did
+    /// the same, but copied the whole buffer on every frame to build itself. The shape only
+    /// changes with a resize, so the pixels it does not fully cover are worked out once - by
+    /// filling it, so the edge is the same anti-aliased one - and each frame only scales those.
+    /// </summary>
+    private void ApplyMask(GraphicsPath shape, Rectangle bounds)
+    {
+        PointF[] points = shape.PathPoints;
+        if (_mask == null || _maskSize != bounds.Size || !points.AsSpan().SequenceEqual(_maskPoints))
+        {
+            BuildMask(shape, bounds, points);
+        }
+
+        BitmapData data = _buffer!.LockBits(new Rectangle(0, 0, bounds.Width, bounds.Height),
+            ImageLockMode.ReadWrite, PixelFormat.Format32bppPArgb);
+        try
+        {
+            foreach ((int x, int y, byte cover) in _mask!)
+            {
+                IntPtr at = data.Scan0 + (y * data.Stride) + (x * 4);
+                if (cover == 0)
+                {
+                    Marshal.WriteInt32(at, 0);
+                    continue;
+                }
+
+                // Premultiplied, so all four channels scale alike.
+                uint pixel = (uint)Marshal.ReadInt32(at);
+                uint a = ((pixel >> 24) * cover) / 255;
+                uint r = (((pixel >> 16) & 0xFF) * cover) / 255;
+                uint gr = (((pixel >> 8) & 0xFF) * cover) / 255;
+                uint b = ((pixel & 0xFF) * cover) / 255;
+                Marshal.WriteInt32(at, (int)((a << 24) | (r << 16) | (gr << 8) | b));
+            }
+        }
+        finally
+        {
+            _buffer.UnlockBits(data);
+        }
+    }
+
+    private void BuildMask(GraphicsPath shape, Rectangle bounds, PointF[] points)
+    {
+        var mask = new List<(int X, int Y, byte Cover)>();
+        using (var coverage = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb))
+        {
+            using (Graphics cg = Graphics.FromImage(coverage))
+            {
+                Theme.Prepare(cg);
+                cg.Clear(Color.Transparent);
+                cg.TranslateTransform(-bounds.X, -bounds.Y);
+                cg.FillPath(Brushes.White, shape);
+            }
+
+            BitmapData data = coverage.LockBits(new Rectangle(0, 0, bounds.Width, bounds.Height),
+                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            try
+            {
+                var row = new int[bounds.Width];
+                for (int y = 0; y < bounds.Height; y++)
+                {
+                    Marshal.Copy(data.Scan0 + (y * data.Stride), row, 0, bounds.Width);
+                    for (int x = 0; x < bounds.Width; x++)
+                    {
+                        byte cover = (byte)((uint)row[x] >> 24);
+                        if (cover < 255)
+                        {
+                            mask.Add((x, y, cover));
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                coverage.UnlockBits(data);
+            }
+        }
+
+        _mask = mask.ToArray();
+        _maskSize = bounds.Size;
+        _maskPoints = points;
     }
 
     public void Dispose()
     {
         _buffer?.Dispose();
         _buffer = null;
+        _mask = null;
     }
 }
 
