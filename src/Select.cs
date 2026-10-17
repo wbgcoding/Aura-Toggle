@@ -509,6 +509,7 @@ internal sealed class SelectPopup : PopupForm
         _dpi = dpi;
         ComputeMetrics();
 
+        _openerFont = font;
         Font = font;
         Measure();
 
@@ -521,6 +522,34 @@ internal sealed class SelectPopup : PopupForm
     }
 
     private int Scale(int length) => length * _dpi / 96;
+
+    /// <summary>The font of the control this opened from, already at the right size for its display.</summary>
+    private readonly Font _openerFont;
+
+    /// <summary>
+    /// Opened on a display at another scale than the process started on. WinForms rescales this
+    /// window's font for that display on top of a font that already carries it - the opener's -
+    /// so the rows came out half again too large and cut short at the width measured for the real
+    /// size. The opener's font is put back and the width checked against it.
+    /// </summary>
+    protected override void OnOpenedAtOtherScale()
+    {
+        Font = _openerFont;
+        _dpi = DeviceDpi;
+        ComputeMetrics();
+        Measure();
+
+        Rectangle screen = Screen.FromControl(this).WorkingArea;
+        int width = Math.Min(Math.Max(ClientSize.Width, WidthFor(_items, Font, _dpi)), screen.Width - Scale(16));
+        if (width != ClientSize.Width)
+        {
+            ClientSize = new Size(width, ClientSize.Height);
+        }
+
+        Fit(screen);
+        _scroll = Math.Clamp(_scroll, 0, _maxScroll);
+        Invalidate();
+    }
 
     /// <summary>
     /// The narrowest this list can open at without cutting an entry short: each row's text plus
