@@ -14,7 +14,8 @@ namespace AuraToggle;
 /// window that moves, shows, hides, changes order or is cloaked (<c>SetWinEventHook</c>), so a
 /// window moved off the control is noticed on the next pass of the message loop and the
 /// animation carries on before a stale frame can show. A slow poll backs that up for windows
-/// whose events do not reach this process, such as an elevated one.
+/// whose events do not reach this process, such as an elevated one, and for a message lost with
+/// a window handle that went away.
 /// </summary>
 /// <remarks>
 /// Errs towards "visible": a window that might let the control show through - see-through,
@@ -31,7 +32,6 @@ internal sealed class OcclusionWatch : IDisposable
     private readonly IntPtr _objectHook;
     private bool _queued;
     private bool _hidden;
-    private bool _locked;
     private bool _disposed;
 
     public OcclusionWatch(Form form, Control target, Action<bool> changed)
@@ -46,15 +46,20 @@ internal sealed class OcclusionWatch : IDisposable
         _systemHook = SetWinEventHook(EventSystemForeground, EventSystemMinimizeEnd, IntPtr.Zero, _proc, 0, 0, HookFlags);
         _objectHook = SetWinEventHook(EventObjectDestroy, EventObjectUncloaked, IntPtr.Zero, _proc, 0, 0, HookFlags);
 
-        // The hooks skip this process, so its own window moving or changing size is caught here.
+        // The hooks skip this process, so its own window moving, changing size or coming to the
+        // front (a click on it, Alt+Tab) is caught here.
         _form.Move += OnOwnChange;
         _form.Resize += OnOwnChange;
         _form.VisibleChanged += OnOwnChange;
+        _form.Activated += OnOwnChange;
+        _form.Deactivate += OnOwnChange;
         _target.VisibleChanged += OnOwnChange;
         _target.SizeChanged += OnOwnChange;
         SystemEvents.SessionSwitch += OnSessionSwitch;
 
-        _poll.Tick += OnOwnChange;
+        // Checks straight away rather than through Queue: a queued check whose message was lost
+        // would otherwise block every later one for good.
+        _poll.Tick += (_, _) => Check();
         _poll.Start();
         Queue();
     }
@@ -76,20 +81,18 @@ internal sealed class OcclusionWatch : IDisposable
         _form.Move -= OnOwnChange;
         _form.Resize -= OnOwnChange;
         _form.VisibleChanged -= OnOwnChange;
+        _form.Activated -= OnOwnChange;
+        _form.Deactivate -= OnOwnChange;
         _target.VisibleChanged -= OnOwnChange;
         _target.SizeChanged -= OnOwnChange;
     }
 
     private void OnOwnChange(object? sender, EventArgs e) => Queue();
 
-    private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
-    {
-        if (e.Reason is SessionSwitchReason.SessionLock or SessionSwitchReason.SessionUnlock)
-        {
-            _locked = e.Reason == SessionSwitchReason.SessionLock;
-            Queue();
-        }
-    }
+    /// <summary>Only a prompt to look again: whether the session is locked is read fresh on every
+    /// check (<see cref="InputDesktopIsOurs"/>), so a missed unlock - a remote reconnect raises
+    /// others - cannot leave the animation asleep.</summary>
+    private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e) => Queue();
 
     private void OnWinEvent(IntPtr hook, uint winEvent, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
     {
@@ -134,8 +137,8 @@ internal sealed class OcclusionWatch : IDisposable
 
     private bool ComputeHidden()
     {
-        if (_locked || !_form.Visible || _form.WindowState == FormWindowState.Minimized || !_target.Visible
-            || !_target.IsHandleCreated || IsCloaked(_form.Handle))
+        if (!_form.Visible || _form.WindowState == FormWindowState.Minimized || !_target.Visible
+            || !_target.IsHandleCreated || IsCloaked(_form.Handle) || !InputDesktopIsOurs())
         {
             return true;
         }
@@ -190,8 +193,16 @@ internal sealed class OcclusionWatch : IDisposable
             return null;
         }
 
+        // Click-through, or drawn by DirectComposition (no redirection bitmap): either may be
+        // clear where it sits.
         long style = GetWindowLongPtr(window, GwlExStyle).ToInt64();
-        if ((style & WsExTransparent) != 0)
+        if ((style & (WsExTransparent | WsExNoRedirectionBitmap)) != 0)
+        {
+            return null;
+        }
+
+        // A window cut to a shape of its own covers less than its rectangle.
+        if (GetWindowRgnBox(window, out _) != RegionError)
         {
             return null;
         }
@@ -225,7 +236,7 @@ internal sealed class OcclusionWatch : IDisposable
     {
         var lines = new List<string>
         {
-            $"target {_target.RectangleToScreen(_target.ClientRectangle)}  hidden {ComputeHidden()}  locked {_locked}",
+            $"target {_target.RectangleToScreen(_target.ClientRectangle)}  hidden {ComputeHidden()}  input desktop {InputDesktopIsOurs()}",
         };
         uint ownProcess = (uint)Environment.ProcessId;
         int count = 0;
@@ -313,6 +324,20 @@ internal sealed class OcclusionWatch : IDisposable
         return left;
     }
 
+    /// <summary>False while the lock screen or the secure desktop of a UAC prompt is up: nothing
+    /// of this session's desktop is on screen then.</summary>
+    private static bool InputDesktopIsOurs()
+    {
+        IntPtr desktop = OpenInputDesktop(0, false, DesktopSwitchDesktop);
+        if (desktop == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        CloseDesktop(desktop);
+        return true;
+    }
+
     private static bool IsCloaked(IntPtr window) =>
         DwmGetWindowAttribute(window, DwmwaCloaked, out int cloaked, sizeof(int)) == 0 && cloaked != 0;
 
@@ -337,6 +362,9 @@ internal sealed class OcclusionWatch : IDisposable
     private const int GwlExStyle = -20;
     private const long WsExTransparent = 0x00000020;
     private const long WsExLayered = 0x00080000;
+    private const long WsExNoRedirectionBitmap = 0x00200000;
+    private const int RegionError = 0;
+    private const uint DesktopSwitchDesktop = 0x0100;
     private const uint LwaColorKey = 0x1;
     private const uint LwaAlpha = 0x2;
     private const uint MonitorDefaultToNull = 0;
@@ -377,6 +405,16 @@ internal sealed class OcclusionWatch : IDisposable
 
     [DllImport("user32.dll")]
     private static extern IntPtr MonitorFromRect(ref Rect rect, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowRgnBox(IntPtr window, out Rect box);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr OpenInputDesktop(uint flags, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint access);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseDesktop(IntPtr desktop);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr window, int attribute, out Rect value, int size);
