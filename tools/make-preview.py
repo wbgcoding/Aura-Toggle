@@ -38,7 +38,7 @@ FRAMES = 240
 FRAME_DURATION_MS = 17  # 240 x 17 ms = one sweep every 4 s at just under 60 fps
 MAX_KB = 1500
 SATURATION_THRESHOLD = 90  # 0-255; the button's own animated effect is far above this
-LABEL_DEVIATION = 28  # how far off the clean gradient a pixel must be to count as label, 0-255
+LABEL_NOISE = 6  # off the clean gradient by less than this, a pixel is left untouched, 0-255
 EDGE_TRIM = 2  # columns at each end of the button that blend into the window; measured as 1
 
 
@@ -86,15 +86,29 @@ def clean_gradient(region_rgb: np.ndarray, region_mask: np.ndarray) -> np.ndarra
     return np.repeat(np.round(line).astype(np.uint8)[None, :, :], h, axis=0)
 
 
-def label_alpha(region_rgb: np.ndarray, clean: np.ndarray) -> np.ndarray:
-    """How much of each pixel belongs to the label rather than to the effect behind it.
+def label_layers(region_rgb: np.ndarray, clean: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """The label as two numbers per pixel: how much of the effect still shows through, and how
+    much white sits on top of it - so every frame can draw it over a different colour.
 
-    The text and its shadow sit far off the gradient they cover; their antialiased edges sit
-    partway. Taking that distance as an alpha keeps the edges soft instead of cutting the glyphs
-    out along a hard threshold, which left a rim of the old colour around every letter.
+    The label is white text over a soft black shadow, so each pixel is the effect behind it
+    darkened, then mixed with white: pixel = effect * keep + white. Three colour channels against
+    two unknowns, solved per pixel by a straight line fit. Lifting the captured pixels themselves
+    instead carried the colour that sat behind the shadow along with it, which showed as a
+    coloured halo round the letters once the effect had moved on.
     """
-    deviation = np.abs(region_rgb.astype(np.int16) - clean.astype(np.int16)).max(axis=2)
-    return np.clip(deviation / LABEL_DEVIATION, 0.0, 1.0)[:, :, None]
+    x = clean.astype(np.float64)
+    y = region_rgb.astype(np.float64)
+    x_mean = x.mean(axis=2, keepdims=True)
+    y_mean = y.mean(axis=2, keepdims=True)
+    spread = ((x - x_mean) ** 2).sum(axis=2, keepdims=True)
+    keep = ((x - x_mean) * (y - y_mean)).sum(axis=2, keepdims=True) / np.maximum(spread, 1.0)
+    keep = np.clip(keep, 0.0, 1.0)
+    white = np.clip(y_mean - keep * x_mean, 0.0, 255.0)
+
+    # Pixels the label does not touch stay exactly the effect, rather than carrying the fit's noise.
+    deviation = np.abs(y - x).max(axis=2, keepdims=True)
+    untouched = deviation < LABEL_NOISE
+    return np.where(untouched, 1.0, keep), np.where(untouched, 0.0, white)
 
 
 def build_frames(rgb: np.ndarray, alpha: np.ndarray, mask: np.ndarray) -> list[Image.Image]:
@@ -103,13 +117,12 @@ def build_frames(rgb: np.ndarray, alpha: np.ndarray, mask: np.ndarray) -> list[I
     region_mask = mask[y:y + h, x:x + w] > 0
 
     clean = clean_gradient(region_rgb, region_mask)
-    label_weight = label_alpha(region_rgb, clean)
-    label = region_rgb.astype(np.float64) * label_weight
+    keep, white = label_layers(region_rgb, clean)
 
     frames = []
     for i in range(FRAMES):
         wave = np.roll(clean, round(i * w / FRAMES), axis=1).astype(np.float64)
-        composed = np.round(wave * (1.0 - label_weight) + label).astype(np.uint8)
+        composed = np.clip(np.round(wave * keep + white), 0, 255).astype(np.uint8)
 
         frame = np.dstack((rgb, alpha))
         region = frame[y:y + h, x:x + w, :3]
