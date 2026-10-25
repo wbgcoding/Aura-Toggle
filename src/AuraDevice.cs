@@ -100,6 +100,12 @@ internal sealed class AuraDevice : IDisposable
         0x18F3, 0x1939, 0x19AF, 0x1AA6, 0x1BED, // mainboard controllers
     };
 
+    /// <summary>
+    /// The controllers that take the inline-colour effect command 0x3B. Every other id, the unknown
+    /// ones on the mainboard usage page included, is a mainboard controller and gets 0x35/0x36.
+    /// </summary>
+    private static readonly ushort[] AddressableProductIds = { 0x1867, 0x1872, 0x18A3, 0x18A5, 0x1889 };
+
     private readonly HidStream _stream;
     private readonly bool _addressableOnly;
     private readonly List<Channel> _channels = new();
@@ -110,7 +116,11 @@ internal sealed class AuraDevice : IDisposable
 
         int addressableHeaders = configTable[0x02];
         int mainboardLeds = configTable[0x1B];
-        _addressableOnly = mainboardLeds == 0;
+
+        // The product id decides the command set, not the LED count: a mainboard controller on a
+        // board without onboard lighting reports 0 mainboard LEDs, yet it does not speak 0x3B. Sent
+        // there, every effect left the headers dark and nothing switched them back on.
+        _addressableOnly = AddressableProductIds.Contains(stream.Info.Pid);
 
         // configTable[0x1D], plain 12V RGB headers, is deliberately not read: the reference board
         // is ARGB only, so there is no hardware here to verify what commands a classic RGB header
@@ -146,6 +156,12 @@ internal sealed class AuraDevice : IDisposable
     }
 
     private readonly record struct Channel(byte Index, int StartLed, int LedCount, int Header);
+
+    /// <summary>
+    /// Product id, command set and the config table fields the layout comes from, for the log: a
+    /// board that behaves oddly can then be told apart from the reference one without guessing.
+    /// </summary>
+    private string Layout { get; set; } = "";
 
     /// <summary>The USB product string when the device exposes one, empty otherwise.</summary>
     public string Name { get; private set; }
@@ -249,7 +265,7 @@ internal sealed class AuraDevice : IDisposable
 
         foreach (AuraDevice found in devices)
         {
-            AuraLog.Info($"Discover: {found.Name} - {found.Channels.Count} channel(s)");
+            AuraLog.Info($"Discover: {found.Name} - {found.Channels.Count} channel(s) {found.Layout}");
         }
 
         if (devices.Count == 0)
@@ -381,7 +397,14 @@ internal sealed class AuraDevice : IDisposable
 
         // The firmware string itself is not kept: answering 0x82 at all is the protocol probe,
         // and nothing in the tool has a use for the version.
-        var device = new AuraDevice(stream, configTable) { Name = stream.Info.Product };
+        var device = new AuraDevice(stream, configTable)
+        {
+            Name = stream.Info.Product,
+            Layout = string.Format(CultureInfo.InvariantCulture,
+                "[PID {0:X4}, {1}, headers {2}, mainboard LEDs {3}, RGB headers {4}]",
+                stream.Info.Pid, AddressableProductIds.Contains(stream.Info.Pid) ? "addressable" : "mainboard",
+                configTable[0x02], configTable[0x1B], configTable[0x1D]),
+        };
 
         return device.ChannelCount > 0 ? device : null;
     }

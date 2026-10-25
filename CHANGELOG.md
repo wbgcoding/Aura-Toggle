@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- On mainboards without onboard lighting (only ARGB headers, for example the X870-P), switching off or picking any effect left the headers dark and switching on did nothing until Armoury Crate rescanned them. The tool sent those controllers the command meant for separate addressable controllers; it now picks the command set by the controller's product id
+- The log names each controller's product id and channel layout, so a board that behaves oddly can be told apart
+
 ## [1.7.0] - 2026-10-17
 
 A smoother and calmer window. The big button now animates evenly at about 60 frames a second, rests
