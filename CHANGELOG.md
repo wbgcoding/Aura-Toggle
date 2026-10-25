@@ -10,7 +10,7 @@ A fix for mainboards whose lighting runs only on ARGB headers, with no onboard l
 
 ### Fixed
 
-- On mainboards without onboard lighting (only ARGB headers, for example the X870-P), switching off or picking any effect left the headers dark and switching on did nothing until Armoury Crate rescanned them. The tool sent those controllers the command meant for separate addressable controllers; it now picks the command set by the controller's product id
+- On mainboards without onboard lighting (only ARGB headers, for example the X870-P), picking any effect or colour left the headers dark and switching on did nothing until Armoury Crate rescanned them. The tool sent those controllers the command meant for separate addressable controllers; it now picks the command set by the controller's product id
 - The log names each controller's product id and channel layout, so a board that behaves oddly can be told apart
 
 ## [1.7.0] - 2026-10-17
