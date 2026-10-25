@@ -4,7 +4,9 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.1] - 2026-10-25
+
+A fix for mainboards whose lighting runs only on ARGB headers, with no onboard lights of their own.
 
 ### Fixed
 
@@ -409,6 +411,7 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only 
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
+[1.7.1]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.4.1...v1.5.0
