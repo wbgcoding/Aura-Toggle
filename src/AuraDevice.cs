@@ -399,14 +399,11 @@ internal sealed class AuraDevice : IDisposable
 
         // The firmware string itself is not kept: answering 0x82 at all is the protocol probe,
         // and nothing in the tool has a use for the version.
-        var device = new AuraDevice(stream, configTable)
-        {
-            Name = stream.Info.Product,
-            Layout = string.Format(CultureInfo.InvariantCulture,
-                "[PID {0:X4}, {1}, headers {2}, mainboard LEDs {3}, RGB headers {4}]",
-                stream.Info.Pid, device._addressableOnly ? "addressable" : "mainboard",
-                configTable[0x02], configTable[0x1B], configTable[0x1D]),
-        };
+        var device = new AuraDevice(stream, configTable) { Name = stream.Info.Product };
+        device.Layout = string.Format(CultureInfo.InvariantCulture,
+            "[PID {0:X4}, {1}, headers {2}, mainboard LEDs {3}, RGB headers {4}]",
+            stream.Info.Pid, device._addressableOnly ? "addressable" : "mainboard",
+            configTable[0x02], configTable[0x1B], configTable[0x1D]);
 
         return device.ChannelCount > 0 ? device : null;
     }
