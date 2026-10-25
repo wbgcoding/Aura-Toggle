@@ -6,11 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [1.7.1] - 2026-10-25
 
-A fix for mainboards whose lighting runs only on ARGB headers, with no onboard lights of their own.
+A fix for mainboards without onboard lights of their own, whose lighting runs only on the headers.
 
 ### Fixed
 
-- On mainboards without onboard lighting (only ARGB headers, for example the X870-P), picking any effect or colour left the headers dark and switching on did nothing until Armoury Crate rescanned them. The tool sent those controllers the command meant for separate addressable controllers; it now picks the command set by the controller's product id
+- On mainboards without onboard lighting, the tool sent the Aura controller the command meant for separate addressable controllers. Reported on an ASUS PRIME X870-P WIFI: picking any effect or colour left the headers dark and switching on did not bring them back. The command set now follows the controller's USB product id
 - The log names each controller's product id and channel layout, so a board that behaves oddly can be told apart
 
 ## [1.7.0] - 2026-10-17

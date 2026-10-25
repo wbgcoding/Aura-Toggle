@@ -128,8 +128,10 @@ internal sealed class AuraDevice : IDisposable
         // non-addressable header does not have. Wiring it up without a board to test against
         // would be guessing at somebody else's hardware, which this project does not do.
 
+        // An addressable controller has no fixed zone, only its headers, whatever the table says;
+        // a zone counted there would shift every header onto its neighbour's channel.
         int startLed = 0;
-        if (mainboardLeds > 0)
+        if (!_addressableOnly && mainboardLeds > 0)
         {
             _channels.Add(new Channel(0, startLed, mainboardLeds, Header: 0));
             startLed += mainboardLeds;
@@ -402,7 +404,7 @@ internal sealed class AuraDevice : IDisposable
             Name = stream.Info.Product,
             Layout = string.Format(CultureInfo.InvariantCulture,
                 "[PID {0:X4}, {1}, headers {2}, mainboard LEDs {3}, RGB headers {4}]",
-                stream.Info.Pid, AddressableProductIds.Contains(stream.Info.Pid) ? "addressable" : "mainboard",
+                stream.Info.Pid, device._addressableOnly ? "addressable" : "mainboard",
                 configTable[0x02], configTable[0x1B], configTable[0x1D]),
         };
 
