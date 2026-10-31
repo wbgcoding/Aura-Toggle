@@ -4,7 +4,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: "wednesday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
   - package-ecosystem: pip
     directory: /.github/requirements
     schedule:
       interval: weekly
+      day: "wednesday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
