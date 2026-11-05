@@ -1,4 +1,5 @@
 @echo off
+title Aura Toggle
 REM Builds "AuraToggle.exe" into dist\.
 REM
 REM   build.bat                      EVERYTHING: portable, installer, dist\release with checksums
@@ -27,6 +28,24 @@ REM bin\publish\<rid>\ for reading a stack trace from a crash.
 REM
 setlocal
 
+REM A double click runs exactly `%COMSPEC% /c ""<full path>" "`, so comparing against that is
+REM both precise and free. The previous `echo %CMDCMDLINE% | find /I "/c"` was neither: any
+REM `cmd /c build.bat` matched it, and an unqualified `find` resolves to GNU find on a PATH that
+REM has Git or MSYS ahead of System32, which turns the test into a filesystem walk and leaves the
+REM build sitting at `pause`. The quotes are stripped before comparing: spliced into an `if` as
+REM they are, the doubled quotes of a real double click broke the line and cmd quit on the spot,
+REM so a failed build vanished before it could be read. Delayed expansion is on for that one
+REM line only, since it is the one way to strip quotes without the quotes breaking the `set`.
+REM NOPAUSE (CI, the autobuild hook, agents) always counts as automated. Only a double click gets
+REM the small window, the pause on error and the 10 second close on success; an automated run
+REM never resizes, blocks or waits.
+set "DBLCLICK="
+setlocal EnableDelayedExpansion
+set "CMDL=!CMDCMDLINE:"=!"
+endlocal & set "CMDL=%CMDL%"
+if not defined NOPAUSE if /I "%CMDL%"=="%COMSPEC:"=% /c %~f0 " set "DBLCLICK=1"
+if defined DBLCLICK mode con cols=100 lines=25
+
 set "ROOT=%~dp0"
 set "MODE=%~1"
 set "EXE=AuraToggle.exe"
@@ -43,7 +62,7 @@ REM the taskkill below, which would close the user's running copy for nothing.
 echo.
 echo Unknown option "%MODE%".
 echo Use: portable ^| installer ^| all ^| review, or no argument for everything.
-call :maybepause
+call :failpause
 exit /b 2
 
 :dispatch
@@ -67,10 +86,13 @@ if /I "%MODE%"=="installer" goto :installer
 if /I "%MODE%"=="review" goto :review
 
 call :publish win-x64 "%ROOT%dist"
-if errorlevel 1 exit /b 1
+if errorlevel 1 (
+    call :failpause
+    exit /b 1
+)
 echo.
 echo Done: %ROOT%dist\%EXE%
-call :maybepause
+call :okclose
 exit /b 0
 
 REM The review build: same publish, configuration "Review", which compiles the surface tool in
@@ -83,7 +105,7 @@ dotnet publish "%ROOT%AuraToggle.csproj" -c Review -r win-x64 --self-contained f
 if errorlevel 1 (
     echo.
     echo BUILD FAILED
-    call :maybepause
+    call :failpause
     exit /b 1
 )
 if not exist "%ROOT%bin\review-build" mkdir "%ROOT%bin\review-build"
@@ -91,7 +113,7 @@ copy /y "%STAGE%\%EXE%" "%ROOT%bin\review-build" >nul
 if errorlevel 1 goto :copyfailed
 echo.
 echo Done: %ROOT%bin\review-build\%EXE%
-call :maybepause
+call :okclose
 exit /b 0
 
 REM Publishes into one folder, framework dependent, and writes the two dist shortcuts next to it.
@@ -152,11 +174,11 @@ if errorlevel 1 goto :allfailed
 echo.
 echo Everything is in %ROOT%dist
 dir /b "%ROOT%dist"
-call :maybepause
+call :okclose
 exit /b 0
 
 :allfailed
-call :maybepause
+call :failpause
 exit /b 1
 
 :checksums
@@ -258,7 +280,7 @@ if errorlevel 1 (
 
 echo Installer: %ROOT%dist\AuraToggle-Setup-%APPVER%.exe
 
-if /I not "%~1"=="noexit" call :maybepause
+if /I not "%~1"=="noexit" call :okclose
 exit /b 0
 
 :payloadmissing
@@ -269,18 +291,18 @@ echo dist folder, then build again.
 goto :installerfailed
 
 :installerfailed
-if /I not "%~1"=="noexit" call :maybepause
+if /I not "%~1"=="noexit" call :failpause
 exit /b 1
 
-:maybepause
-REM Pause only on a double click, never in CI or in the autobuild hook.
-REM
-REM A double click runs exactly `%COMSPEC% /c ""<full path>" "`, so comparing against that is
-REM both precise and free. The previous `echo %CMDCMDLINE% | find /I "/c"` was neither: any
-REM `cmd /c build.bat` matched it, and an unqualified `find` resolves to GNU find on a PATH that
-REM has Git or MSYS ahead of System32, which turns the test into a filesystem walk and leaves the
-REM build sitting at `pause`.
-if defined NOPAUSE exit /b 0
-if /I not "%CMDCMDLINE%"=="%COMSPEC% /c ""%~f0"" " exit /b 0
+:failpause
+REM Double click only: the failure stays on screen until a key is pressed.
+if not defined DBLCLICK exit /b 0
 pause
+exit /b 0
+
+:okclose
+REM Double click only: success closes the window by itself after 10 seconds (a key skips the
+REM wait). Full path, so a timeout.exe from Git or MSYS ahead of System32 is never the one run.
+if not defined DBLCLICK exit /b 0
+"%SystemRoot%\System32\timeout.exe" /t 10
 exit /b 0
