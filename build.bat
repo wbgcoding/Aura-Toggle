@@ -129,7 +129,11 @@ if errorlevel 1 (
 )
 if not exist "%ROOT%bin\review-build" mkdir "%ROOT%bin\review-build"
 copy /y "%STAGE%\%EXE%" "%ROOT%bin\review-build" >nul
-if errorlevel 1 goto :copyfailed
+if errorlevel 1 (
+    call :copyfailed
+    call :failpause
+    exit /b 1
+)
 echo.
 rem === build freshness: save ===
 set "BSART=bin\review-build\AuraToggle.exe"
