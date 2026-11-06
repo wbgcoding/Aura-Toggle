@@ -48,6 +48,7 @@ if defined DBLCLICK mode con cols=100 lines=25
 
 set "ROOT=%~dp0"
 set "MODE=%~1"
+if /i "%MODE%"=="--force" set "MODE=%~2"
 set "EXE=AuraToggle.exe"
 set "PDB=AuraToggle.pdb"
 
@@ -66,6 +67,21 @@ call :failpause
 exit /b 2
 
 :dispatch
+rem === build freshness: check ===
+set "BS=%~dp0tools\build-stamp.ps1"
+set "BSKEY=exe"
+set "BSEXTRA=%MODE%"
+if not defined BSEXTRA set "BSEXTRA=all"
+set "BSART="
+set "BSFRESH="
+set "BSFORCE="
+if "%FORCE%"=="1" set "BSFORCE=1"
+for %%A in (%*) do if /i "%%~A"=="--force" set "BSFORCE=1"
+if defined BSFORCE goto :bs_start
+if not exist "%BS%" goto :bs_start
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Check -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%"`) do set "BSFRESH=%%A"
+if defined BSFRESH goto :bs_uptodate
+:bs_start
 REM A running copy locks its own exe, which makes the publish step fail after ten retries -
 REM that failure aborts "all" before it ever reaches the installer, so the installer silently
 REM never appears. Closing it first is safe - but only this project's own build output: a plain
@@ -91,6 +107,9 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
+rem === build freshness: save ===
+set "BSART=dist\AuraToggle.exe,dist\Aura On.lnk,dist\Aura Off.lnk"
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
 echo Done: %ROOT%dist\%EXE%
 call :okclose
 exit /b 0
@@ -112,6 +131,9 @@ if not exist "%ROOT%bin\review-build" mkdir "%ROOT%bin\review-build"
 copy /y "%STAGE%\%EXE%" "%ROOT%bin\review-build" >nul
 if errorlevel 1 goto :copyfailed
 echo.
+rem === build freshness: save ===
+set "BSART=bin\review-build\AuraToggle.exe"
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
 echo Done: %ROOT%bin\review-build\%EXE%
 call :okclose
 exit /b 0
@@ -172,6 +194,9 @@ if errorlevel 1 goto :allfailed
 call :checksums
 if errorlevel 1 goto :allfailed
 echo.
+rem === build freshness: save ===
+set "BSART=dist\AuraToggle.exe,dist\Aura On.lnk,dist\Aura Off.lnk,dist\AuraToggle-Setup-%APPVER%.exe,dist\SHA256SUMS.txt"
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
 echo Everything is in %ROOT%dist
 dir /b "%ROOT%dist"
 call :okclose
@@ -280,6 +305,11 @@ if errorlevel 1 (
 
 echo Installer: %ROOT%dist\AuraToggle-Setup-%APPVER%.exe
 
+rem === build freshness: save (a full build saves after the checksums instead) ===
+if /I "%~1"=="noexit" goto :bs_nosave_inst
+set "BSART=dist\AuraToggle.exe,dist\Aura On.lnk,dist\Aura Off.lnk,dist\AuraToggle-Setup-%APPVER%.exe"
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
+:bs_nosave_inst
 if /I not "%~1"=="noexit" call :okclose
 exit /b 0
 
@@ -305,4 +335,9 @@ REM Double click only: success closes the window by itself after 10 seconds (a k
 REM wait). Full path, so a timeout.exe from Git or MSYS ahead of System32 is never the one run.
 if not defined DBLCLICK exit /b 0
 "%SystemRoot%\System32\timeout.exe" /t 10
+exit /b 0
+
+:bs_uptodate
+for %%F in ("%BSFRESH%") do echo Build is up to date (last build %%~tF), nothing to do: %%~fF
+call :okclose
 exit /b 0
