@@ -436,3 +436,5 @@ This is an independent project. It is **not** made, endorsed or supported by ASU
 Inc. "ASUS", "ROG", "TUF" and "Aura" are trademarks of their respective owners, used here only
 to describe which hardware this talks to. No ASUS software, driver or library is used, bundled
 or required.
+
+<p align="right">© 2026 BGCoding · Made with Claude</p>
