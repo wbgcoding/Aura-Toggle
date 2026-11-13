@@ -458,7 +458,10 @@ internal static class AuraFiles
             : fallback;
 
     public static byte JsonByte(JsonElement element, string name, byte fallback = 0) =>
-        element.TryGetProperty(name, out JsonElement value) && value.TryGetByte(out byte parsed) ? parsed : fallback;
+        element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Number &&
+        value.TryGetByte(out byte parsed)
+            ? parsed
+            : fallback;
 
     public static bool JsonFlag(JsonElement element, string name, bool fallback = false) =>
         element.TryGetProperty(name, out JsonElement value) &&
