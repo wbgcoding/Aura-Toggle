@@ -110,7 +110,7 @@ internal sealed class AuraDevice : IDisposable
     private readonly bool _addressableOnly;
     private readonly List<Channel> _channels = new();
 
-    private AuraDevice(HidStream stream, byte[] configTable)
+    internal AuraDevice(HidStream stream, byte[] configTable)
     {
         _stream = stream;
 
@@ -166,7 +166,7 @@ internal sealed class AuraDevice : IDisposable
     private string Layout { get; set; } = "";
 
     /// <summary>The USB product string when the device exposes one, empty otherwise.</summary>
-    public string Name { get; private set; }
+    public string Name { get; internal set; }
 
     /// <summary>
     /// The HID device path. Stable for as long as this physical controller stays in the same
@@ -475,7 +475,7 @@ internal sealed class AuraDevice : IDisposable
     /// unverified number is exactly the fuzzing the project forbids - so anything else falls back
     /// to the ASUS default.
     /// </summary>
-    private static byte Verified(byte mode) =>
+    internal static byte Verified(byte mode) =>
         mode != AuraState.ModeOff && AuraPresets.ByMode(mode) == null ? AuraState.ModeRainbow : mode;
 
     /// <summary>
@@ -484,7 +484,7 @@ internal sealed class AuraDevice : IDisposable
     /// build does not know keep their colour command, so the paths that matter most - switching
     /// the board off above all - still send the full set of reports.
     /// </summary>
-    private static bool CarriesColour(byte mode) => AuraPresets.ByMode(mode)?.UsesColour != false;
+    internal static bool CarriesColour(byte mode) => AuraPresets.ByMode(mode)?.UsesColour != false;
 
     /// <summary>Colour for the running effect, addressed by an LED bitmask.</summary>
     private void SendEffectColor(Channel channel, byte red, byte green, byte blue)
@@ -547,7 +547,7 @@ internal sealed class AuraDevice : IDisposable
         CmdReadFirmware, CmdReadConfigTable, CmdMainboardEffect, CmdMainboardEffectColor, CmdAddressableEffect,
     };
 
-    private static void EnsureAllowed(byte[] report)
+    internal static void EnsureAllowed(byte[] report)
     {
         if (report.Length < 2 || Array.IndexOf(AllowedCommands, report[1]) < 0)
         {
@@ -556,7 +556,7 @@ internal sealed class AuraDevice : IDisposable
         }
     }
 
-    private void Write(byte[] report)
+    internal void Write(byte[] report)
     {
         EnsureAllowed(report);
 
