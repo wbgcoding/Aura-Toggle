@@ -457,7 +457,7 @@ public sealed class ProgramArgsTests : DataFolderTest
     public void ACustomNameMatchesOnlyThatChannel()
     {
         List<Program.ChannelEntry> pool = Layouts.Entries(Layouts.Two());
-        AuraChannelNames.Set("dev-b", 1, "My Header");
+        Stored.Name("dev-b", 1, "My Header");
 
         foreach (string text in new[] { "My Header", "my header", "myheader", "MY-HEADER" })
         {
@@ -473,7 +473,7 @@ public sealed class ProgramArgsTests : DataFolderTest
     public void ACustomNameDoesNotReplaceTheDefaultOne()
     {
         List<Program.ChannelEntry> pool = Layouts.Entries(new List<AuraDeviceSummary> { Layouts.Mainboard("dev-a") });
-        AuraChannelNames.Set("dev-a", 2, "Fans");
+        Stored.Name("dev-a", 2, "Fans");
 
         Program.ChannelEntry? byDefault = Resolve("ARGB 2", pool, out _);
         Program.ChannelEntry? byCustom = Resolve("fans", pool, out _);
@@ -487,8 +487,8 @@ public sealed class ProgramArgsTests : DataFolderTest
     public void ACustomNameTwoChannelsShareIsAmbiguous()
     {
         List<Program.ChannelEntry> pool = Layouts.Entries(Layouts.Two());
-        AuraChannelNames.Set("dev-a", 1, "Case");
-        AuraChannelNames.Set("dev-b", 0, "case");
+        Stored.Name("dev-a", 1, "Case");
+        Stored.Name("dev-b", 0, "case");
 
         Program.ChannelEntry? found = Resolve("CASE", pool, out List<string> candidates);
 
@@ -500,7 +500,7 @@ public sealed class ProgramArgsTests : DataFolderTest
     public void ACustomNameThatEqualsAnotherChannelsDefaultIsAmbiguous()
     {
         List<Program.ChannelEntry> pool = Layouts.Entries(new List<AuraDeviceSummary> { Layouts.Mainboard("dev-a") });
-        AuraChannelNames.Set("dev-a", 1, "ARGB 3");
+        Stored.Name("dev-a", 1, "ARGB 3");
 
         Program.ChannelEntry? found = Resolve("ARGB 3", pool, out _);
 
@@ -511,7 +511,7 @@ public sealed class ProgramArgsTests : DataFolderTest
     public void ANumberIsTakenAsTheFlatNumberBeforeAnyName()
     {
         List<Program.ChannelEntry> pool = Layouts.Entries(Layouts.Two());
-        AuraChannelNames.Set("dev-a", 3, "2");
+        Stored.Name("dev-a", 3, "2");
 
         Program.ChannelEntry? found = Resolve("2", pool, out _);
 
@@ -523,7 +523,7 @@ public sealed class ProgramArgsTests : DataFolderTest
     public void ANumberOutsideTheListFallsBackToACustomNameThatIsANumber()
     {
         List<Program.ChannelEntry> pool = Layouts.Entries(new List<AuraDeviceSummary> { Layouts.Mainboard("dev-a") });
-        AuraChannelNames.Set("dev-a", 3, "7");
+        Stored.Name("dev-a", 3, "7");
 
         Program.ChannelEntry? found = Resolve("7", pool, out _);
 
@@ -570,7 +570,7 @@ public sealed class ProgramArgsTests : DataFolderTest
     public void ChannelNameMatchesUsesTheNamesItIsGiven()
     {
         Program.ChannelEntry header = Layouts.Entries(new List<AuraDeviceSummary> { Layouts.Mainboard("dev-a") })[2];
-        AuraChannelNames.Set("dev-a", header.ChannelIndex, "Radiator");
+        Stored.Name("dev-a", header.ChannelIndex, "Radiator");
         Dictionary<string, string> names = AuraChannelNames.All();
 
         Assert.True(Program.ChannelNameMatches(header, "radiator", names));

@@ -108,3 +108,28 @@ internal static class Layouts
     public static List<Program.ChannelEntry> Entries(List<AuraDeviceSummary> devices) =>
         Program.FlattenChannels(devices);
 }
+
+/// <summary>
+/// Stores a value the way the app does and makes sure it landed: a write the OS briefly refuses
+/// (a virus scanner holding the target) is logged and dropped by design, which would make a
+/// test flaky rather than the product wrong.
+/// </summary>
+internal static class Stored
+{
+    private const int Attempts = 10;
+
+    public static void Name(string deviceKey, int channel, string name)
+    {
+        string key = AuraFiles.ChannelKey(deviceKey, channel);
+        for (int attempt = 0; attempt < Attempts; attempt++)
+        {
+            AuraChannelNames.Set(deviceKey, channel, name);
+            if (AuraChannelNames.All().TryGetValue(key, out string? stored) && stored == name)
+            {
+                return;
+            }
+        }
+
+        throw new IOException("The channel name was not stored.");
+    }
+}
