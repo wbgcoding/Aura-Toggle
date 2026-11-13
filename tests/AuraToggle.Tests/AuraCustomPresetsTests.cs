@@ -726,6 +726,8 @@ public sealed class AuraCustomPresetsTests : PersistenceTest
         {
             for (int i = 0; i < 15; i++)
             {
+                // The files lock is what serialises the writers of one process, as it does for every caller.
+                using IDisposable guard = AuraFiles.Lock();
                 AuraCustomPresets.Save(new List<CustomPreset>
                 {
                     new("W" + n, new List<CustomPresetEntry> { Entry(label: "w" + n + "-" + i) }),
