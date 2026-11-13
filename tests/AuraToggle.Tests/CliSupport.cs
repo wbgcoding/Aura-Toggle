@@ -132,4 +132,34 @@ internal static class Stored
 
         throw new IOException("The channel name was not stored.");
     }
+
+    public static void State(AuraState state)
+    {
+        for (int attempt = 0; attempt < Attempts; attempt++)
+        {
+            state.Save();
+            if (AuraState.Load() == state)
+            {
+                return;
+            }
+        }
+
+        throw new IOException("The state was not stored.");
+    }
+
+    /// <summary>Stores one channel's own record, as a switch of just that channel would.</summary>
+    public static void Look(string deviceKey, int channel, ChannelLighting look)
+    {
+        for (int attempt = 0; attempt < Attempts; attempt++)
+        {
+            AuraChannelStates.Remember(new[] { (deviceKey, channel) }, look, new[] { deviceKey });
+            ChannelLighting? read = AuraChannelStates.Get(AuraChannelStates.All(), deviceKey, channel);
+            if (read != null && (read with { Seen = look.Seen }) == (look with { Brightness = read.Brightness }))
+            {
+                return;
+            }
+        }
+
+        throw new IOException("The channel record was not stored.");
+    }
 }
