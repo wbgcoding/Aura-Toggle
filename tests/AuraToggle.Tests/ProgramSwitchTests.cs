@@ -690,6 +690,79 @@ public sealed class ProgramSwitchTests : DataFolderTest
         Assert.False(AnyChannelOn(new List<AuraDevice>()));
     }
 
+    // ---- custom presets, as far as they can be reached without discovery ----
+
+    private static CustomPreset StoredPreset(string name, string deviceKey = "a")
+    {
+        var preset = new CustomPreset(name, new List<CustomPresetEntry>
+        {
+            new(deviceKey, 0, "Onboard", Breathing, 1, 2, 3),
+        });
+
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            AuraCustomPresets.Save(new List<CustomPreset> { preset });
+            if (AuraCustomPresets.Load().Any(p => p.Name == name))
+            {
+                return preset;
+            }
+        }
+
+        throw new IOException("The preset was not stored.");
+    }
+
+    // A preset with nothing in it names no controller, so there is nothing to apply it to.
+    [Fact]
+    public void ACustomPresetWithoutEntriesIsNotFound()
+    {
+        var empty = new CustomPreset("Empty", new List<CustomPresetEntry>());
+
+        Assert.Equal(3, Assert.Throws<AuraNotFoundException>(() => ApplyCustomPreset(empty)).ExitCode);
+    }
+
+    [Fact]
+    public void ACustomPresetWithNoControllerPresentIsNotFoundAndChangesNothing()
+    {
+        Stored.State(Board());
+        string? before = TestData.ReadRaw(AuraState.FileName);
+        CustomPreset preset = StoredPreset("Mine");
+
+        Assert.Equal(3, Assert.Throws<AuraNotFoundException>(() => ApplyCustomPreset(preset)).ExitCode);
+        Assert.Equal(before, TestData.ReadRaw(AuraState.FileName));
+        Assert.Null(TestData.ReadRaw(AuraChannelStates.FileName));
+    }
+
+    // The active preset is re-applied by switching the whole board on, never by a switch off or a partial one.
+    [Fact]
+    public void SwitchingOffKeepsTheActiveCustomPresetInTheState()
+    {
+        StoredPreset("Mine");
+        Stored.State(Board(preset: "Mine"));
+        using FakeController a = A();
+
+        AuraState result = Switch(false, null, -1, Open(a));
+
+        Assert.False(result.On);
+        Assert.Equal("Mine", result.CustomPreset);
+        Assert.Equal("Mine", AuraState.Load().CustomPreset);
+        Assert.Equal(new[] { (0, Off), (1, Off) }, Modes(a));
+    }
+
+    [Fact]
+    public void SwitchingOneControllerOnRestoresRecordsInsteadOfApplyingTheCustomPreset()
+    {
+        StoredPreset("Mine");
+        Stored.State(Board(on: false, preset: "Mine"));
+        Stored.Look("a", 0, Look(Static, 7, 8, 9, on: false));
+        using FakeController a = A();
+
+        AuraState result = Switch(true, "a", -1, Open(a));
+
+        Assert.True(result.On);
+        Assert.Equal("Mine", result.CustomPreset);
+        Assert.Equal(new ChannelLook(0, Static, 7, 8, 9), Burst(a)[0]);
+    }
+
     // ---- the same on a mainboard controller ----
 
     [Fact]
