@@ -368,7 +368,7 @@ internal static partial class Program
         Environment.Exit(5);
     }
 
-    private static int Run(string[] args)
+    internal static int Run(string[] args)
     {
         (List<string> rest, string? deviceArg, string? channelArg) = ExtractTargeting(args);
         if (rest.Count == 0)
@@ -469,7 +469,7 @@ internal static partial class Program
     /// The on/off/toggle/preset/brightness commands. <paramref name="devices"/> are the controllers
     /// a targeted call already opened (null for the whole board); the caller disposes them.
     /// </summary>
-    private static int RunApply(string command, List<string> rest, string? targetDevice, int targetChannel,
+    internal static int RunApply(string command, List<string> rest, string? targetDevice, int targetChannel,
         List<AuraDevice>? devices, List<AuraDeviceSummary>? summaries)
     {
         if (rest.Count == 1 && command is "on" or "off")
@@ -541,7 +541,7 @@ internal static partial class Program
     /// each consuming the token right after it; everything else stays in order for the existing
     /// positional parsing below to see unchanged.
     /// </summary>
-    private static (List<string> Positional, string? Device, string? Channel) ExtractTargeting(string[] args)
+    internal static (List<string> Positional, string? Device, string? Channel) ExtractTargeting(string[] args)
     {
         var rest = new List<string>();
         string? device = null;
@@ -577,7 +577,7 @@ internal static partial class Program
     /// Turns <c>-device</c>/<c>-channel</c> into the (deviceKey, channel) pair every apply method
     /// already takes, against the controllers the caller already discovered.
     /// </summary>
-    private static bool TryResolveTarget(string? deviceArg, string? channelArg,
+    internal static bool TryResolveTarget(string? deviceArg, string? channelArg,
         List<AuraDeviceSummary> devices, out string? deviceKey, out int channel, out int errorExitCode)
     {
         deviceKey = null;
@@ -629,10 +629,10 @@ internal static partial class Program
     }
 
     /// <summary>One channel, numbered for <c>-list</c>/<c>-status</c> and <c>-channel</c>.</summary>
-    private sealed record ChannelEntry(string DeviceKey, int ChannelIndex, int DeviceNumber, int ChannelNumber,
+    internal sealed record ChannelEntry(string DeviceKey, int ChannelIndex, int DeviceNumber, int ChannelNumber,
         int FlatNumber, AuraChannel Channel);
 
-    private static List<ChannelEntry> FlattenChannels(List<AuraDeviceSummary> devices)
+    internal static List<ChannelEntry> FlattenChannels(List<AuraDeviceSummary> devices)
     {
         var list = new List<ChannelEntry>();
         int flat = 0;
@@ -657,7 +657,7 @@ internal static partial class Program
     /// one match is not resolved here; the caller reports it as unknown or ambiguous either way,
     /// with every entry in <paramref name="pool"/> listed as a possible target.
     /// </summary>
-    private static ChannelEntry? ResolveChannelEntry(string text, List<ChannelEntry> pool, out List<string> candidates)
+    internal static ChannelEntry? ResolveChannelEntry(string text, List<ChannelEntry> pool, out List<string> candidates)
     {
         candidates = new List<string>();
 
@@ -689,7 +689,7 @@ internal static partial class Program
         return null;
     }
 
-    private static bool ChannelNameMatches(ChannelEntry entry, string wanted, Dictionary<string, string> customNames)
+    internal static bool ChannelNameMatches(ChannelEntry entry, string wanted, Dictionary<string, string> customNames)
     {
         if (AuraChannelNames.Get(customNames, entry.DeviceKey, entry.ChannelIndex) is string own &&
             AuraPresets.Normalise(own) == wanted)
@@ -701,14 +701,14 @@ internal static partial class Program
             AuraPresets.Normalise(DefaultChannelName(entry.Channel, language)) == wanted);
     }
 
-    private static string DefaultChannelName(AuraChannel channel, string language) => channel.Onboard
+    internal static string DefaultChannelName(AuraChannel channel, string language) => channel.Onboard
         ? Strings.InLanguage("ChannelOnboard", language)
         : string.Format(CultureInfo.InvariantCulture, Strings.InLanguage("ChannelHeader", language), channel.Header);
 
     /// <summary>"&lt;flat&gt;\t&lt;device&gt;.&lt;channel&gt;\t&lt;name&gt;" - the identifiers
     /// <c>-channel</c> accepts, always in English regardless of the display language so a script
     /// reading <c>-list</c> does not break when the user switches it.</summary>
-    private static string DescribeChannel(ChannelEntry entry) =>
+    internal static string DescribeChannel(ChannelEntry entry) =>
         $"{entry.FlatNumber}\t{entry.DeviceNumber}.{entry.ChannelNumber}\t{DefaultChannelName(entry.Channel, "en")}";
 
     /// <summary>One "  &lt;name&gt;   &lt;description&gt;" line of the help, in one column layout.</summary>
@@ -720,7 +720,7 @@ internal static partial class Program
     /// pasted into a script, a batch file or a bug report, and it should read the same for
     /// everyone. The short usage line the error paths print stays translated.
     /// </summary>
-    private static int PrintHelp()
+    internal static int PrintHelp()
     {
         WriteLine($"Aura Toggle {VersionText}");
         WriteLine("Switches ASUS Aura mainboard lighting. Nothing is written to the controller's");
@@ -777,7 +777,7 @@ internal static partial class Program
         _ => Strings.ErrorControllerNotFound,
     };
 
-    private static int PrintList()
+    internal static int PrintList()
     {
         List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int errorExitCode);
         if (devices.Count == 0)
@@ -813,7 +813,7 @@ internal static partial class Program
         return 0;
     }
 
-    private static int PrintStatus(bool json)
+    internal static int PrintStatus(bool json)
     {
         List<AuraDeviceSummary> devices = AuraDevice.ListDevices(out int errorExitCode);
         if (devices.Count == 0)
@@ -855,7 +855,7 @@ internal static partial class Program
     /// with brightness 0, the same "follows the board" sentinel <c>channel-state.json</c> itself
     /// uses, rather than a null the caller would have to special-case.
     /// </summary>
-    private static string StatusJson(AuraState state, Dictionary<string, ChannelLighting> remembered,
+    internal static string StatusJson(AuraState state, Dictionary<string, ChannelLighting> remembered,
         List<ChannelEntry> channels)
     {
         using var buffer = new MemoryStream();
@@ -897,7 +897,7 @@ internal static partial class Program
         return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
     }
 
-    private static string FormatStatusLine(string label, bool on, byte mode, byte red, byte green, byte blue,
+    internal static string FormatStatusLine(string label, bool on, byte mode, byte red, byte green, byte blue,
         string brightness)
     {
         AuraPreset? preset = AuraPresets.ByMode(mode);
@@ -908,7 +908,7 @@ internal static partial class Program
     }
 
     /// <summary>Accepts #RRGGBB, RRGGBB and the common colour names.</summary>
-    private static bool TryParseColour(string value, out Color colour)
+    internal static bool TryParseColour(string value, out Color colour)
     {
         if (Theme.TryParseHex(value, out colour))
         {
@@ -919,7 +919,7 @@ internal static partial class Program
         return colour.IsKnownColor && !colour.IsSystemColor && colour.A == 255;
     }
 
-    private static int Usage()
+    internal static int Usage()
     {
         WriteError(Strings.UsageLine);
         WriteError(string.Format(CultureInfo.CurrentCulture, Strings.UsagePresets, AuraPresets.Names));
@@ -927,7 +927,7 @@ internal static partial class Program
     }
 
     /// <summary>Accepts -on, --on, /on and on, in any casing.</summary>
-    private static string Normalise(string argument) => argument.TrimStart('-', '/').ToLowerInvariant();
+    internal static string Normalise(string argument) => argument.TrimStart('-', '/').ToLowerInvariant();
 
     /// <summary>
     /// Applies the stored effect or switches every channel off. Nothing is written to the
@@ -944,7 +944,7 @@ internal static partial class Program
         Switch(on, deviceKey, channel, null);
 
     /// <param name="open">Controllers the caller already discovered and disposes itself; null discovers here.</param>
-    private static AuraState Switch(bool on, string? deviceKey, int channel, List<AuraDevice>? open)
+    internal static AuraState Switch(bool on, string? deviceKey, int channel, List<AuraDevice>? open)
     {
         // Locked around the whole read-modify-write: a command-line switch and one from the
         // window running at the same time would otherwise each save their own copy of
@@ -993,7 +993,7 @@ internal static partial class Program
     /// rather than writing it, so switching off and on again cannot flatten it.
     /// </summary>
     /// <returns>Whether any channel on the machine is on afterwards.</returns>
-    private static bool Restore(AuraState state, string? deviceKey, int channel, List<AuraDevice>? open)
+    internal static bool Restore(AuraState state, string? deviceKey, int channel, List<AuraDevice>? open)
     {
         List<AuraDevice> devices = open ?? AuraDevice.DiscoverAll();
 
@@ -1015,11 +1015,11 @@ internal static partial class Program
     }
 
     /// <summary>The lighting the board as a whole is set to, for channels that have no own record.</summary>
-    private static ChannelLighting BoardWide(AuraState state) =>
+    internal static ChannelLighting BoardWide(AuraState state) =>
         new(state.Mode, state.Red, state.Green, state.Blue);
 
     /// <summary>A channel's own brightness, or the board-wide one while it has none of its own.</summary>
-    private static byte Brightness(ChannelLighting? look, AuraState state) =>
+    internal static byte Brightness(ChannelLighting? look, AuraState state) =>
         look is { Brightness: not 0 } own ? own.Brightness : state.Brightness;
 
     /// <summary>One header of a controller as the engine sharing sees it.</summary>
@@ -1180,7 +1180,7 @@ internal static partial class Program
     /// Only the brightness path sets it: a dimmer must never light a header the user switched off.
     /// </param>
     /// <returns>The channels that were named, for the caller to record.</returns>
-    private static List<(string DeviceKey, int Channel)> ApplyMix(List<AuraDevice> devices, string? deviceKey,
+    internal static List<(string DeviceKey, int Channel)> ApplyMix(List<AuraDevice> devices, string? deviceKey,
         int channel, AuraState state, ChannelLighting? look, byte? brightness = null, bool keepPower = false,
         Func<AuraDevice, bool>? only = null)
     {
@@ -1251,7 +1251,7 @@ internal static partial class Program
     /// switch it off again and never on. An unlisted controller falls back to the board-wide flag,
     /// and the switch that follows reports why it cannot be reached.
     /// </summary>
-    private static bool ControllerIsOn(string deviceKey, List<AuraDeviceSummary> listed)
+    internal static bool ControllerIsOn(string deviceKey, List<AuraDeviceSummary> listed)
     {
         AuraDeviceSummary? summary = listed.Find(d => d.Key == deviceKey);
         AuraState state = AuraState.Load();
@@ -1276,7 +1276,7 @@ internal static partial class Program
 
     /// <summary>One controller by key, or every controller when none is named. Shared by every
     /// caller that resolves "-device" against an already-open device list.</summary>
-    private static List<AuraDevice> ResolveDevices(List<AuraDevice> devices, string? deviceKey)
+    internal static List<AuraDevice> ResolveDevices(List<AuraDevice> devices, string? deviceKey)
     {
         List<AuraDevice> targets = string.IsNullOrEmpty(deviceKey)
             ? devices
@@ -1295,7 +1295,7 @@ internal static partial class Program
     /// The keys of the controllers found this run, handed to the channel records so an attached
     /// controller's look is never aged out.
     /// </summary>
-    private static string[] Attached(List<AuraDevice> devices) => devices.Select(d => d.Key).ToArray();
+    internal static string[] Attached(List<AuraDevice> devices) => devices.Select(d => d.Key).ToArray();
 
     private static void Close(List<AuraDevice> devices)
     {
@@ -1309,7 +1309,7 @@ internal static partial class Program
     /// Whether at least one channel of the controllers already open is on. A channel with no
     /// record has never been switched on its own, which means it is following the board.
     /// </summary>
-    private static bool AnyChannelOn(List<AuraDevice> devices)
+    internal static bool AnyChannelOn(List<AuraDevice> devices)
     {
         Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
 
@@ -1333,7 +1333,7 @@ internal static partial class Program
         int channel = -1) => ApplyPreset(preset, colour, deviceKey, channel, null);
 
     /// <param name="open">Controllers the caller already discovered and disposes itself; null discovers here.</param>
-    private static AuraState ApplyPreset(AuraPreset preset, Color? colour, string? deviceKey, int channel,
+    internal static AuraState ApplyPreset(AuraPreset preset, Color? colour, string? deviceKey, int channel,
         List<AuraDevice>? open)
     {
         using IDisposable guard = AuraFiles.HardwareLock();
@@ -1376,7 +1376,7 @@ internal static partial class Program
         SetBrightness(percent, deviceKey, channel, null);
 
     /// <param name="open">Controllers the caller already discovered and disposes itself; null discovers here.</param>
-    private static AuraState SetBrightness(byte percent, string? deviceKey, int channel, List<AuraDevice>? open)
+    internal static AuraState SetBrightness(byte percent, string? deviceKey, int channel, List<AuraDevice>? open)
     {
         using IDisposable guard = AuraFiles.HardwareLock();
 
@@ -1435,7 +1435,7 @@ internal static partial class Program
     }
 
     /// <summary>Every channel the caller named, as the pairs the stored records are keyed by.</summary>
-    private static List<(string DeviceKey, int Channel)> Channels(List<AuraDevice> devices, string? deviceKey,
+    internal static List<(string DeviceKey, int Channel)> Channels(List<AuraDevice> devices, string? deviceKey,
         int channel)
     {
         List<AuraDevice> targets = ResolveDevices(devices, deviceKey);
@@ -1736,7 +1736,7 @@ internal static partial class Program
     }
 
     /// <returns>Whether any channel on the machine is on afterwards.</returns>
-    private static bool Send(byte mode, AuraState state, string? deviceKey, int channel,
+    internal static bool Send(byte mode, AuraState state, string? deviceKey, int channel,
         List<AuraDevice>? open = null)
     {
         List<AuraDevice> devices = open ?? AuraDevice.DiscoverAll();
