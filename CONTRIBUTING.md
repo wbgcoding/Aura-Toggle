@@ -15,14 +15,16 @@ features is "does it make turning the lighting off or on easier".
 You need the .NET 10 SDK, and Inno Setup 6 for the installer. See
 [Building](README.md#building) in the README; `build.bat` is the whole build.
 
-Before you open a pull request, run both and make sure they pass:
+Before you open a pull request, run these and make sure they pass:
 
 ```bat
 dotnet build AuraToggle.csproj -c Release
+dotnet test --project tests\AuraToggle.Tests
 powershell -ExecutionPolicy Bypass -File tests\static-checks.ps1
 ```
 
-The same two run on every pull request.
+The same run on every pull request. A change to logic comes with unit tests in
+`tests\AuraToggle.Tests`.
 
 ## Pull requests
 

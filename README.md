@@ -378,6 +378,13 @@ leaves it on afterwards:
 powershell -ExecutionPolicy Bypass -File tests\aura-tests.ps1
 ```
 
+Unit tests, no controller needed. They run against a throwaway data folder, so they never touch
+your settings, the autostart entry or the lighting:
+
+```bat
+dotnet test --project tests\AuraToggle.Tests
+```
+
 Static checks, no controller needed, they only read the source tree: resource keys in step across
 all ten languages (placeholders included), no hardcoded interface text, no fixed pixel sizes that
 skip the display scaling, one version across project, installer and changelog:
