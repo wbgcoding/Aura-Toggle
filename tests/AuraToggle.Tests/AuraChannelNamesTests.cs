@@ -464,4 +464,17 @@ public sealed class AuraChannelNamesTests : PersistenceTest
         Assert.Empty(AuraChannelNames.All());
         Assert.False(File.Exists(AuraFiles.PathTo(AuraChannelNames.FileName)));
     }
+
+    // An escaped lone surrogate is valid JSON but cannot become a .NET string. Reading it threw out
+    // of the loop and every name after it was lost.
+    [Fact]
+    public void ANameOrKeyThatCannotBecomeTextDropsNothingElse()
+    {
+        Dictionary<string, string> names = Load(
+            "{\"dev|0\":\"First\",\"dev|1\":\"\\ud800\",\"dev|\\udc00\":\"Odd\",\"dev|2\":\"Last\"}");
+
+        Assert.Equal(2, names.Count);
+        Assert.Equal("First", names["dev|0"]);
+        Assert.Equal("Last", names["dev|2"]);
+    }
 }

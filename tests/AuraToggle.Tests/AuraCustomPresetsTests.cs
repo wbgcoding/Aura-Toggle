@@ -322,15 +322,6 @@ public sealed class AuraCustomPresetsTests : PersistenceTest
         Assert.Empty(Load(One("\"channel\":-5,\"mode\":2")));
     }
 
-    [Theory]
-    [InlineData("1.5")]
-    [InlineData("2147483648")]
-    [InlineData("1e20")]
-    public void LoadReadsAChannelThatIsNotAnIntNumberAsTheWholeController(string stored)
-    {
-        Assert.Equal(-1, Assert.Single(Assert.Single(Load(One("\"channel\":" + stored))).Entries).Channel);
-    }
-
     // ---- names and labels ----
 
     [Fact]
@@ -749,5 +740,99 @@ public sealed class AuraCustomPresetsTests : PersistenceTest
         Assert.Matches(@"^W\d$", loaded.Name);
         Assert.Empty(TempFiles());
         Assert.Empty(BadCopies("presets"));
+    }
+
+    // ---- a channel that is not a whole number ----
+
+    // A hand-edited channel that is not a number used to end the whole read, so every preset after
+    // it vanished from the list and the next save wrote the shortened list back over the file.
+    [Theory]
+    [InlineData("\"x\"")]
+    [InlineData("\"1\"")]
+    [InlineData("true")]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("{}")]
+    [InlineData("1.5")]
+    [InlineData("99999999999")]
+    [InlineData("2147483648")]
+    [InlineData("1e20")]
+    public void AnUnusableChannelDropsOnlyItsOwnEntry(string channel)
+    {
+        string json = "[" +
+            "{\"name\":\"Before\",\"entries\":[{\"deviceKey\":\"dev#1\",\"channel\":0,\"mode\":1}]}," +
+            "{\"name\":\"Mixed\",\"entries\":[" +
+                "{\"deviceKey\":\"dev#1\",\"channel\":" + channel + ",\"mode\":1}," +
+                "{\"deviceKey\":\"dev#1\",\"channel\":2,\"mode\":1}]}," +
+            "{\"name\":\"After\",\"entries\":[{\"deviceKey\":\"dev#1\",\"channel\":1,\"mode\":1}]}]";
+
+        List<CustomPreset> loaded = Load(json);
+
+        Assert.Equal(new[] { "Before", "Mixed", "After" }, loaded.Select(p => p.Name));
+        Assert.Equal(2, Assert.Single(loaded[1].Entries).Channel);
+    }
+
+    [Fact]
+    public void AMissingChannelStillMeansTheWholeController()
+    {
+        CustomPresetEntry only = Assert.Single(Assert.Single(Load(One("\"deviceKey\":\"dev#1\",\"mode\":1"))).Entries);
+        Assert.Equal(-1, only.Channel);
+    }
+
+    // ---- an imported preset file goes through the same entry rules as presets.json ----
+
+    private static List<CustomPresetEntry>? Import(string entriesJson, out string? name)
+    {
+        string path = AuraFiles.PathTo("import.json");
+        File.WriteAllText(path, "{\"kind\":\"aura-preset\",\"name\":\"Imported\",\"entries\":" + entriesJson + "}");
+        return CustomPresetEditor.TryReadPresetFile(path, out name);
+    }
+
+    [Fact]
+    public void AnImportedEntryWithAnUnusableChannelIsDroppedNotTheWholeFile()
+    {
+        List<CustomPresetEntry>? entries = Import(
+            "[{\"deviceKey\":\"dev#1\",\"channel\":\"x\",\"mode\":1},{\"deviceKey\":\"dev#1\",\"channel\":3,\"mode\":1}]",
+            out string? name);
+
+        Assert.Equal("Imported", name);
+        Assert.Equal(3, Assert.Single(entries!).Channel);
+    }
+
+    [Fact]
+    public void AnImportedEntryBelowTheWholeControllerIsDropped()
+    {
+        List<CustomPresetEntry>? entries = Import(
+            "[{\"deviceKey\":\"dev#1\",\"channel\":-5,\"mode\":1},{\"deviceKey\":\"dev#1\",\"channel\":1,\"mode\":1}]",
+            out _);
+
+        Assert.Equal(1, Assert.Single(entries!).Channel);
+    }
+
+    [Fact]
+    public void AnImportedUnknownEffectAndOutOfRangeBrightnessAreHeldToTheStoredRules()
+    {
+        List<CustomPresetEntry>? entries = Import(
+            "[{\"deviceKey\":\"dev#1\",\"channel\":1,\"mode\":200,\"brightness\":1}]", out _);
+
+        CustomPresetEntry only = Assert.Single(entries!);
+        Assert.Equal(AuraState.ModeStatic, only.Mode);
+        Assert.Equal(AuraState.MinBrightness, only.Brightness);
+    }
+
+    // An escaped lone surrogate is valid JSON text but cannot become a .NET string. Reading it
+    // threw out of the loop, which lost every preset after it on the next save.
+    [Fact]
+    public void ALabelThatCannotBecomeTextDropsNothingElse()
+    {
+        string json = "[" +
+            "{\"name\":\"First\",\"entries\":[{\"deviceKey\":\"dev#1\",\"channel\":0,\"label\":\"\\ud800\",\"mode\":1}]}," +
+            "{\"name\":\"\\udc00\",\"entries\":[{\"deviceKey\":\"dev#1\",\"channel\":0,\"mode\":1}]}," +
+            "{\"name\":\"Last\",\"entries\":[{\"deviceKey\":\"dev#1\",\"channel\":1,\"mode\":1}]}]";
+
+        List<CustomPreset> loaded = Load(json);
+
+        Assert.Equal(new[] { "First", "Last" }, loaded.Select(p => p.Name));
+        Assert.Equal("", Assert.Single(loaded[0].Entries).Label);
     }
 }

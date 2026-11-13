@@ -1021,6 +1021,61 @@ public sealed class AuraFilesTests : PersistenceTest
         Assert.True(done);
     }
 
+    // ---- a target held open by someone else ----
+
+    private static bool WriteMarker(string value) =>
+        AuraFiles.Write("held.json", w => { w.WriteStartObject(); w.WriteString("v", value); w.WriteEndObject(); });
+
+    // A virus scanner or a second copy of the app reading the file holds it open for a moment, and
+    // Windows refuses to replace a file that is open without delete sharing. That used to lose the
+    // write at once; it now waits the moment out.
+    [Fact]
+    public void AWriteRidesOutATargetHeldOpenForAMoment()
+    {
+        Assert.True(WriteMarker("old"));
+        string path = AuraFiles.PathTo("held.json");
+        var held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        bool sawTemp = false;
+
+        // Lets go of the file only once the write has created its temp file, so the first move
+        // always meets the held target and only a retry can succeed.
+        var releaser = new Thread(() =>
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            while (!sawTemp && clock.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                sawTemp = TempFiles().Length > 0;
+            }
+
+            Thread.Sleep(40);
+            held.Dispose();
+        }) { IsBackground = true };
+        releaser.Start();
+
+        bool written = WriteMarker("new");
+
+        Assert.True(releaser.Join(TimeSpan.FromSeconds(15)));
+        Assert.True(sawTemp);
+        Assert.True(written);
+        Assert.Contains("\"new\"", File.ReadAllText(path));
+        Assert.Empty(TempFiles());
+    }
+
+    [Fact]
+    public void AWriteGivesUpOnATargetThatStaysHeldAndKeepsTheOldFile()
+    {
+        Assert.True(WriteMarker("old"));
+        string path = AuraFiles.PathTo("held.json");
+
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            Assert.False(WriteMarker("new"));
+        }
+
+        Assert.Contains("\"old\"", File.ReadAllText(path));
+        Assert.Empty(TempFiles());
+    }
+
     // ---- folder helpers ----
 
     [Fact]

@@ -877,4 +877,15 @@ public sealed class AuraChannelStatesTests : PersistenceTest
         Assert.Empty(AuraChannelStates.All());
         Assert.False(File.Exists(AuraFiles.PathTo(AuraChannelStates.FileName)));
     }
+
+    // An escaped lone surrogate in a key is valid JSON but cannot become a .NET string. Reading it
+    // threw out of the loop and every channel after it was forgotten.
+    [Fact]
+    public void AKeyThatCannotBecomeTextDropsNothingElse()
+    {
+        Dictionary<string, ChannelLighting> states = Load(
+            "{\"dev|0\":{\"mode\":1},\"dev|\\ud800\":{\"mode\":1},\"dev|2\":{\"mode\":1}}");
+
+        Assert.Equal(new[] { "dev|0", "dev|2" }, states.Keys.OrderBy(k => k, StringComparer.Ordinal));
+    }
 }

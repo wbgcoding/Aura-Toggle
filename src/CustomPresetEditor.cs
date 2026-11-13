@@ -888,7 +888,7 @@ internal sealed class CustomPresetEditor : PopupForm
         RaisePreview();
     }
 
-    private static List<CustomPresetEntry>? TryReadPresetFile(string path, out string? name)
+    internal static List<CustomPresetEntry>? TryReadPresetFile(string path, out string? name)
     {
         name = null;
 
@@ -921,19 +921,10 @@ internal sealed class CustomPresetEditor : PopupForm
             var entries = new List<CustomPresetEntry>();
             foreach (JsonElement item in entriesElement.EnumerateArray())
             {
-                if (item.ValueKind != JsonValueKind.Object)
+                if (AuraCustomPresets.ReadEntry(item) is CustomPresetEntry entry)
                 {
-                    continue;
+                    entries.Add(entry);
                 }
-
-                entries.Add(new CustomPresetEntry(
-                    AuraFiles.JsonText(item, "deviceKey"),
-                    item.TryGetProperty("channel", out JsonElement channelElement) &&
-                        channelElement.TryGetInt32(out int channel) ? channel : -1,
-                    AuraFiles.Caption(AuraFiles.JsonText(item, "label"), AuraFiles.MaxChannelLabel),
-                    AuraFiles.JsonByte(item, "mode"), AuraFiles.JsonByte(item, "red"),
-                    AuraFiles.JsonByte(item, "green"), AuraFiles.JsonByte(item, "blue"),
-                    AuraFiles.JsonByte(item, "brightness")));
             }
 
             return entries.Count > 0 ? entries : null;

@@ -63,46 +63,10 @@ internal static class AuraCustomPresets
                 var entries = new List<CustomPresetEntry>();
                 foreach (JsonElement entry in entriesElement.EnumerateArray())
                 {
-                    if (entry.ValueKind != JsonValueKind.Object)
+                    if (ReadEntry(entry) is CustomPresetEntry read)
                     {
-                        continue;
+                        entries.Add(read);
                     }
-
-                    // Same rule AuraChannelStates applies before a mode reaches the hardware: only
-                    // a mode this build actually knows - or "off" - is trusted from a hand-edited
-                    // or imported file, otherwise the window names an effect the board never runs
-                    // while sending the board something else entirely.
-                    byte mode = AuraPresets.ValidChannelMode(AuraFiles.JsonByte(entry, "mode"));
-
-                    // Brightness gets the same treatment as in AuraChannelStates: 0 stays "leave
-                    // the channel as it is", anything else is held to the range the slider offers.
-                    byte brightness = AuraFiles.JsonByte(entry, "brightness");
-                    if (brightness != 0)
-                    {
-                        brightness = Math.Clamp(brightness, AuraState.MinBrightness, AuraState.MaxBrightness);
-                    }
-
-                    // Missing channel means an entry written before presets went per-channel: -1
-                    // keeps its old meaning of "the whole controller". Anything below that is not a
-                    // channel at all - a hand-edited or imported file - and the entry is dropped
-                    // rather than read as "the whole controller" by the `< 0` checks downstream.
-                    int channelIndex = entry.TryGetProperty("channel", out JsonElement c) && c.TryGetInt32(out int index)
-                        ? index
-                        : -1;
-                    if (channelIndex < -1)
-                    {
-                        continue;
-                    }
-
-                    entries.Add(new CustomPresetEntry(
-                        AuraFiles.JsonText(entry, "deviceKey"),
-                        channelIndex,
-                        AuraFiles.Caption(AuraFiles.JsonText(entry, "label"), AuraFiles.MaxChannelLabel),
-                        mode, AuraFiles.JsonByte(entry, "red"),
-                        AuraFiles.JsonByte(entry, "green"), AuraFiles.JsonByte(entry, "blue"),
-                        // Missing brightness means an entry written before presets carried one:
-                        // 0 leaves the channel at whatever brightness it already has.
-                        brightness));
                 }
 
                 if (entries.Count > 0)
@@ -117,6 +81,58 @@ internal static class AuraCustomPresets
         {
             return presets;
         }
+    }
+
+    /// <summary>
+    /// One stored or imported entry, or null when it is not one. Both presets.json and a preset
+    /// file picked for import are plain text anything can be written into, so every property is
+    /// checked for its kind and an unusable entry is dropped on its own instead of ending the read.
+    /// </summary>
+    internal static CustomPresetEntry? ReadEntry(JsonElement entry)
+    {
+        if (entry.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        // Same rule AuraChannelStates applies before a mode reaches the hardware: only a mode this
+        // build actually knows - or "off" - is trusted from a hand-edited or imported file,
+        // otherwise the window names an effect the board never runs while sending the board
+        // something else entirely.
+        byte mode = AuraPresets.ValidChannelMode(AuraFiles.JsonByte(entry, "mode"));
+
+        // Brightness gets the same treatment as in AuraChannelStates: 0 stays "leave the channel
+        // as it is", anything else is held to the range the slider offers. Missing brightness
+        // means an entry written before presets carried one, which reads as that same 0.
+        byte brightness = AuraFiles.JsonByte(entry, "brightness");
+        if (brightness != 0)
+        {
+            brightness = Math.Clamp(brightness, AuraState.MinBrightness, AuraState.MaxBrightness);
+        }
+
+        // Missing channel means an entry written before presets went per-channel: -1 keeps its old
+        // meaning of "the whole controller". A channel that is not a whole number, or one below
+        // -1, is not a channel at all, and the entry is dropped rather than read as "the whole
+        // controller" by the `< 0` checks downstream.
+        int channel = -1;
+        if (entry.TryGetProperty("channel", out JsonElement channelElement) &&
+            (channelElement.ValueKind != JsonValueKind.Number || !channelElement.TryGetInt32(out channel)))
+        {
+            return null;
+        }
+
+        if (channel < -1)
+        {
+            return null;
+        }
+
+        return new CustomPresetEntry(
+            AuraFiles.JsonText(entry, "deviceKey"),
+            channel,
+            AuraFiles.Caption(AuraFiles.JsonText(entry, "label"), AuraFiles.MaxChannelLabel),
+            mode, AuraFiles.JsonByte(entry, "red"),
+            AuraFiles.JsonByte(entry, "green"), AuraFiles.JsonByte(entry, "blue"),
+            brightness);
     }
 
     /// <summary>

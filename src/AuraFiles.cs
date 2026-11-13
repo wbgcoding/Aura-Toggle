@@ -453,9 +453,42 @@ internal static class AuraFiles
     // rather than the same checks re-typed per file.
 
     public static string JsonText(JsonElement element, string name, string fallback = "") =>
-        element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? fallback
-            : fallback;
+        element.TryGetProperty(name, out JsonElement value) && TextOf(value) is string text ? text : fallback;
+
+    /// <summary>
+    /// The text of a string value, or null for any other kind. An escaped lone surrogate is valid
+    /// JSON but no .NET string can hold it, and reading it throws; one such value in a hand-edited
+    /// file must cost only itself, not every entry after it.
+    /// </summary>
+    public static string? TextOf(JsonElement value)
+    {
+        if (value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        try
+        {
+            return value.GetString();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>A property's name, or null when it holds an escaped lone surrogate (see <see cref="TextOf"/>).</summary>
+    public static string? NameOf(JsonProperty property)
+    {
+        try
+        {
+            return property.Name;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
 
     public static byte JsonByte(JsonElement element, string name, byte fallback = 0) =>
         element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Number &&
@@ -522,7 +555,7 @@ internal static class AuraFiles
                 body(stream);
             }
 
-            File.Move(temp, PathTo(name), overwrite: true);
+            MoveIntoPlace(temp, PathTo(name));
             return true;
         }
         catch (Exception ex) when (IsExpected(ex))
@@ -540,6 +573,31 @@ internal static class AuraFiles
             }
 
             return false;
+        }
+    }
+
+    private const int MoveAttempts = 5;
+    private const int MoveRetryStepMs = 25;
+
+    /// <summary>
+    /// A virus scanner, the search indexer or a second copy of the app reading the file can hold
+    /// it open for a moment, and Windows refuses to replace a file that is open without delete
+    /// sharing. A few short retries (a quarter of a second in all) ride that out; a file that stays
+    /// held still fails, and the caller logs it as before.
+    /// </summary>
+    private static void MoveIntoPlace(string temp, string target)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temp, target, overwrite: true);
+                return;
+            }
+            catch (Exception ex) when (attempt < MoveAttempts && ex is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(MoveRetryStepMs * attempt);
+            }
         }
     }
 

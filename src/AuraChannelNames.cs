@@ -60,9 +60,9 @@ internal static class AuraChannelNames
         {
             foreach (JsonProperty property in document.RootElement.EnumerateObject())
             {
-                if (property.Value.ValueKind == JsonValueKind.String)
+                if (AuraFiles.NameOf(property) is string key && AuraFiles.TextOf(property.Value) is string name)
                 {
-                    names[property.Name] = AuraFiles.Caption(property.Value.GetString() ?? "", AuraFiles.MaxChannelName);
+                    names[key] = AuraFiles.Caption(name, AuraFiles.MaxChannelName);
                 }
             }
 

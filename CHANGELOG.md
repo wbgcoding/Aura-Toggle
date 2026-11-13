@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- One hand-edited preset entry whose channel was not a whole number made every preset after it disappear, and the next save wrote the shortened list back. Now only that entry is dropped
+- Importing a preset file with one bad channel entry no longer rejects the whole file; only that entry is left out
+- A setting is no longer lost when a virus scanner or a second copy of the app has the file open at the moment it is saved; the save waits a quarter of a second at most
+- A stored colour or effect value of the wrong kind (text, true/false, a list), or a name with a broken escaped character, no longer ends reading the file and costs only that one value
+
 ## [1.7.1] - 2026-10-25
 
 A fix for mainboards without onboard lights of their own, whose lighting runs only on the headers.

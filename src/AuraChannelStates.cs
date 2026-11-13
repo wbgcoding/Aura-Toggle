@@ -176,7 +176,7 @@ internal static class AuraChannelStates
         {
             foreach (JsonProperty property in document.RootElement.EnumerateObject())
             {
-                if (property.Value.ValueKind != JsonValueKind.Object)
+                if (property.Value.ValueKind != JsonValueKind.Object || AuraFiles.NameOf(property) is not string key)
                 {
                     continue;
                 }
@@ -188,7 +188,7 @@ internal static class AuraChannelStates
                 // outdated file, otherwise the window would name an effect the board never runs.
                 byte mode = AuraPresets.ValidChannelMode(AuraFiles.JsonByte(property.Value, "mode"));
 
-                states[property.Name] = new ChannelLighting(
+                states[key] = new ChannelLighting(
                     mode,
                     AuraFiles.JsonByte(property.Value, "red"),
                     AuraFiles.JsonByte(property.Value, "green"),
