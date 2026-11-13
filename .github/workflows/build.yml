@@ -28,6 +28,9 @@ jobs:
       - name: Build review
         run: dotnet build AuraToggle.csproj -c Review -warnaserror -nologo
 
+      - name: Unit tests
+        run: dotnet test --project tests/AuraToggle.Tests
+
       - name: Static checks
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\static-checks.ps1

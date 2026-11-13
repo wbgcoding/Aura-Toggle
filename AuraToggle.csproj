@@ -35,6 +35,14 @@
 
   <ItemGroup>
     <Compile Remove=".tmp\**" />
+    <!-- The unit tests are a project of their own; their sources never belong in the app. -->
+    <Compile Remove="tests\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AuraToggle.Tests" />
   </ItemGroup>
 
   <ItemGroup>

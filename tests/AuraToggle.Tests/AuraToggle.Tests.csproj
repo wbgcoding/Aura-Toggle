@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>AuraToggle.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Always the review build of the app: in it AuraFiles.UseReviewFolder exists, and once it
+         is called the app never opens a controller, never touches the Run key and keeps every
+         file in the throwaway folder the tests hand it. -->
+    <ProjectReference Include="..\..\AuraToggle.csproj" SetConfiguration="Configuration=Review" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Turns parallel runs off: every test shares the app's static data folder. -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
+  </ItemGroup>
+
+</Project>

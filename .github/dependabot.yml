@@ -11,6 +11,13 @@ updates:
       codeql-action:
         patterns:
           - "github/codeql-action*"
+  - package-ecosystem: nuget
+    directory: /tests/AuraToggle.Tests
+    schedule:
+      interval: weekly
+      day: "wednesday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
   - package-ecosystem: pip
     directory: /.github/requirements
     schedule:
