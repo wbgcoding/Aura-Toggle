@@ -381,6 +381,15 @@ internal static class AuraFiles
         }
     }
 
+    /// <summary>True when the last read of <paramref name="name"/> found it present but unusable.</summary>
+    internal static bool IsDamaged(string name)
+    {
+        lock (DamagedFiles)
+        {
+            return DamagedFiles.Contains(name);
+        }
+    }
+
     /// <summary>
     /// Copies a file that failed to read to <c>&lt;name&gt;.bad-&lt;stamp&gt;.json</c> beside it,
     /// once, right before the first write that would replace it. Only the three newest copies of

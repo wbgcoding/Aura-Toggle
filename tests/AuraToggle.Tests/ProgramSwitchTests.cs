@@ -133,6 +133,23 @@ public sealed class ProgramSwitchTests : DataFolderTest
         Assert.Equal(new[] { new ChannelLook(0, Static, 200, 100, 50), new ChannelLook(1, Static, 200, 100, 50) }, Burst(a));
     }
 
+    // An unreadable presets.json reads as an empty list: that one switch falls back to the plain
+    // restore, but the name stays, since the preset may still be in the file once it reads again.
+    [Fact]
+    public void SwitchingOnKeepsThePresetNameWhenThePresetFileCannotBeRead()
+    {
+        Stored.State(Board(on: false, preset: "Kept"));
+        TestData.WriteRaw(AuraCustomPresets.FileName, "{ not json");
+        using FakeController a = A();
+
+        AuraState result = Switch(true, null, -1, Open(a));
+
+        Assert.True(result.On);
+        Assert.Equal("Kept", result.CustomPreset);
+        Assert.Equal("Kept", AuraState.Load().CustomPreset);
+        Assert.Equal(new[] { new ChannelLook(0, Static, 200, 100, 50), new ChannelLook(1, Static, 200, 100, 50) }, Burst(a));
+    }
+
     [Fact]
     public void SwitchingOffKeepsTheNameOfAPresetThatNoLongerExists()
     {

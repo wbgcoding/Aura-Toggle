@@ -471,14 +471,10 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// The on/off/toggle/preset/brightness commands. <paramref name="devices"/> are the controllers
-    /// a targeted call already opened (null for the whole board); the caller disposes them.
+    /// One parsed on/off/toggle/preset/brightness command, run against its target.
+    /// <c>devices</c> are the controllers a targeted call already opened (null for the whole
+    /// board); the caller disposes them.
     /// </summary>
-    internal static int RunApply(string command, List<string> rest, string? targetDevice, int targetChannel,
-        List<AuraDevice>? devices, List<AuraDeviceSummary>? summaries) =>
-        ParseApply(command, rest) is ApplyAction apply ? apply(targetDevice, targetChannel, devices, summaries) : Usage();
-
-    /// <summary>One parsed on/off/toggle/preset/brightness command, run against its target.</summary>
     internal delegate int ApplyAction(string? targetDevice, int targetChannel, List<AuraDevice>? devices,
         List<AuraDeviceSummary>? summaries);
 
@@ -994,7 +990,9 @@ internal static partial class Program
             {
                 // Deleted, or renamed by hand in presets.json, since it was applied: there is
                 // nothing left to run, so it is dropped from the state just like an unmatched one.
-                presetUnmatched = true;
+                // Not when presets.json could not be read this time (locked, damaged): the
+                // preset may well still be there, so only this switch falls back to the restore.
+                presetUnmatched = !AuraFiles.IsDamaged(AuraCustomPresets.FileName);
             }
             else
             {
