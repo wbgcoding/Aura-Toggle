@@ -12,6 +12,10 @@
 #       Records the stamp after a successful build. A wildcard resolves to the newest match.
 #       Exit 1 when no artifact is found, or when an artifact is older than -Since.
 #       -Since is an ISO time (UTC unless it carries an offset) or a FILETIME tick count.
+#       -Expect <fingerprint> (from -Fingerprint at build start): exit 1 without saving when the
+#       sources changed while the build ran, so the next build does not count as fresh.
+#   build-stamp.ps1 -Fingerprint -Project <dir> -Key <name> [-Extra <text>]
+#       Prints the current fingerprint; take it before the build and pass it to -Save -Expect.
 #   build-stamp.ps1 -Clear -Project <dir> [-Key <name>]
 #       Forgets the stamps of a project (or only those of one key).
 #   build-stamp.ps1 -Now
@@ -34,11 +38,13 @@ param(
     [switch]$Save,
     [switch]$Clear,
     [switch]$Now,
+    [switch]$Fingerprint,
     [string]$Project,
     [string]$Key,
     [string]$Extra = '',
     [string[]]$Artifact,
     [string]$Since,
+    [string]$Expect,
     [string[]]$Include
 )
 
@@ -298,6 +304,7 @@ function DoSave([string]$root) {
         }
     }
     $fp = GetFingerprint $root
+    if ($Expect -and $Expect -ne $fp) { Say 'sources changed during the build, stamp not saved'; return 1 }
     $path = StampPath $root
     $old = ReadStamp $path
     $entries = @()
@@ -330,9 +337,9 @@ function DoClear([string]$root) {
     0
 }
 
-$mode = @($Check, $Save, $Clear, $Now | Where-Object { $_ }).Count
+$mode = @($Check, $Save, $Clear, $Now, $Fingerprint | Where-Object { $_ }).Count
 if ($mode -ne 1) {
-    [Console]::Error.WriteLine('build-stamp: give exactly one of -Check, -Save, -Clear, -Now')
+    [Console]::Error.WriteLine('build-stamp: give exactly one of -Check, -Save, -Clear, -Now, -Fingerprint')
     exit $(if ($Check) { 1 } else { 2 })
 }
 if ($Now) {
@@ -347,6 +354,7 @@ try {
     if (-not [IO.Directory]::Exists($root)) { throw ('project folder not found: ' + $root) }
     if ($Check) { $code = DoCheck $root }
     elseif ($Save) { $code = DoSave $root }
+    elseif ($Fingerprint) { [Console]::Out.WriteLine((GetFingerprint $root)); $code = 0 }
     else { $code = DoClear $root }
 } catch {
     $code = 1

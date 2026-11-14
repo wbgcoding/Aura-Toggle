@@ -36,7 +36,7 @@ REM build sitting at `pause`. The quotes are stripped before comparing: spliced 
 REM they are, the doubled quotes of a real double click broke the line and cmd quit on the spot,
 REM so a failed build vanished before it could be read. Delayed expansion is on for that one
 REM line only, since it is the one way to strip quotes without the quotes breaking the `set`.
-REM NOPAUSE (CI, the autobuild hook, agents) always counts as automated. Only a double click gets
+REM NOPAUSE (CI and other automated runs) always counts as automated. Only a double click gets
 REM the small window, the pause on error and the 10 second close on success; an automated run
 REM never resizes, blocks or waits.
 set "DBLCLICK="
@@ -72,6 +72,8 @@ set "BS=%~dp0tools\build-stamp.ps1"
 set "BSKEY=exe"
 set "BSEXTRA=%MODE%"
 if not defined BSEXTRA set "BSEXTRA=all"
+REM The SDK version is part of the key, so a toolchain update on the same commit rebuilds.
+for /f "usebackq delims=" %%V in (`dotnet --version 2^>nul`) do set "BSEXTRA=%BSEXTRA% sdk %%V"
 set "BSART="
 set "BSFRESH="
 set "BSFORCE="
@@ -82,6 +84,10 @@ if not exist "%BS%" goto :bs_start
 for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Check -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%"`) do set "BSFRESH=%%A"
 if defined BSFRESH goto :bs_uptodate
 :bs_start
+REM The fingerprint is taken before the build: a source edit made while it runs must not be
+REM recorded as built, so -Save refuses when the sources no longer match it.
+set "BSFP="
+if exist "%BS%" for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Fingerprint -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%"`) do set "BSFP=%%A"
 REM A running copy locks its own exe, which makes the publish step fail after ten retries -
 REM that failure aborts "all" before it ever reaches the installer, so the installer silently
 REM never appears. Closing it first is safe - but only this project's own build output: a plain
@@ -109,7 +115,7 @@ if errorlevel 1 (
 echo.
 rem === build freshness: save ===
 set "BSART=dist\AuraToggle.exe,dist\Aura On.lnk,dist\Aura Off.lnk"
-if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" -Expect "%BSFP%" >nul 2>&1
 echo Done: %ROOT%dist\%EXE%
 call :okclose
 exit /b 0
@@ -137,7 +143,7 @@ if errorlevel 1 (
 echo.
 rem === build freshness: save ===
 set "BSART=bin\review-build\AuraToggle.exe"
-if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" -Expect "%BSFP%" >nul 2>&1
 echo Done: %ROOT%bin\review-build\%EXE%
 call :okclose
 exit /b 0
@@ -200,7 +206,7 @@ if errorlevel 1 goto :allfailed
 echo.
 rem === build freshness: save ===
 set "BSART=dist\AuraToggle.exe,dist\Aura On.lnk,dist\Aura Off.lnk,dist\AuraToggle-Setup-%APPVER%.exe,dist\SHA256SUMS.txt"
-if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" -Expect "%BSFP%" >nul 2>&1
 echo Everything is in %ROOT%dist
 dir /b "%ROOT%dist"
 call :okclose
@@ -312,7 +318,7 @@ echo Installer: %ROOT%dist\AuraToggle-Setup-%APPVER%.exe
 rem === build freshness: save (a full build saves after the checksums instead) ===
 if /I "%~1"=="noexit" goto :bs_nosave_inst
 set "BSART=dist\AuraToggle.exe,dist\Aura On.lnk,dist\Aura Off.lnk,dist\AuraToggle-Setup-%APPVER%.exe"
-if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" >nul 2>&1
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "%BSART%" -Expect "%BSFP%" >nul 2>&1
 :bs_nosave_inst
 if /I not "%~1"=="noexit" call :okclose
 exit /b 0
