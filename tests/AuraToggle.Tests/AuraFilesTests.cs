@@ -402,6 +402,28 @@ public sealed class AuraFilesTests : PersistenceTest
         Assert.NotNull(again);
     }
 
+    // A read that failed while a virus scanner held the file read as defaults, and the next save
+    // wrote those over the user's file. A hold of a few dozen milliseconds is now ridden out.
+    [Fact]
+    public void ReadWaitsOutAFileHeldForAMoment()
+    {
+        TestData.WriteRaw("f.json", "{\"kept\":true}");
+        var held = new FileStream(AuraFiles.PathTo("f.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var release = new Thread(() =>
+        {
+            Thread.Sleep(60);
+            held.Dispose();
+        }) { IsBackground = true };
+        release.Start();
+
+        using JsonDocument? document = AuraFiles.Read("f.json", JsonValueKind.Object);
+        release.Join();
+
+        Assert.NotNull(document);
+        Assert.True(document!.RootElement.GetProperty("kept").GetBoolean());
+        Assert.False(AuraFiles.IsDamaged("f.json"));
+    }
+
     // ---- damaged copies ----
 
     [Fact]

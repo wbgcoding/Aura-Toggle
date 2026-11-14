@@ -34,6 +34,7 @@ internal static class AuraCustomPresets
     {
         var presets = new List<CustomPreset>();
         var taken = new HashSet<string>();
+        bool dropped = false;
 
         using JsonDocument? document = AuraFiles.Read(FileName, JsonValueKind.Array);
         if (document == null)
@@ -49,6 +50,7 @@ internal static class AuraCustomPresets
                 // text in the user's profile, so anything at all can be in it.
                 if (item.ValueKind != JsonValueKind.Object)
                 {
+                    dropped = true;
                     continue;
                 }
 
@@ -57,6 +59,7 @@ internal static class AuraCustomPresets
                     !item.TryGetProperty("entries", out JsonElement entriesElement) ||
                     entriesElement.ValueKind != JsonValueKind.Array)
                 {
+                    dropped = true;
                     continue;
                 }
 
@@ -67,12 +70,27 @@ internal static class AuraCustomPresets
                     {
                         entries.Add(read);
                     }
+                    else
+                    {
+                        dropped = true;
+                    }
                 }
 
                 if (entries.Count > 0)
                 {
                     presets.Add(new CustomPreset(UniqueName(name, taken), entries));
                 }
+                else
+                {
+                    dropped = true;
+                }
+            }
+
+            // Whatever was left out would be gone for good with the next save, so the file as it
+            // is now gets copied aside before that save, like one that could not be read at all.
+            if (dropped)
+            {
+                AuraFiles.MarkPartlyRead(FileName);
             }
 
             return presets;
@@ -99,16 +117,12 @@ internal static class AuraCustomPresets
         // build actually knows - or "off" - is trusted from a hand-edited or imported file,
         // otherwise the window names an effect the board never runs while sending the board
         // something else entirely.
-        byte mode = AuraPresets.ValidChannelMode(AuraFiles.JsonByte(entry, "mode"));
+        byte mode = AuraPresets.ValidChannelMode(AuraFiles.StoredMode(entry, "mode"));
 
         // Brightness gets the same treatment as in AuraChannelStates: 0 stays "leave the channel
         // as it is", anything else is held to the range the slider offers. Missing brightness
         // means an entry written before presets carried one, which reads as that same 0.
-        byte brightness = AuraFiles.JsonByte(entry, "brightness");
-        if (brightness != 0)
-        {
-            brightness = Math.Clamp(brightness, AuraState.MinBrightness, AuraState.MaxBrightness);
-        }
+        byte brightness = AuraFiles.StoredBrightness(entry, "brightness");
 
         // Missing channel means an entry written before presets went per-channel: -1 keeps its old
         // meaning of "the whole controller". A channel that is not a whole number, or one below

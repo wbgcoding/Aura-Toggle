@@ -183,16 +183,77 @@ public sealed class AuraCustomPresetsTests : PersistenceTest
         {
             CustomPresetEntry entry = Assert.Single(Assert.Single(Load(One("\"" + field + "\":" + wrong))).Entries);
 
-            // Mode falls back to 0 (off) which is a valid channel mode; the colours and brightness to 0.
-            Assert.Equal(0, field switch
+            // Mode falls back to static, never to "off", which would leave the channel dark; the
+            // colours to 0. Brightness has its own rule, below.
+            int expected = field == "mode" ? AuraState.ModeStatic : 0;
+            if (field == "brightness")
+            {
+                continue;
+            }
+
+            Assert.Equal(expected, field switch
             {
                 "red" => entry.Red,
                 "green" => entry.Green,
                 "blue" => entry.Blue,
-                "brightness" => entry.Brightness,
                 _ => entry.Mode,
             });
         }
+    }
+
+    // A brightness that is not a whole number reads as "leave the channel alone"; a whole number
+    // out of range is held to the slider, at either end, instead of being dropped to 0.
+    [Theory]
+    [InlineData("\"7\"", 0)]
+    [InlineData("true", 0)]
+    [InlineData("null", 0)]
+    [InlineData("[]", 0)]
+    [InlineData("1.5", 0)]
+    [InlineData("1e3", 0)]
+    [InlineData("-1", 10)]
+    [InlineData("-300", 10)]
+    [InlineData("256", 100)]
+    [InlineData("300", 100)]
+    public void LoadHoldsAnyWholeBrightnessToTheSliderRange(string stored, int expected)
+    {
+        CustomPresetEntry entry = Assert.Single(Assert.Single(Load(One("\"brightness\":" + stored))).Entries);
+
+        Assert.Equal(expected, entry.Brightness);
+    }
+
+    [Fact]
+    public void AnUnreadableModeReadsAsStaticNotOff()
+    {
+        CustomPresetEntry entry = Assert.Single(Assert.Single(Load(One("\"mode\":300"))).Entries);
+
+        Assert.Equal(AuraState.ModeStatic, entry.Mode);
+    }
+
+    // Whatever Load leaves out would be gone with the next save; the file as it was is kept aside.
+    [Fact]
+    public void SaveAfterALoadThatLeftAnEntryOutKeepsACopyOfTheFile()
+    {
+        string original = "[{\"name\":\"P\",\"entries\":[{\"deviceKey\":\"d\",\"channel\":1,\"mode\":1}," +
+            "{\"deviceKey\":\"d\",\"channel\":\"x\",\"mode\":1}]}]";
+        TestData.WriteRaw(AuraCustomPresets.FileName, original);
+        List<CustomPreset> presets = AuraCustomPresets.Load();
+        Assert.Single(Assert.Single(presets).Entries);
+
+        Assert.True(AuraCustomPresets.Save(presets));
+
+        Assert.Equal(original, File.ReadAllText(Assert.Single(BadCopies("presets"))));
+    }
+
+    [Fact]
+    public void SaveAfterACleanLoadKeepsNoCopy()
+    {
+        TestData.WriteRaw(AuraCustomPresets.FileName,
+            "[{\"name\":\"P\",\"entries\":[{\"deviceKey\":\"d\",\"channel\":1,\"mode\":1}]}]");
+        List<CustomPreset> presets = AuraCustomPresets.Load();
+
+        Assert.True(AuraCustomPresets.Save(presets));
+
+        Assert.Empty(BadCopies("presets"));
     }
 
     [Theory]

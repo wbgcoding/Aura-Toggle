@@ -14,13 +14,13 @@ A calmer title bar and sturdier handling of stored and imported files and of com
 
 ### Fixed
 
-- A wrong argument next to `-device` or `-channel` (an unknown effect, a bad colour, a brightness over 100) is reported as a usage error (exit code 2) on every machine. Without a controller it used to say "no controller" (exit code 3)
+- A wrong argument next to `-device` or `-channel` (an unknown effect, a bad colour, a brightness over 100), or a device number that is no number, is reported as a usage error (exit code 2) on every machine. Without a controller it used to say "no controller" (exit code 3)
 - Switching on forgets a custom preset that was deleted since it was applied, so the window and `-status` no longer name it as active
-- One hand-edited preset entry whose channel was not a number made every preset after it disappear, and the next save wrote the shortened list back. Now only that entry is dropped, as is an entry whose channel is a fraction
+- One hand-edited preset entry whose channel was not a number made every preset after it disappear, and the next save wrote the shortened list back. Now only that entry is dropped, as is an entry whose channel is a fraction, and the file as it was is copied aside before the next save
 - Importing a preset file with one bad channel entry no longer rejects the whole file; only that entry is left out
 - An imported preset with an unknown effect or an out-of-range brightness is corrected the same way as a stored one (static effect, brightness held to the slider's range) instead of being applied as is
-- A setting is no longer lost when a virus scanner or a second copy of the app has the file open at the moment it is saved; the save waits a quarter of a second at most
-- A stored colour or effect value of the wrong kind (text, true/false, a list), or a name with a broken escaped character, no longer ends reading the file and costs only that one value
+- A setting is no longer lost when a virus scanner or a second copy of the app has the file open at the moment it is read or saved; reading and saving wait a quarter of a second at most
+- A stored colour or effect value of the wrong kind (text, true/false, a list), or a name with a broken escaped character, no longer ends reading the file and costs only that one value. An effect that cannot be read becomes the static effect instead of switching the channel off, and a stored brightness out of range is held to the slider's range instead of being ignored
 
 ## [1.7.1] - 2026-10-25
 

@@ -181,12 +181,10 @@ internal static class AuraChannelStates
                     continue;
                 }
 
-                byte brightness = AuraFiles.JsonByte(property.Value, "brightness");
-
                 // Same rule AuraDevice.Verified applies before a mode reaches the hardware: only
                 // a mode this build actually knows - or "off" - is trusted from a hand-edited or
                 // outdated file, otherwise the window would name an effect the board never runs.
-                byte mode = AuraPresets.ValidChannelMode(AuraFiles.JsonByte(property.Value, "mode"));
+                byte mode = AuraPresets.ValidChannelMode(AuraFiles.StoredMode(property.Value, "mode"));
 
                 states[key] = new ChannelLighting(
                     mode,
@@ -199,9 +197,7 @@ internal static class AuraChannelStates
                     // Missing means the channel follows the board-wide brightness, which is also
                     // what every record written before brightness went per channel means - left
                     // as zero rather than clamped into range, unlike a genuine stored value.
-                    brightness == 0
-                        ? (byte)0
-                        : Math.Clamp(brightness, AuraState.MinBrightness, AuraState.MaxBrightness),
+                    AuraFiles.StoredBrightness(property.Value, "brightness"),
                     AuraFiles.JsonNumber(property.Value, "seen", 0));
             }
 

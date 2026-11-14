@@ -141,7 +141,16 @@ public sealed class AuraChannelStatesTests : PersistenceTest
         {
             ChannelLighting look = Assert.Single(Load("{\"d|0\":{\"" + field + "\":" + wrong + "}}")).Value;
 
-            Assert.Equal(0, field switch
+            // Mode falls back to static, never to "off"; a whole brightness out of range is held
+            // to the slider (-1 the dimmest, 256 the brightest), anything else reads as 0.
+            int expected = field switch
+            {
+                "mode" => AuraState.ModeStatic,
+                "brightness" when wrong == "-1" => AuraState.MinBrightness,
+                "brightness" when wrong == "256" => AuraState.MaxBrightness,
+                _ => 0,
+            };
+            Assert.Equal(expected, field switch
             {
                 "red" => look.Red,
                 "green" => look.Green,

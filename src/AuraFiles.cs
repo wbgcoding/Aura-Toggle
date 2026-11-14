@@ -341,7 +341,7 @@ internal static class AuraFiles
                 return null;
             }
 
-            JsonDocument document = JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
+            JsonDocument document = JsonDocument.Parse(ReadText(path));
             if (document.RootElement.ValueKind == expectedRoot)
             {
                 MarkDamaged(name, false);
@@ -381,7 +381,38 @@ internal static class AuraFiles
         }
     }
 
-    /// <summary>True when the last read of <paramref name="name"/> found it present but unusable.</summary>
+    /// <summary>
+    /// Reads a stored file whole. A virus scanner or a second copy of the app can hold it for a
+    /// moment; a failed read reads as defaults and the next save would write those back, so the
+    /// same short retries as a save ride that out. A missing file is not retried.
+    /// </summary>
+    private static string ReadText(string path)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return File.ReadAllText(path, Encoding.UTF8);
+            }
+            catch (Exception ex) when (attempt < MoveAttempts &&
+                ex is not (FileNotFoundException or DirectoryNotFoundException) &&
+                ex is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(MoveRetryStepMs * attempt);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Marks a file that read fine but had parts the reader had to leave out, so the first save
+    /// that would write the shortened content back keeps a copy of the original first.
+    /// </summary>
+    internal static void MarkPartlyRead(string name) => MarkDamaged(name, true);
+
+    /// <summary>
+    /// True when the last read of <paramref name="name"/> found it present but unusable, whole or
+    /// in part.
+    /// </summary>
     internal static bool IsDamaged(string name)
     {
         lock (DamagedFiles)
@@ -504,6 +535,25 @@ internal static class AuraFiles
         value.TryGetByte(out byte parsed)
             ? parsed
             : fallback;
+
+    /// <summary>
+    /// A stored per-channel mode before <see cref="AuraPresets.ValidChannelMode"/>: missing keeps
+    /// its old meaning of "off", but a value that is there and not a small number reads as static,
+    /// never as "off", which would leave the channel dark.
+    /// </summary>
+    public static byte StoredMode(JsonElement element, string name) =>
+        element.TryGetProperty(name, out _) ? JsonByte(element, name, AuraState.ModeStatic) : AuraState.ModeOff;
+
+    /// <summary>
+    /// A stored per-channel brightness: 0 (also when missing or not a whole number) means
+    /// "follow the board", any other number is held to the range the slider offers, so 300 reads
+    /// as the brightest and a negative number as the dimmest setting.
+    /// </summary>
+    public static byte StoredBrightness(JsonElement element, string name)
+    {
+        int value = JsonNumber(element, name, 0);
+        return value == 0 ? (byte)0 : (byte)Math.Clamp(value, AuraState.MinBrightness, AuraState.MaxBrightness);
+    }
 
     public static bool JsonFlag(JsonElement element, string name, bool fallback = false) =>
         element.TryGetProperty(name, out JsonElement value) &&
