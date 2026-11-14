@@ -150,6 +150,24 @@ public sealed class ProgramSwitchTests : DataFolderTest
         Assert.Equal(new[] { new ChannelLook(0, Static, 200, 100, 50), new ChannelLook(1, Static, 200, 100, 50) }, Burst(a));
     }
 
+    // A file that read with one bad entry left out still says what it holds: a preset missing
+    // from it is gone, and its name must not linger because of an unrelated broken entry.
+    [Fact]
+    public void SwitchingOnForgetsAMissingPresetEvenWhenTheFileHadABadEntry()
+    {
+        Stored.State(Board(on: false, preset: "Gone"));
+        TestData.WriteRaw(AuraCustomPresets.FileName,
+            "[{\"name\":\"Other\",\"entries\":[{\"deviceKey\":\"x\",\"channel\":1,\"mode\":1}," +
+            "{\"deviceKey\":\"x\",\"channel\":\"bad\",\"mode\":1}]}]");
+        using FakeController a = A();
+
+        AuraState result = Switch(true, null, -1, Open(a));
+
+        Assert.True(result.On);
+        Assert.Equal("", result.CustomPreset);
+        Assert.Equal("", AuraState.Load().CustomPreset);
+    }
+
     [Fact]
     public void SwitchingOffKeepsTheNameOfAPresetThatNoLongerExists()
     {

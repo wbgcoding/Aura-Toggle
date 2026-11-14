@@ -1002,7 +1002,7 @@ internal static partial class Program
                 // nothing left to run, so it is dropped from the state just like an unmatched one.
                 // Not when presets.json could not be read this time (locked, damaged): the
                 // preset may well still be there, so only this switch falls back to the restore.
-                presetUnmatched = !AuraFiles.IsDamaged(AuraCustomPresets.FileName);
+                presetUnmatched = !AuraFiles.IsUnreadable(AuraCustomPresets.FileName);
             }
             else
             {

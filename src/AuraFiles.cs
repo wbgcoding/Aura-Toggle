@@ -364,6 +364,10 @@ internal static class AuraFiles
     // defaults plus one change; it is copied aside first.
     private static readonly System.Collections.Generic.HashSet<string> DamagedFiles = new();
 
+    // The subset whose last read failed outright, as opposed to one that read with parts left out.
+    // Guarded by the DamagedFiles lock.
+    private static readonly System.Collections.Generic.HashSet<string> UnreadableFiles = new();
+
     private const int KeptBadCopies = 3;
 
     private static void MarkDamaged(string name, bool damaged)
@@ -373,10 +377,12 @@ internal static class AuraFiles
             if (damaged)
             {
                 DamagedFiles.Add(name);
+                UnreadableFiles.Add(name);
             }
             else
             {
                 DamagedFiles.Remove(name);
+                UnreadableFiles.Remove(name);
             }
         }
     }
@@ -407,17 +413,24 @@ internal static class AuraFiles
     /// Marks a file that read fine but had parts the reader had to leave out, so the first save
     /// that would write the shortened content back keeps a copy of the original first.
     /// </summary>
-    internal static void MarkPartlyRead(string name) => MarkDamaged(name, true);
-
-    /// <summary>
-    /// True when the last read of <paramref name="name"/> found it present but unusable, whole or
-    /// in part.
-    /// </summary>
-    internal static bool IsDamaged(string name)
+    internal static void MarkPartlyRead(string name)
     {
         lock (DamagedFiles)
         {
-            return DamagedFiles.Contains(name);
+            DamagedFiles.Add(name);
+        }
+    }
+
+    /// <summary>
+    /// True when the last read of <paramref name="name"/> found it present but could not use it
+    /// at all. A file that read fine with some parts left out does not count: what it holds is
+    /// known, so a name missing from it is really gone.
+    /// </summary>
+    internal static bool IsUnreadable(string name)
+    {
+        lock (DamagedFiles)
+        {
+            return UnreadableFiles.Contains(name);
         }
     }
 

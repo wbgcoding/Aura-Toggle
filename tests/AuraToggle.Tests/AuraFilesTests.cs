@@ -421,7 +421,7 @@ public sealed class AuraFilesTests : PersistenceTest
 
         Assert.NotNull(document);
         Assert.True(document!.RootElement.GetProperty("kept").GetBoolean());
-        Assert.False(AuraFiles.IsDamaged("f.json"));
+        Assert.False(AuraFiles.IsUnreadable("f.json"));
     }
 
     // ---- damaged copies ----
