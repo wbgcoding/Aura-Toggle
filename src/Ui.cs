@@ -281,6 +281,28 @@ internal static class Theme
     }
 
     /// <summary>
+    /// Paints the title bar in the window's own background and text colours, active or not, so
+    /// it reads as part of the window instead of a strip in Windows' grey or accent colour.
+    /// Before Windows 11 only the light or dark frame is set, the closest that version allows.
+    /// </summary>
+    public static void TintTitleBar(IntPtr window)
+    {
+        const int UseImmersiveDarkMode = 20;
+        const int CaptionColour = 35;
+        const int CaptionTextColour = 36;
+
+        int dark = Dark ? 1 : 0;
+        int caption = ColourRef(Background);
+        int text = ColourRef(Text);
+        DwmSetWindowAttribute(window, UseImmersiveDarkMode, ref dark, sizeof(int));
+        DwmSetWindowAttribute(window, CaptionColour, ref caption, sizeof(int));
+        DwmSetWindowAttribute(window, CaptionTextColour, ref text, sizeof(int));
+    }
+
+    /// <summary>A colour as Windows' COLORREF: red in the low byte, blue in the third.</summary>
+    internal static int ColourRef(Color colour) => colour.R | (colour.G << 8) | (colour.B << 16);
+
+    /// <summary>
     /// Turns off the zoom Windows plays when a window opens or closes. On a popup it read as a
     /// panel that first came up small and grew, and shrank before it went away.
     /// </summary>

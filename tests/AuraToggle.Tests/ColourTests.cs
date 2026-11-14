@@ -461,4 +461,17 @@ public class ColourTests
 
         Assert.True(Math.Abs(EffectPainter.Luminance(Theme.Text) - EffectPainter.Luminance(Theme.Background)) > 0.4);
     }
+
+    // The title bar takes its colours as a COLORREF: red in the low byte. Swapped bytes would paint
+    // the dark background (32,33,36) as a faint blue and the light one off by a tint.
+    [Theory]
+    [InlineData(1, 2, 3, 0x030201)]
+    [InlineData(32, 33, 36, 0x242120)]
+    [InlineData(250, 250, 251, 0xFBFAFA)]
+    [InlineData(255, 0, 0, 0x0000FF)]
+    [InlineData(0, 0, 255, 0xFF0000)]
+    public void TitleBarColoursAreSentRedFirst(int red, int green, int blue, int expected)
+    {
+        Assert.Equal(expected, Theme.ColourRef(Color.FromArgb(200, red, green, blue)));
+    }
 }

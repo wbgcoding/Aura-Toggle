@@ -6,7 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The title bar takes the window's own background and text colour in light and dark mode, instead of Windows' grey or accent colour
+
 ### Fixed
+
+- A wrong argument next to `-device` or `-channel` (an unknown effect, a bad colour, a brightness over 100) is reported as a usage error (exit code 2) on every machine. Without a controller it used to say "no controller" (exit code 3)
+- Switching on forgets a custom preset that was deleted since it was applied, so the window and `-status` no longer name it as active
 
 - One hand-edited preset entry whose channel was not a whole number made every preset after it disappear, and the next save wrote the shortened list back. Now only that entry is dropped
 - Importing a preset file with one bad channel entry no longer rejects the whole file; only that entry is left out

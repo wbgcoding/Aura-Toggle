@@ -205,6 +205,7 @@ internal sealed partial class ToggleForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         Text = Strings.WindowTitle;
         CaptionKeeper.Attach(this);
+        HandleCreated += (_, _) => Theme.TintTitleBar(Handle);
         Icon = LoadIcon();
         ClientSize = new Size(MinWidth, InitialHeight);   // unscaled: replaced by ResizeToContent before the window shows
         FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -2138,6 +2139,7 @@ internal sealed partial class ToggleForm : Form
         _themeEchoUntil = 0;
         if (IsHandleCreated)
         {
+            Theme.TintTitleBar(Handle);
             SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0,
                 SwpNoSize | SwpNoMove | SwpNoZOrder | SwpNoActivate | (uint)SwpFrameChanged);
         }
