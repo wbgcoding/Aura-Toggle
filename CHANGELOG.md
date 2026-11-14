@@ -4,19 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.2] - 2026-11-14
+
+A calmer title bar and sturdier handling of stored and imported files and of command line mistakes.
 
 ### Changed
 
-- The title bar takes the window's own background and text colour in light and dark mode, instead of Windows' grey or accent colour
+- On Windows 11 the title bar takes the window's own background and text colour in light and dark mode, instead of Windows' grey or accent colour. Windows 10 gets the matching light or dark frame
 
 ### Fixed
 
 - A wrong argument next to `-device` or `-channel` (an unknown effect, a bad colour, a brightness over 100) is reported as a usage error (exit code 2) on every machine. Without a controller it used to say "no controller" (exit code 3)
 - Switching on forgets a custom preset that was deleted since it was applied, so the window and `-status` no longer name it as active
-
-- One hand-edited preset entry whose channel was not a whole number made every preset after it disappear, and the next save wrote the shortened list back. Now only that entry is dropped
+- One hand-edited preset entry whose channel was not a number made every preset after it disappear, and the next save wrote the shortened list back. Now only that entry is dropped, as is an entry whose channel is a fraction
 - Importing a preset file with one bad channel entry no longer rejects the whole file; only that entry is left out
+- An imported preset with an unknown effect or an out-of-range brightness is corrected the same way as a stored one (static effect, brightness held to the slider's range) instead of being applied as is
 - A setting is no longer lost when a virus scanner or a second copy of the app has the file open at the moment it is saved; the save waits a quarter of a second at most
 - A stored colour or effect value of the wrong kind (text, true/false, a list), or a name with a broken escaped character, no longer ends reading the file and costs only that one value
 
@@ -427,6 +429,7 @@ Aura Sync devices, and plain 12 V RGB headers get no channel of their own, only 
 reports as its onboard zone is switched. The controller cannot report back which effect is
 running, so the tool remembers what it last set.
 
+[1.7.2]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/wbgcoding/Aura-Toggle/compare/v1.5.0...v1.6.0
