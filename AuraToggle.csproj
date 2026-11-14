@@ -41,7 +41,8 @@
     <None Remove="tests\**" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- The tests build against the Review configuration; the published exe names no friend. -->
+  <ItemGroup Condition="'$(Configuration)' != 'Release'">
     <InternalsVisibleTo Include="AuraToggle.Tests" />
   </ItemGroup>
 
