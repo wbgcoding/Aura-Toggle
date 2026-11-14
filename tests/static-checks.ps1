@@ -243,9 +243,24 @@ if (Test-Path $privateList) {
     }
 }
 
+# The README's closing credit line is the one sanctioned place a tool is named: its last line,
+# right-aligned, carrying the copyright. Only that exact line is let through the trace check.
+$readmePath = Join-Path $root "README.md"
+$creditLine = 0
+if (Test-Path $readmePath) {
+    $readmeLines = [IO.File]::ReadAllLines($readmePath)
+    for ($i = $readmeLines.Count - 1; $i -ge 0; $i--) {
+        if ($readmeLines[$i].Trim()) {
+            if ($readmeLines[$i] -match '^<p align="right">\S \d{4} BGCoding \S Made with \w+</p>$') { $creditLine = $i + 1 }
+            break
+        }
+    }
+}
+
 foreach ($line in Get-SourceLines $textFiles) {
     # This file is the one place the patterns themselves are written down.
     if ($line.File -eq "tests\static-checks.ps1") { continue }
+    if ($line.File -eq "README.md" -and $line.Number -eq $creditLine) { continue }
 
     # Case-sensitive: Spanish and Portuguese "todo" is an ordinary word.
     if ($line.Text -cmatch "\b(TODO|FIXME|HACK|XXX)\b") {
