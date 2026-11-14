@@ -434,9 +434,14 @@ internal static partial class Program
             return 0;
         }
 
+        if (ParseApply(command, rest) is not ApplyAction apply)
+        {
+            return Usage();
+        }
+
         if (deviceArg == null && channelArg == null)
         {
-            return RunApply(command, rest, null, -1, null, null);
+            return apply(null, -1, null, null);
         }
 
         // One discovery serves both the lookup of the named target and the action, under one
@@ -457,7 +462,7 @@ internal static partial class Program
                 return targetingError;
             }
 
-            return RunApply(command, rest, targetDevice, targetChannel, devices, summaries);
+            return apply(targetDevice, targetChannel, devices, summaries);
         }
         finally
         {
@@ -470,29 +475,49 @@ internal static partial class Program
     /// a targeted call already opened (null for the whole board); the caller disposes them.
     /// </summary>
     internal static int RunApply(string command, List<string> rest, string? targetDevice, int targetChannel,
-        List<AuraDevice>? devices, List<AuraDeviceSummary>? summaries)
+        List<AuraDevice>? devices, List<AuraDeviceSummary>? summaries) =>
+        ParseApply(command, rest) is ApplyAction apply ? apply(targetDevice, targetChannel, devices, summaries) : Usage();
+
+    /// <summary>One parsed on/off/toggle/preset/brightness command, run against its target.</summary>
+    internal delegate int ApplyAction(string? targetDevice, int targetChannel, List<AuraDevice>? devices,
+        List<AuraDeviceSummary>? summaries);
+
+    /// <summary>
+    /// Checks the arguments of an on/off/toggle/preset/brightness command and returns what to run,
+    /// or null when they are not a command this accepts. Kept apart from running it, so a typo is
+    /// reported as one before a targeted call goes looking for controllers: otherwise the same
+    /// wrong argument gave a usage error on one machine and "no controller" on another.
+    /// </summary>
+    internal static ApplyAction? ParseApply(string command, List<string> rest)
     {
         if (rest.Count == 1 && command is "on" or "off")
         {
-            Switch(command == "on", targetDevice, targetChannel, devices);
-            return 0;
+            bool on = command == "on";
+            return (targetDevice, targetChannel, devices, _) =>
+            {
+                Switch(on, targetDevice, targetChannel, devices);
+                return 0;
+            };
         }
 
         if (rest.Count == 1 && command == "toggle")
         {
-            // A single channel decides by its own remembered state, not the board's - the whole
-            // point of targeting one channel is that it can differ from the others. A channel
-            // with no record of its own has never been switched on its own, so it still follows
-            // whatever the board is doing.
-            bool currentlyOn = targetChannel >= 0
-                ? AuraChannelStates.Get(AuraChannelStates.All(), targetDevice!, targetChannel)?.On
-                    ?? AuraState.Load().On
-                : !string.IsNullOrEmpty(targetDevice)
-                    ? ControllerIsOn(targetDevice, summaries!)
-                    : AuraState.Load().On;
+            return (targetDevice, targetChannel, devices, summaries) =>
+            {
+                // A single channel decides by its own remembered state, not the board's - the whole
+                // point of targeting one channel is that it can differ from the others. A channel
+                // with no record of its own has never been switched on its own, so it still follows
+                // whatever the board is doing.
+                bool currentlyOn = targetChannel >= 0
+                    ? AuraChannelStates.Get(AuraChannelStates.All(), targetDevice!, targetChannel)?.On
+                        ?? AuraState.Load().On
+                    : !string.IsNullOrEmpty(targetDevice)
+                        ? ControllerIsOn(targetDevice, summaries!)
+                        : AuraState.Load().On;
 
-            Switch(!currentlyOn, targetDevice, targetChannel, devices);
-            return 0;
+                Switch(!currentlyOn, targetDevice, targetChannel, devices);
+                return 0;
+            };
         }
 
         if (command == "preset" && rest.Count is 2 or 3)
@@ -500,7 +525,7 @@ internal static partial class Program
             AuraPreset? preset = AuraPresets.Find(rest[1]);
             if (preset == null)
             {
-                return Usage();
+                return null;
             }
 
             Color? colour = null;
@@ -508,14 +533,17 @@ internal static partial class Program
             {
                 if (!TryParseColour(rest[2], out Color parsed))
                 {
-                    return Usage();
+                    return null;
                 }
 
                 colour = parsed;
             }
 
-            ApplyPreset(preset, colour, targetDevice, targetChannel, devices);
-            return 0;
+            return (targetDevice, targetChannel, devices, _) =>
+            {
+                ApplyPreset(preset, colour, targetDevice, targetChannel, devices);
+                return 0;
+            };
         }
 
         if (command == "brightness" && rest.Count == 2)
@@ -523,17 +551,21 @@ internal static partial class Program
             if (!byte.TryParse(rest[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out byte percent) ||
                 percent > AuraState.MaxBrightness)
             {
-                return Usage();
+                return null;
             }
 
             // Below the floor is clamped rather than rejected: "-brightness 0" reads as "as dim as
             // this tool goes", not a typo worth an error - unlike a value above the ceiling, which
             // is far more likely to be one.
-            SetBrightness(Math.Max(percent, AuraState.MinBrightness), targetDevice, targetChannel, devices);
-            return 0;
+            byte level = Math.Max(percent, AuraState.MinBrightness);
+            return (targetDevice, targetChannel, devices, _) =>
+            {
+                SetBrightness(level, targetDevice, targetChannel, devices);
+                return 0;
+            };
         }
 
-        return Usage();
+        return null;
     }
 
     /// <summary>
@@ -958,7 +990,13 @@ internal static partial class Program
         if (on && string.IsNullOrEmpty(deviceKey) && state.CustomPreset.Length > 0)
         {
             CustomPreset? preset = AuraCustomPresets.Load().Find(p => p.Name == state.CustomPreset);
-            if (preset != null)
+            if (preset == null)
+            {
+                // Deleted, or renamed by hand in presets.json, since it was applied: there is
+                // nothing left to run, so it is dropped from the state just like an unmatched one.
+                presetUnmatched = true;
+            }
+            else
             {
                 // Null when the preset names none of the attached controllers: the plain restore
                 // below brings the board back instead of failing on a stale device path.

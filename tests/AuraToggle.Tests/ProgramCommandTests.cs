@@ -91,6 +91,38 @@ public sealed class ProgramCommandTests : DataFolderTest
         Assert.Equal(Usage, Cli.Run("-channel", "x", "-device", "1").ExitCode);
     }
 
+    // A wrong argument next to -device or -channel used to be found only after the controller
+    // search, so with no controller it reported "no controller" instead of the typo, and the same
+    // command line gave a different exit code on another machine.
+    [Theory]
+    [InlineData("-preset", "nonsense", "-device", "1")]
+    [InlineData("-preset", "static", "not-a-colour", "-channel", "1")]
+    [InlineData("-preset", "-channel", "1")]
+    [InlineData("-brightness", "101", "-device", "1")]
+    [InlineData("-brightness", "x", "-channel", "1.1")]
+    [InlineData("-on", "extra", "-device", "1")]
+    [InlineData("-toggle", "now", "-channel", "1")]
+    [InlineData("-bogus", "-device", "1")]
+    public void AWrongArgumentWithTargetingIsUsageBeforeAnyControllerSearch(params string[] args)
+    {
+        SeedStoredFiles();
+        Dictionary<string, string> before = Snapshot();
+
+        CliResult result = Cli.Run(args);
+
+        Assert.Equal(Usage, result.ExitCode);
+        Assert.Equal(before, Snapshot());
+    }
+
+    [Theory]
+    [InlineData("-preset", "rainbow", "-device", "1")]
+    [InlineData("-brightness", "50", "-channel", "1")]
+    [InlineData("-on", "-device", "1")]
+    public void AWellFormedTargetedCommandStillLooksForTheController(params string[] args)
+    {
+        Assert.Equal(NoController, Cli.Run(args).ExitCode);
+    }
+
     [Fact]
     public void OnlyTargetingAndNoCommandIsUsage()
     {
@@ -429,13 +461,6 @@ public sealed class ProgramCommandTests : DataFolderTest
     {
         Assert.Equal(NoController, Cli.Run("-device", "1", "-channel", "2", "-off").ExitCode);
         Assert.Equal(NoController, Cli.Run("-channel", "2", "-brightness", "40").ExitCode);
-    }
-
-    [Fact]
-    public void ATargetedBadCommandWordIsStillUsageOnceTheControllersAreFound()
-    {
-        // No controller means exit 3 first; the point is that a bad word never turns into a switch.
-        Assert.Equal(NoController, Cli.Run("-bogus", "-device", "1").ExitCode);
     }
 
     // ---- Stored files stay untouched when no controller answers ----------------------------

@@ -117,6 +117,35 @@ public sealed class ProgramSwitchTests : DataFolderTest
         Assert.Equal(result, AuraState.Load());
     }
 
+    // A preset deleted after it was applied stayed named in the state for good: the window and
+    // "-status" kept calling it active although nothing could run it any more.
+    [Fact]
+    public void SwitchingOnForgetsAPresetThatNoLongerExists()
+    {
+        Stored.State(Board(on: false, preset: "Gone"));
+        using FakeController a = A();
+
+        AuraState result = Switch(true, null, -1, Open(a));
+
+        Assert.True(result.On);
+        Assert.Equal("", result.CustomPreset);
+        Assert.Equal("", AuraState.Load().CustomPreset);
+        Assert.Equal(new[] { new ChannelLook(0, Static, 200, 100, 50), new ChannelLook(1, Static, 200, 100, 50) }, Burst(a));
+    }
+
+    [Fact]
+    public void SwitchingOffKeepsTheNameOfAPresetThatNoLongerExists()
+    {
+        // Only switching on looks the preset up; switching off leaves the state's name alone.
+        Stored.State(Board(on: true, preset: "Gone"));
+        using FakeController a = A();
+
+        AuraState result = Switch(false, null, -1, Open(a));
+
+        Assert.False(result.On);
+        Assert.Equal("Gone", AuraState.Load().CustomPreset);
+    }
+
     [Fact]
     public void OffThenOnLeavesTheRecordsExactlyAsTheyWere()
     {
