@@ -283,18 +283,24 @@ internal static class Theme
     /// <summary>
     /// Paints the title bar in the window's own background and text colours, active or not, so
     /// it reads as part of the window instead of a strip in Windows' grey or accent colour.
-    /// Before Windows 11 only the light or dark frame is set, the closest that version allows.
+    /// Before Windows 11 only the light or dark frame is set, the closest that version allows;
+    /// Windows 10 before 20H1 knows that setting only under its older number.
     /// </summary>
     public static void TintTitleBar(IntPtr window)
     {
         const int UseImmersiveDarkMode = 20;
+        const int UseImmersiveDarkModeBefore20H1 = 19;
         const int CaptionColour = 35;
         const int CaptionTextColour = 36;
 
         int dark = Dark ? 1 : 0;
         int caption = ColourRef(Background);
         int text = ColourRef(Text);
-        DwmSetWindowAttribute(window, UseImmersiveDarkMode, ref dark, sizeof(int));
+        if (DwmSetWindowAttribute(window, UseImmersiveDarkMode, ref dark, sizeof(int)) != 0)
+        {
+            DwmSetWindowAttribute(window, UseImmersiveDarkModeBefore20H1, ref dark, sizeof(int));
+        }
+
         DwmSetWindowAttribute(window, CaptionColour, ref caption, sizeof(int));
         DwmSetWindowAttribute(window, CaptionTextColour, ref text, sizeof(int));
     }
