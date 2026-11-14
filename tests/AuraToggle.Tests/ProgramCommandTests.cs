@@ -103,6 +103,9 @@ public sealed class ProgramCommandTests : DataFolderTest
     [InlineData("-on", "extra", "-device", "1")]
     [InlineData("-toggle", "now", "-channel", "1")]
     [InlineData("-bogus", "-device", "1")]
+    [InlineData("-on", "-device", "x")]
+    [InlineData("-on", "-device", "0")]
+    [InlineData("-preset", "rainbow", "-device", "-2")]
     public void AWrongArgumentWithTargetingIsUsageBeforeAnyControllerSearch(params string[] args)
     {
         SeedStoredFiles();

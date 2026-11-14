@@ -444,6 +444,16 @@ internal static partial class Program
             return apply(null, -1, null, null);
         }
 
+        // A device number that is no number at all is a typo on every machine, so it gets the
+        // usage error before the search instead of "no controller" where none is attached.
+        if (deviceArg != null &&
+            (!int.TryParse(deviceArg, NumberStyles.Integer, CultureInfo.InvariantCulture, out int deviceNumber) ||
+             deviceNumber < 1))
+        {
+            WriteError(Strings.ErrorDeviceNotFound);
+            return 2;
+        }
+
         // One discovery serves both the lookup of the named target and the action, under one
         // hardware lock, so the controllers are not handshaken again for every step.
         using IDisposable guard = AuraFiles.HardwareLock();
