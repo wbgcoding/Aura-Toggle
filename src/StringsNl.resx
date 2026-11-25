@@ -356,4 +356,22 @@
   <data name="HotkeyModifierWin" xml:space="preserve">
     <value>Win</value>
   </data>
+  <data name="TextUndo" xml:space="preserve">
+    <value>Ongedaan maken</value>
+  </data>
+  <data name="TextCut" xml:space="preserve">
+    <value>Knippen</value>
+  </data>
+  <data name="TextCopy" xml:space="preserve">
+    <value>Kopiëren</value>
+  </data>
+  <data name="TextPaste" xml:space="preserve">
+    <value>Plakken</value>
+  </data>
+  <data name="TextDelete" xml:space="preserve">
+    <value>Verwijderen</value>
+  </data>
+  <data name="TextSelectAll" xml:space="preserve">
+    <value>Alles selecteren</value>
+  </data>
 </root>

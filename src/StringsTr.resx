@@ -356,4 +356,22 @@
   <data name="HotkeyModifierWin" xml:space="preserve">
     <value>Win</value>
   </data>
+  <data name="TextUndo" xml:space="preserve">
+    <value>Geri al</value>
+  </data>
+  <data name="TextCut" xml:space="preserve">
+    <value>Kes</value>
+  </data>
+  <data name="TextCopy" xml:space="preserve">
+    <value>Kopyala</value>
+  </data>
+  <data name="TextPaste" xml:space="preserve">
+    <value>Yapıştır</value>
+  </data>
+  <data name="TextDelete" xml:space="preserve">
+    <value>Sil</value>
+  </data>
+  <data name="TextSelectAll" xml:space="preserve">
+    <value>Tümünü seç</value>
+  </data>
 </root>

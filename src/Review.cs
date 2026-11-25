@@ -609,6 +609,7 @@ internal static partial class Program
         ("tray", "notification area menu with its effect list open, shown over the main window"),
         ("editor", "new custom preset, opened from the main window"),
         ("rename", "channel rename, opened from the main window"),
+        ("textmenu", "right-click menu of the channel rename field, part of the name selected"),
         ("colour", "colour picker, opened from the custom colour chip"),
         ("error", "error dialog"),
     };
@@ -616,7 +617,7 @@ internal static partial class Program
     private static readonly Dictionary<string, string[]> ShotGroups = new()
     {
         ["all"] = ShotSurfaces.Select(s => s.Id).ToArray(),
-        ["popups"] = new[] { "settings", "settings-start", "effects", "channels", "tray", "editor", "rename", "colour", "error" },
+        ["popups"] = new[] { "settings", "settings-start", "effects", "channels", "tray", "editor", "rename", "textmenu", "colour", "error" },
     };
 
     private static int RunSurfaceTool(string[] args)
@@ -1308,6 +1309,11 @@ internal static partial class Program
                 case "rename":
                     form.OpenRenameForReview();
                     break;
+                case "textmenu":
+                    form.OpenRenameForReview();
+                    await Settle(form);
+                    OpenTextMenuForReview();
+                    break;
                 case "colour":
                     form.OpenColourPickerForReview();
                     break;
@@ -1318,6 +1324,37 @@ internal static partial class Program
 
         Application.Run(form);
         return result;
+    }
+
+    private static ContextMenuStrip? _textMenu;
+
+    /// <summary>The themed menu of the first text box in the open rename popup, with the end of
+    /// the name selected so every command but Undo and Paste reads enabled.</summary>
+    private static void OpenTextMenuForReview()
+    {
+        RenamePopup? popup = Application.OpenForms.OfType<RenamePopup>().FirstOrDefault();
+        TextBox? box = popup == null ? null : Descendants(popup).OfType<TextBox>().FirstOrDefault();
+        if (box?.ContextMenuStrip is not ContextMenuStrip menu)
+        {
+            return;
+        }
+
+        box.Focus();
+        box.Select(Math.Max(0, box.TextLength - 3), Math.Min(3, box.TextLength));
+        _textMenu = menu;
+        menu.Show(box, new Point(box.Width / 3, box.Height));
+    }
+
+    private static IEnumerable<Control> Descendants(Control root)
+    {
+        foreach (Control child in root.Controls)
+        {
+            yield return child;
+            foreach (Control nested in Descendants(child))
+            {
+                yield return nested;
+            }
+        }
     }
 
     [DllImport("user32.dll")]
@@ -1379,7 +1416,7 @@ internal static partial class Program
         List<Control> forms = Application.OpenForms.Cast<Form>()
             .Where(f => f.Visible && f.Opacity > 0 && f.Width > 0 && f.Height > 0)
             .Cast<Control>()
-            .Concat(ToggleForm.ReviewMenus.Where(m => m.Visible))
+            .Concat(ToggleForm.ReviewMenus.Append(_textMenu).OfType<ToolStripDropDown>().Where(m => m.Visible))
             .ToList();
         if (forms.Count == 0)
         {

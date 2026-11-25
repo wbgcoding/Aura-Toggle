@@ -223,6 +223,7 @@ internal static class Strings
     public static string SettingHotkey => Get("SettingHotkey");
 
     public static string SettingHotkeyConflict => Get("SettingHotkeyConflict");
+
     public static string PresetShortcutHint => Get("PresetShortcutHint");
 
     public static string ChannelShortcutHint => Get("ChannelShortcutHint");
@@ -236,6 +237,18 @@ internal static class Strings
     public static string HotkeyModifierShift => Get("HotkeyModifierShift");
 
     public static string HotkeyModifierWin => Get("HotkeyModifierWin");
+
+    public static string TextUndo => Get("TextUndo");
+
+    public static string TextCut => Get("TextCut");
+
+    public static string TextCopy => Get("TextCopy");
+
+    public static string TextPaste => Get("TextPaste");
+
+    public static string TextDelete => Get("TextDelete");
+
+    public static string TextSelectAll => Get("TextSelectAll");
 
     private static string Get(string key) =>
         Current.GetString(key) ?? English.GetString(key) ?? key;

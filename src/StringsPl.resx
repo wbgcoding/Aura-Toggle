@@ -356,4 +356,22 @@
   <data name="HotkeyModifierWin" xml:space="preserve">
     <value>Win</value>
   </data>
+  <data name="TextUndo" xml:space="preserve">
+    <value>Cofnij</value>
+  </data>
+  <data name="TextCut" xml:space="preserve">
+    <value>Wytnij</value>
+  </data>
+  <data name="TextCopy" xml:space="preserve">
+    <value>Kopiuj</value>
+  </data>
+  <data name="TextPaste" xml:space="preserve">
+    <value>Wklej</value>
+  </data>
+  <data name="TextDelete" xml:space="preserve">
+    <value>Usuń</value>
+  </data>
+  <data name="TextSelectAll" xml:space="preserve">
+    <value>Zaznacz wszystko</value>
+  </data>
 </root>

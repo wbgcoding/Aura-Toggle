@@ -26,36 +26,10 @@ internal sealed partial class ToggleForm
         return stream == null ? null : new Icon(stream, size);
     }
 
-    /// <summary>
-    /// Room above the first and below the last entry, and a little more height per row, so the
-    /// rounded highlight does not sit against the menu's own rounded edge. Applied as the menu
-    /// opens, which also catches the effect entries rebuilt since.
-    /// </summary>
-    private void SpaceTrayMenu(ToolStripDropDown menu)
-    {
-        // The menu's own dpi: it opens on the screen with the notification area, which need not
-        // be the one the window is on.
-        int Scale(int length) => length * menu.DeviceDpi / 96;
-        int edge = Scale(4);
-        menu.Padding = new Padding(menu.Padding.Left, edge, menu.Padding.Right, edge);
-        foreach (ToolStripItem item in menu.Items)
-        {
-            if (item is ToolStripMenuItem)
-            {
-                item.Padding = new Padding(0, Scale(3), 0, Scale(3));
-            }
-        }
-    }
-
     private void SetUpTray()
     {
-        var menu = new ContextMenuStrip
-        {
-            Renderer = new TrayMenuRenderer(),
-            BackColor = Theme.Surface,
-            ForeColor = Theme.Text,
-            Font = Theme.Menu,
-        };
+        var menu = new ContextMenuStrip();
+        ThemedMenu.Style(menu);
 
         // The whole board, never the selector's target: this entry sits next to a label that
         // reads the board state, and there is no channel selector in the notification area to
@@ -64,17 +38,7 @@ internal sealed partial class ToggleForm
         menu.Items.Add(_trayLighting);
 
         _trayEffects.Text = Strings.TrayEffects;
-        _trayEffects.DropDown.Renderer = menu.Renderer;
-        _trayEffects.DropDown.BackColor = Theme.Surface;
-        _trayEffects.DropDown.ForeColor = Theme.Text;
-        _trayEffects.DropDown.Font = Theme.Menu;
-
-        // The same compositor-drawn rounded corners and border as every popup of the window, for
-        // the menu and its effect list alike; HandleCreated covers a handle WinForms recreates.
-        menu.HandleCreated += (_, _) => Theme.RoundWindowCorners(menu.Handle);
-        _trayEffects.DropDown.HandleCreated += (_, _) => Theme.RoundWindowCorners(_trayEffects.DropDown.Handle);
-        menu.Opening += (_, _) => SpaceTrayMenu(menu);
-        _trayEffects.DropDown.Opening += (_, _) => SpaceTrayMenu(_trayEffects.DropDown);
+        ThemedMenu.Style(_trayEffects.DropDown);
         menu.Items.Add(_trayEffects);
         RefreshTrayEffects();
 
@@ -217,95 +181,5 @@ internal sealed partial class ToggleForm
         // The selector and the effect list were rebuilt while the window was hidden (a rename, a
         // discovery in the tray), and nothing repainted the rest of the window from them.
         Render();
-    }
-}
-
-/// <summary>Paints the tray menu in the same flat, themed style as the window.</summary>
-internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
-{
-    public TrayMenuRenderer() : base(new TrayColours())
-    {
-        RoundedEdges = true;
-    }
-
-    protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
-    {
-        // A drop down gets its border from the compositor along with the rounded corners; a
-        // square one drawn here would show its corners poking out of the rounded window.
-        // Windows 10 rounds nothing and draws no border of its own, so the menu keeps its drawn one.
-        if (e.ToolStrip is not ToolStripDropDown || !OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
-        {
-            base.OnRenderToolStripBorder(e);
-        }
-    }
-
-    protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
-    {
-        if (e.Item is not { Selected: true, Enabled: true })
-        {
-            return;
-        }
-
-        // A rounded highlight set in from the menu's edges, matching the rows of the window's own
-        // lists, instead of a square bar that runs into the rounded corners.
-        Rectangle row = new(Point.Empty, e.Item.Size);
-        int inset = Math.Max(2, row.Height / 8);
-        var area = new RectangleF(inset, 1, row.Width - (inset * 2) - 1, row.Height - 3);
-        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        using var path = Theme.RoundedRectangle(area, row.Height / 5f);
-        using var brush = new SolidBrush(Theme.AccentSoft);
-        e.Graphics.FillPath(brush, path);
-    }
-
-    protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
-    {
-        e.TextColor = e.Item?.Enabled == true ? Theme.Text : Theme.TextMuted;
-        base.OnRenderItemText(e);
-    }
-
-    protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
-    {
-        // The lighting entry shows its state through a dot rather than a Windows tick box.
-        if (e.Item is not ToolStripMenuItem { Checked: true })
-        {
-            return;
-        }
-
-        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        using var brush = new SolidBrush(Theme.Accent);
-
-        // Sized from the box the menu gave it rather than in fixed pixels: a renderer is not a
-        // control, so it has no dpi of its own to scale against, but that box already carries the
-        // menu's, which is the same thing one step earlier.
-        Rectangle box = e.ImageRectangle;
-        int dot = Math.Max(4, Math.Min(box.Width, box.Height) / 2);
-        e.Graphics.FillEllipse(brush, box.X + ((box.Width - dot) / 2), box.Y + ((box.Height - dot) / 2), dot, dot);
-    }
-
-    private sealed class TrayColours : ProfessionalColorTable
-    {
-        public TrayColours() => UseSystemColors = false;
-
-        public override Color ToolStripDropDownBackground => Theme.Surface;
-
-        public override Color MenuItemSelected => Theme.AccentSoft;
-
-        public override Color MenuItemSelectedGradientBegin => Theme.AccentSoft;
-
-        public override Color MenuItemSelectedGradientEnd => Theme.AccentSoft;
-
-        public override Color MenuItemBorder => Theme.AccentSoft;
-
-        public override Color MenuBorder => Theme.Border;
-
-        public override Color ImageMarginGradientBegin => Theme.Surface;
-
-        public override Color ImageMarginGradientMiddle => Theme.Surface;
-
-        public override Color ImageMarginGradientEnd => Theme.Surface;
-
-        public override Color SeparatorDark => Theme.Border;
-
-        public override Color SeparatorLight => Theme.Border;
     }
 }

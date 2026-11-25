@@ -356,4 +356,22 @@
   <data name="HotkeyModifierWin" xml:space="preserve">
     <value>Win</value>
   </data>
+  <data name="TextUndo" xml:space="preserve">
+    <value>元に戻す</value>
+  </data>
+  <data name="TextCut" xml:space="preserve">
+    <value>切り取り</value>
+  </data>
+  <data name="TextCopy" xml:space="preserve">
+    <value>コピー</value>
+  </data>
+  <data name="TextPaste" xml:space="preserve">
+    <value>貼り付け</value>
+  </data>
+  <data name="TextDelete" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="TextSelectAll" xml:space="preserve">
+    <value>すべて選択</value>
+  </data>
 </root>

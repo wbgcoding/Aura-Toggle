@@ -850,6 +850,7 @@ internal sealed class TextField : FlatControl
         // greyed out however much was typed into it.
         _box.TextChanged += (_, _) => OnTextChanged(EventArgs.Empty);
         _box.KeyDown += (_, e) => Accepted?.Invoke(this, e);
+        ThemedMenu.AttachTo(_box);
         Controls.Add(_box);
 
         DesignHeight = 34;

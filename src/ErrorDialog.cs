@@ -76,6 +76,7 @@ internal sealed class ErrorDialog : PopupForm
 
         _details.Multiline = true;
         _details.ReadOnly = true;
+        ThemedMenu.AttachTo(_details);
         _details.ScrollBars = ScrollBars.Vertical;
         _details.BackColor = Theme.NeutralSoft;
         _details.ForeColor = Theme.Text;
