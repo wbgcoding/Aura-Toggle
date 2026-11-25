@@ -36,6 +36,9 @@ internal sealed class FrameClock : IDisposable
 
     private readonly Control _owner;
     private readonly Action _tick;
+
+    // Made once: a method group passed to BeginInvoke is a new delegate every frame.
+    private readonly Action _post;
     private readonly object _gate = new();
     private Thread? _thread;
 
@@ -50,6 +53,7 @@ internal sealed class FrameClock : IDisposable
     {
         _owner = owner;
         _tick = tick;
+        _post = Tick;
     }
 
     public bool Enabled
@@ -165,7 +169,7 @@ internal sealed class FrameClock : IDisposable
             {
                 if (_owner.IsHandleCreated && !_owner.IsDisposed)
                 {
-                    _owner.BeginInvoke(Tick);
+                    _owner.BeginInvoke(_post);
                     continue;
                 }
             }

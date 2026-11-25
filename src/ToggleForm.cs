@@ -764,7 +764,11 @@ internal sealed partial class ToggleForm : Form
 
             copy = new CustomPreset(copyName, new List<CustomPresetEntry>(original.Entries));
             presets.Add(copy);
-            AuraCustomPresets.Save(presets);
+            if (!AuraCustomPresets.Save(presets))
+            {
+                ShowError(new IOException(Strings.ErrorSaveFailed), "Duplicate preset");
+                return;
+            }
         }
 
         RefreshEffectItems();
@@ -1872,13 +1876,22 @@ internal sealed partial class ToggleForm : Form
     /// </summary>
     private void QueueSettle()
     {
-        if (!IsHandleCreated || IsDisposed)
+        // One dpi change raises this from the window and from each list; a settle still waiting
+        // covers them all.
+        if (!IsHandleCreated || IsDisposed || _settleQueued)
         {
             return;
         }
 
-        BeginInvoke(() => SettleAfterDpiChange(1));
+        _settleQueued = true;
+        BeginInvoke(() =>
+        {
+            _settleQueued = false;
+            SettleAfterDpiChange(1);
+        });
     }
+
+    private bool _settleQueued;
 
     /// <summary>
     /// Re-applies every dpi-dependent measurement, then checks whether anything is short of
@@ -2000,6 +2013,7 @@ internal sealed partial class ToggleForm : Form
         _revealTimer?.Dispose();
         _occlusion?.Dispose();
         StopDiscoveryRetry();
+        StopReassert();
         Icon?.Dispose();
         _iconOff?.Dispose();
         _iconOnTray?.Dispose();
@@ -2132,6 +2146,16 @@ internal sealed partial class ToggleForm : Form
 
         _dark = Theme.Dark;
         Theme.Retint(this);
+
+        // An error shown without an owner is not among this window's owned forms.
+        foreach (ErrorDialog dialog in Application.OpenForms.OfType<ErrorDialog>().Where(d => d.Owner == null).ToList())
+        {
+            Theme.Retint(dialog);
+            if (dialog.IsHandleCreated)
+            {
+                Theme.TintTitleBar(dialog.Handle);
+            }
+        }
 
         // Asked for from this thread, so DropForeignFrameRefresh lets it through: should the
         // broadcast have arrived before the setting changed, the refresh Windows sent with it was
@@ -2561,7 +2585,7 @@ internal sealed partial class ToggleForm : Form
         // The write goes to a worker: the hardware lock can be held for seconds by a burst.
         _state = _state with { CustomPreset = "" };
         AuraState toSave = _state;
-        _ = Task.Run(() =>
+        _stateWrite = Task.Run(() =>
         {
             using IDisposable hardware = AuraFiles.HardwareLock();
             using IDisposable guard = AuraFiles.Lock();

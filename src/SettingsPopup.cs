@@ -107,6 +107,7 @@ internal sealed class SettingsPopup : PopupForm
         _hotkeyHint = AddLabel(5, () => Strings.SettingHotkeyConflict);
         _hotkeyHint.ForeColor = Theme.Danger;
         _hotkeyHint.Visible = false;
+        _metrics.Add(() => _hotkeyHint.MaximumSize = new Size(this.Scaled(250), 0));
 
         AddSwitch(6, () => Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
         _startActionLabel = AddLabel(7, () => Strings.SettingStartAction);
@@ -142,11 +143,6 @@ internal sealed class SettingsPopup : PopupForm
         _animate.CheckedChanged += (_, _) => Apply();
         _hotkeyEnabled.CheckedChanged += (_, _) => Apply();
         _closeAfterStart.CheckedChanged += (_, _) => Apply();
-        _startAction.SelectionChanged += (_, _) =>
-        {
-            UpdateStartActionVisibility();
-            FitToContent();
-        };
         _hotkeyRecord.Click += (_, _) => StartRecordingHotkey();
         _autoStart.CheckedChanged += (_, _) =>
         {
@@ -525,6 +521,11 @@ internal sealed class SettingsPopup : PopupForm
         _appliedAt = Environment.TickCount64;
         bool languageChanged = Settings.Language != (_language.Selected?.Key ?? AuraSettings.LanguageAuto);
         _hotkeyHint.Visible = false;
+        if (_recordingHotkey && !_hotkeyEnabled.Checked)
+        {
+            CancelRecordingHotkey();
+        }
+
         _hotkeyRecord.Visible = _hotkeyEnabled.Checked;
         UpdateStartActionVisibility();
         FitToContent();

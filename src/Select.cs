@@ -543,6 +543,12 @@ internal sealed class SelectPopup : PopupForm
     protected override void OnOpenedAtOtherScale()
     {
         Font = _openerFont;
+        Refit();
+    }
+
+    /// <summary>Row metrics, height and width again for the display this is on now.</summary>
+    private void Refit()
+    {
         _dpi = DeviceDpi;
         ComputeMetrics();
         Measure();
@@ -614,12 +620,7 @@ internal sealed class SelectPopup : PopupForm
         {
             if (!IsDisposed)
             {
-                _dpi = DeviceDpi;
-                ComputeMetrics();
-                Measure();
-                Fit(Screen.FromControl(this).WorkingArea);
-                _scroll = Math.Clamp(_scroll, 0, _maxScroll);
-                Invalidate();
+                Refit();
             }
         });
     }
@@ -1116,7 +1117,7 @@ internal sealed class SelectPopup : PopupForm
 
     private void Choose(int index)
     {
-        if (index >= 0 && index < _items.Count)
+        if (index >= 0 && index < _items.Count && !_items[index].IsHint)
         {
             Picked?.Invoke(this, _items[index]);
         }

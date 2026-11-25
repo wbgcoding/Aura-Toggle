@@ -12,6 +12,8 @@ namespace AuraToggle;
 /// </summary>
 internal sealed partial class ToggleForm
 {
+    private System.Threading.Tasks.Task? _stateWrite;
+
     /// <summary>
     /// A data file read once and read again only when it changes on disk. The command line and
     /// other windows write these files too, so the file's own stamp and length decide, not an
@@ -26,9 +28,8 @@ internal sealed partial class ToggleForm
         private long _length = -2;
         private uint _hash;
 
-        // The data files are a few hundred bytes; a bigger one is not hashed, the stamp and
-        // length alone decide for it.
-        private const long HashLimit = 256 * 1024;
+        // A file over the read ceiling is not hashed; the stamp and length alone decide for it.
+        private const long HashLimit = AuraFiles.MaxPresetFileBytes;
 
         public FileCache(string name, Func<T> load)
         {
@@ -153,7 +154,9 @@ internal sealed partial class ToggleForm
     /// </summary>
     private void RefreshFromDisk()
     {
-        if (_busy || !_revealed || IsDisposed)
+        // A reset writes the state back on a worker; until that lands, the file on disk is the
+        // deleted one and would read as a first run.
+        if (_busy || !_revealed || IsDisposed || _stateWrite is { IsCompleted: false })
         {
             return;
         }

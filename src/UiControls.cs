@@ -702,6 +702,7 @@ internal sealed class ColourStrip : FlatControl
             return;
         }
 
+        _picker?.Close();
         var box = ChipAt(index);
         var popup = new ColourPickerPopup(Colour);
         popup.ColourChanged += (_, colour) =>
@@ -1298,12 +1299,14 @@ internal sealed class ColourPickerPopup : PopupForm
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
-        if (SvRect.Contains(e.Location))
+        bool left = e.Button == MouseButtons.Left;
+
+        if (left && SvRect.Contains(e.Location))
         {
             _draggingSv = true;
             UpdateFromSv(e.Location);
         }
-        else if (HueRect.Contains(e.Location))
+        else if (left && HueRect.Contains(e.Location))
         {
             _draggingHue = true;
             UpdateFromHue(e.Location);

@@ -443,7 +443,7 @@ internal static class Theme
         using var fill = new SolidBrush(Surface);
         e.Graphics.FillRectangle(fill, e.Bounds);
         using var border = new Pen(Border);
-        e.Graphics.DrawRectangle(border, 0, 0, e.Bounds.Width - 1, e.Bounds.Height - 1);
+        e.Graphics.DrawRectangle(border, e.Bounds.X, e.Bounds.Y, e.Bounds.Width - 1, e.Bounds.Height - 1);
         TextRenderer.DrawText(e.Graphics, e.ToolTipText, e.Font, e.Bounds, Text,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
     }
