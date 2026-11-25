@@ -681,6 +681,49 @@ public sealed class AuraFilesTests : PersistenceTest
     }
 
     [Fact]
+    public void AWriteOverTheReadCeilingIsRefusedAndKeepsTheOldFile()
+    {
+        Assert.True(AuraFiles.Write("w.json", w => { w.WriteStartObject(); w.WriteNumber("i", 1); w.WriteEndObject(); }));
+        string padding = new('x', 1024);
+
+        bool written = AuraFiles.Write("w.json", w =>
+        {
+            w.WriteStartArray();
+            for (int i = 0; i < 300; i++)
+            {
+                w.WriteStringValue(padding);
+            }
+
+            w.WriteEndArray();
+        });
+
+        Assert.False(written);
+        Assert.Equal("{\"i\":1}", TestData.ReadRaw("w.json"));
+        Assert.Empty(TempFiles());
+    }
+
+    [Fact]
+    public void AWriteJustUnderTheReadCeilingReadsBack()
+    {
+        string padding = new('x', 1024);
+
+        Assert.True(AuraFiles.Write("w.json", w =>
+        {
+            w.WriteStartArray();
+            for (int i = 0; i < 240; i++)
+            {
+                w.WriteStringValue(padding);
+            }
+
+            w.WriteEndArray();
+        }));
+
+        using JsonDocument? document = AuraFiles.Read("w.json", JsonValueKind.Array);
+        Assert.NotNull(document);
+        Assert.Equal(240, document.RootElement.GetArrayLength());
+    }
+
+    [Fact]
     public void ManyWritesLeaveNoTempFiles()
     {
         for (int i = 0; i < 50; i++)

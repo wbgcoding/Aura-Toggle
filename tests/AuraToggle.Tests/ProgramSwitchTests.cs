@@ -328,6 +328,19 @@ public sealed class ProgramSwitchTests : DataFolderTest
         Assert.Equal(new[] { (0, Off), (1, Off) }, Modes(good));
     }
 
+    [Fact]
+    public void ReplayReachesEveryControllerAndStillReportsTheOneThatFailed()
+    {
+        Stored.State(Board());
+        using FakeController bad = FakeController.Addressable("bad", headers: 1, refuseWrites: true);
+        using FakeController good = A();
+
+        Cli.Capture(() => Assert.ThrowsAny<IOException>(() =>
+            ReplayAll(Open(bad, good), Board(), AuraChannelStates.All())));
+
+        Assert.Equal(new[] { (0, Static), (1, Static) }, Modes(good));
+    }
+
     // ---- ApplyMix directly ----
 
     [Fact]

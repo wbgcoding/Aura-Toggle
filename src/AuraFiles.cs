@@ -599,15 +599,6 @@ internal static class AuraFiles
     /// </returns>
     public static bool Write(string name, Action<Utf8JsonWriter> body)
     {
-        return WriteRaw(name, stream =>
-        {
-            using var writer = new Utf8JsonWriter(stream);
-            body(writer);
-        });
-    }
-
-    private static bool WriteRaw(string name, Action<FileStream> body)
-    {
         // The process id is part of the name because the cross-process lock has a timeout: a
         // caller that waited two seconds for it carries on without it, and two writers sharing
         // one temp file would then each fail on the other's open handle and lose the write.
@@ -624,7 +615,20 @@ internal static class AuraFiles
 
             using (FileStream stream = File.Create(temp))
             {
-                body(stream);
+                using (var writer = new Utf8JsonWriter(stream))
+                {
+                    body(writer);
+                }
+
+                // A file over the read ceiling would load as damaged and the next save would
+                // overwrite it with defaults, so it is never written in the first place.
+                if (stream.Length > MaxPresetFileBytes)
+                {
+                    throw new IOException($"{name} would be {stream.Length} bytes, over the {MaxPresetFileBytes} byte limit");
+                }
+
+                // On disk before the move, so a power cut right after it cannot leave an empty file.
+                stream.Flush(flushToDisk: true);
             }
 
             MoveIntoPlace(temp, PathTo(name));

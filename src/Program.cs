@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
@@ -347,14 +348,26 @@ internal static partial class Program
                 // after which the runtime tears the process down right away. Undoing that requires
                 // actually blocking this (crashing) thread until the dialog closes, or the queued
                 // Report() would never get a turn to run before the process is already gone.
-                using var closed = new ManualResetEventSlim(false);
-                form.BeginInvoke(() => ErrorDialog.Report(ex, context, owner: null, onClosed: () =>
+                // Not disposed: the dialog may still set them after this thread gave up waiting.
+                // A UI thread that never gets to the dialog is given up on after 30 seconds; once
+                // it is showing, the process lives until the user closes it.
+                var shown = new ManualResetEventSlim(false);
+                var closed = new ManualResetEventSlim(false);
+                form.BeginInvoke(() =>
                 {
-                    Application.Exit();
-                    closed.Set();
-                }));
-                closed.Wait(TimeSpan.FromSeconds(30));
-                return;
+                    shown.Set();
+                    ErrorDialog.Report(ex, context, owner: null, onClosed: () =>
+                    {
+                        Application.Exit();
+                        closed.Set();
+                    });
+                });
+
+                if (shown.Wait(TimeSpan.FromSeconds(30)))
+                {
+                    closed.Wait();
+                    return;
+                }
             }
             catch (InvalidOperationException)
             {
@@ -1899,10 +1912,7 @@ internal static partial class Program
                     AuraState state = AuraState.Load();
                     Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
 
-                    foreach (AuraDevice device in touched)
-                    {
-                        Replay(device, state, remembered);
-                    }
+                    ReplayAll(touched, state, remembered);
                 }
             }
         }
@@ -1927,6 +1937,7 @@ internal static partial class Program
         try
         {
             AuraState state = AuraState.Load();
+            IOException? failure = null;
 
             foreach (AuraDevice device in devices)
             {
@@ -1950,7 +1961,22 @@ internal static partial class Program
                 // Shown the way Save would apply it: one firmware engine per controller, the
                 // lowest channel on one of those modes decides.
                 var infos = device.Channels.Select(c => new EngineChannel(c.Index, true, null)).ToList();
-                device.Apply(ShareEngine(infos, looks, spreadToAll: false, BoardWide(state), Brightness(null, state)).Looks);
+
+                try
+                {
+                    device.Apply(ShareEngine(infos, looks, spreadToAll: false, BoardWide(state), Brightness(null, state)).Looks);
+                }
+                catch (IOException ex)
+                {
+                    // The other controllers still follow the preview.
+                    AuraLog.Error($"Preview: {device.Name}", ex);
+                    failure ??= ex;
+                }
+            }
+
+            if (failure != null)
+            {
+                ExceptionDispatchInfo.Throw(failure);
             }
         }
         finally
@@ -1973,11 +1999,7 @@ internal static partial class Program
         {
             AuraState state = AuraState.Load();
             Dictionary<string, ChannelLighting> remembered = AuraChannelStates.All();
-
-            foreach (AuraDevice device in devices)
-            {
-                Replay(device, state, remembered);
-            }
+            ReplayAll(devices, state, remembered);
         }
         finally
         {
@@ -1986,6 +2008,35 @@ internal static partial class Program
     }
 
     /// <summary>Re-sends every channel of one controller exactly as the records describe it.</summary>
+    /// <summary>
+    /// Replays every controller even when one of them drops a report, so a single failing device
+    /// cannot leave the others dark or still showing a preview. The first failure is rethrown once
+    /// all of them had their turn.
+    /// </summary>
+    internal static void ReplayAll(IEnumerable<AuraDevice> devices, AuraState state,
+        Dictionary<string, ChannelLighting> remembered)
+    {
+        IOException? failure = null;
+
+        foreach (AuraDevice device in devices)
+        {
+            try
+            {
+                Replay(device, state, remembered);
+            }
+            catch (IOException ex)
+            {
+                AuraLog.Error($"Replay: {device.Name}", ex);
+                failure ??= ex;
+            }
+        }
+
+        if (failure != null)
+        {
+            ExceptionDispatchInfo.Throw(failure);
+        }
+    }
+
     private static void Replay(AuraDevice device, AuraState state,
         Dictionary<string, ChannelLighting> remembered)
     {
