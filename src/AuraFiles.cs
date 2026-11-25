@@ -613,6 +613,7 @@ internal static class AuraFiles
                 return false;
             }
 
+            long length;
             using (FileStream stream = File.Create(temp))
             {
                 using (var writer = new Utf8JsonWriter(stream))
@@ -620,15 +621,19 @@ internal static class AuraFiles
                     body(writer);
                 }
 
-                // A file over the read ceiling would load as damaged and the next save would
-                // overwrite it with defaults, so it is never written in the first place.
-                if (stream.Length > MaxPresetFileBytes)
-                {
-                    throw new IOException($"{name} would be {stream.Length} bytes, over the {MaxPresetFileBytes} byte limit");
-                }
+                length = stream.Length;
 
                 // On disk before the move, so a power cut right after it cannot leave an empty file.
                 stream.Flush(flushToDisk: true);
+            }
+
+            // A file over the read ceiling would load as damaged and the next save would overwrite
+            // it with defaults, so it never replaces the old one.
+            if (length > MaxPresetFileBytes)
+            {
+                AuraLog.Info($"Write {name}: {length} bytes is over the {MaxPresetFileBytes} byte limit, kept the old file");
+                DeleteTemp(temp);
+                return false;
             }
 
             MoveIntoPlace(temp, PathTo(name));
@@ -639,16 +644,19 @@ internal static class AuraFiles
             // Failing to store a preference is not worth aborting a switch that already reached
             // the hardware - but the half-written temp file must not linger forever either.
             AuraLog.Error("Write " + name, ex);
-
-            try
-            {
-                File.Delete(temp);
-            }
-            catch (Exception cleanupEx) when (IsExpected(cleanupEx))
-            {
-            }
-
+            DeleteTemp(temp);
             return false;
+        }
+    }
+
+    private static void DeleteTemp(string temp)
+    {
+        try
+        {
+            File.Delete(temp);
+        }
+        catch (Exception ex) when (IsExpected(ex))
+        {
         }
     }
 
