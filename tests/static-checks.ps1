@@ -198,8 +198,9 @@ $projectVersion = [regex]::Match((Get-Content (Join-Path $root "AuraToggle.cspro
 $setupVersion = [regex]::Match((Get-Content (Join-Path $root "installer\aura.iss") -Raw), '#define AppVersion "([^"]+)"').Groups[1].Value
 $changelog = Get-Content (Join-Path $root "CHANGELOG.md")
 $changelogVersion = ""
+# The open "- unreleased" section names the next version, not the one being built.
 foreach ($line in $changelog) {
-    $match = [regex]::Match($line, "^## \[(\d+\.\d+\.\d+)\]")
+    $match = [regex]::Match($line, "^## \[(\d+\.\d+\.\d+)\](?! - unreleased)")
     if ($match.Success) { $changelogVersion = $match.Groups[1].Value; break }
 }
 

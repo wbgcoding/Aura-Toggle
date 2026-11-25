@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - unreleased
+
+### Fixed
+
+- When one of several controllers fails, the others still go back to their own lighting after identifying a channel or closing the preset editor, instead of staying dark or on the preview
+- A preset list too large to be read back is no longer saved, so it can never replace the working file with an empty one
+- Settings and presets are written to disk before they replace the old file, so a power cut right after a change cannot leave an empty file
+- The error window shown after an unexpected failure stays open until it is closed, instead of disappearing with the app after 30 seconds
+- Duplicating a preset that cannot be saved shows an error instead of opening an editor for a copy that was never stored
+- Right after "Reset everything" the window keeps showing the lighting the board is running instead of first-run defaults
+- Switching the hotkey off while a new combination is being recorded stops the recording
+- The effect list and the channel list fit their width again after the window moves to a display with another scale
+- The colour picker reacts to the left mouse button only
+- An error window that is not attached to the main window follows a switch between light and dark mode
+
 ## [1.7.2] - 2026-11-14
 
 A calmer title bar and sturdier handling of stored and imported files and of command line mistakes.
