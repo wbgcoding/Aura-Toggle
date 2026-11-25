@@ -11,7 +11,7 @@ namespace AuraToggle;
 
 /// <summary>
 /// One entry of a <see cref="Select"/>. A mode of null draws no effect icon, unless
-/// <paramref name="CustomColours"/> is given - used for custom presets, which mix effects
+/// <paramref name="CustomColours"/> is given: used for custom presets, which mix effects
 /// and so have no single mode of their own.
 /// </summary>
 /// <param name="Editable">
@@ -23,7 +23,7 @@ namespace AuraToggle;
 /// </param>
 /// <param name="Renamable">
 /// Gives the row a single pencil button that raises the same edit event as
-/// <paramref name="Editable"/>, without the delete button - for entries that always exist and
+/// <paramref name="Editable"/>, without the delete button: for entries that always exist and
 /// can only be given a different name, such as a channel.
 /// </param>
 /// <param name="IsHint">
@@ -37,7 +37,7 @@ internal sealed record SelectItem(string Key, string Text, byte? Mode, Color[]? 
 /// <summary>A rounded drop down that opens a themed popup instead of the system list.</summary>
 internal sealed class Select : FlatControl
 {
-    /// <summary>The closed control's own metrics, at 96 dpi - see <see cref="OnPaint"/>.</summary>
+    /// <summary>The closed control's own metrics, at 96 dpi: see <see cref="OnPaint"/>.</summary>
     private const int TextInset = 11;
     private const int IconWidth = 22;
     private const int IconHeight = 14;
@@ -154,7 +154,7 @@ internal sealed class Select : FlatControl
     /// <summary>
     /// True for a list that takes whatever its row has left rather than claiming a width of its
     /// own. It then reports no preferred width at all, so a layout cannot treat the width it
-    /// happened to have on the display it came from as a floor the row must not shrink below -
+    /// happened to have on the display it came from as a floor the row must not shrink below,
     /// which is what pushed the gear off the right-hand edge after a display-scale change. A list
     /// this narrow shortens its own text, which is the intended result; a list that claims a width
     /// (the channel selector, in a column sized to fit) leaves this off.
@@ -179,13 +179,13 @@ internal sealed class Select : FlatControl
     /// anything, so any fixed number ends up clipping somebody's text.
     /// </summary>
     /// <param name="withIcon">
-    /// False for a list whose entries carry no icon - the channel selector - so it is not padded
+    /// False for a list whose entries carry no icon (the channel selector) so it is not padded
     /// out by room nothing draws in. Every pixel it keeps is one the effect list loses.
     /// </param>
     /// <param name="includeHints">
     /// False for sizing the closed control itself: a hint row can never be picked (see
     /// <see cref="SelectItem.IsHint"/>), so the closed control never has to show its text and
-    /// measuring it there only made the control - and a window sized from it - grow and shrink
+    /// measuring it there would make the control (and a window sized from it) grow and shrink
     /// as the hint row came and went. The popup this opens still needs the true width, since the
     /// hint really is drawn as a row there; that call keeps the default.
     /// </param>
@@ -229,7 +229,7 @@ internal sealed class Select : FlatControl
             Selected = _items.FirstOrDefault(item => item.Key == Selected.Key);
         }
 
-        // A list open right now follows along instead of showing what was there a moment ago -
+        // A list open right now follows along instead of showing what was there a moment ago:
         // deleting a preset from one of its rows is exactly that case.
         _popup?.Resync(_items);
         Invalidate();
@@ -248,7 +248,7 @@ internal sealed class Select : FlatControl
     /// this one is clicked would take an extra click or two to get out of the way: the click
     /// that lands on this control first only deactivates the other popup, and that popup's own
     /// close races this one's open. Closing it here, synchronously, before this one is even
-    /// created removes the race - by the time the new popup opens, the old one is fully gone.
+    /// created removes the race: by the time the new popup opens, the old one is fully gone.
     /// </summary>
     private static SelectPopup? _openPopup;
 
@@ -364,7 +364,7 @@ internal sealed class Select : FlatControl
         PopupOpening?.Invoke(this, EventArgs.Empty);
 
         // Height + 4 below this control, and the same distance above it when there is no room
-        // below - measured from this control rather than assumed, since the drop downs inside the
+        // below: measured from this control rather than assumed, since the drop downs inside the
         // popups are shorter than the one in the window.
         popup.Open(PointToScreen(new Point(-this.Scaled(PopupOverhang), Height + this.Scaled(4))), FindForm(), Height + this.Scaled(8));
     }
@@ -387,7 +387,7 @@ internal sealed class Select : FlatControl
 
         DrawFocusRing(g, path);
 
-        // Everything here is custom painted, so nothing grows with the display on its own - an
+        // Everything here is custom painted, so nothing grows with the display on its own: an
         // unscaled icon would stay 22x14 next to text that had doubled.
         int left = this.Scaled(TextInset);
         var icon = new Rectangle(left, (Height - this.Scaled(IconHeight)) / 2,
@@ -480,7 +480,7 @@ internal sealed class SelectPopup : PopupForm
     /// Set once an arrow key has moved the selection, cleared by the next mouse move. The list
     /// opens with nothing marked at all: marking the current entry would make the highlight jump
     /// back to it whenever the pointer left the rows, which reads as flicker rather than as an answer to
-    /// "which one is running" - the closed control says that already.
+    /// "which one is running": the closed control says that already.
     /// </summary>
     private bool _keyboard;
 
@@ -488,7 +488,7 @@ internal sealed class SelectPopup : PopupForm
     private int _scroll;
 
     /// <summary>The full, unscrolled height of every row, recomputed whenever the item list
-    /// changes - unlike <see cref="_maxScroll"/>, which also depends on the screen.</summary>
+    /// changes: unlike <see cref="_maxScroll"/>, which also depends on the screen.</summary>
     private int _content;
 
     private int _maxScroll;
@@ -497,7 +497,7 @@ internal sealed class SelectPopup : PopupForm
     private int _confirming = -1;
 
     /// <summary>F2/Delete work on a custom preset row without any control of its own to hang a
-    /// tooltip off - shown and hidden by hand as the hovered row changes instead.</summary>
+    /// tooltip off: shown and hidden by hand as the hovered row changes instead.</summary>
     private readonly ThemedTip _shortcutTip = new();
     private int _tipRow = -1;
 
@@ -522,8 +522,8 @@ internal sealed class SelectPopup : PopupForm
         Measure();
 
         // A placeholder height, good enough until Open() knows which screen this actually opens
-        // on and sizes it for real - the constructor cannot know that yet, and guessing the
-        // primary screen was wrong on a second monitor with a shorter work area.
+        // on and sizes it for real: the constructor cannot know that yet, and guessing the
+        // primary screen would be wrong on a second monitor with a shorter work area.
         ClientSize = new Size(width, Math.Min(_content, _rowHeight * 3));
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
@@ -536,7 +536,7 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>
     /// Opened on a display at another scale than the process started on. WinForms rescales this
-    /// window's font for that display on top of a font that already carries it - the opener's -
+    /// window's font for that display on top of a font that already carries it (the opener's)
     /// so the rows came out half again too large and cut short at the width measured for the real
     /// size. The opener's font is put back and the width checked against it.
     /// </summary>
@@ -570,7 +570,7 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>
     /// The narrowest this list can open at without cutting an entry short: each row's text plus
-    /// what the row paint puts beside it - the icon or plus on the left, the pencil or the edit
+    /// what the row paint puts beside it: the icon or plus on the left, the pencil or the edit
     /// buttons on the right. Mirrors the row layout in OnPaint, so a change to one belongs in
     /// the other.
     /// </summary>
@@ -609,7 +609,7 @@ internal sealed class SelectPopup : PopupForm
     /// <remarks>
     /// <see cref="_dpi"/> is refreshed here rather than read live from <see cref="Control.DeviceDpi"/>
     /// in <see cref="Scale"/>: the constructor runs before this window has a handle, and
-    /// <see cref="Control.DeviceDpi"/> is not the screen it is about to open on until then - see
+    /// <see cref="Control.DeviceDpi"/> is not the screen it is about to open on until then: see
     /// the constructor's own <c>dpi</c> parameter. This is the one place after construction where
     /// the handle already exists and the value is trustworthy.
     /// </remarks>
@@ -634,7 +634,7 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>
     /// Takes the item list again while the window stays open. Deleting a preset from a row must
-    /// not close the whole list, or removing three of them would mean opening it three times - the
+    /// not close the whole list, or removing three of them would mean opening it three times: the
     /// list is where presets are managed, so it has to survive managing them.
     /// </summary>
     public void Resync(IEnumerable<SelectItem> items)
@@ -655,7 +655,7 @@ internal sealed class SelectPopup : PopupForm
 
     /// <summary>
     /// Height for the screen this is on, and how far it can scroll there. The constructor cannot
-    /// know either - a work area shorter than the primary monitor's otherwise let the list claim
+    /// know either: a work area shorter than the primary monitor's otherwise let the list claim
     /// rows past the bottom of the screen instead of scrolling to reach them.
     /// </summary>
     private void Fit(Rectangle screen)
@@ -697,7 +697,7 @@ internal sealed class SelectPopup : PopupForm
         Width - (_inset * 2),
         _rowHeight);
 
-    /// <summary>Wheel movement not yet worth a whole notch - precision touchpads report small deltas.</summary>
+    /// <summary>Wheel movement not yet worth a whole notch: precision touchpads report small deltas.</summary>
     private int _wheelRemainder;
 
     protected override void OnMouseWheel(MouseEventArgs e)
@@ -797,7 +797,7 @@ internal sealed class SelectPopup : PopupForm
 #if REVIEW
     /// <summary>
     /// Review mode only: shows the tooltip on the first row that has one, the same way hovering it
-    /// would - so the tooltip's dark theme can be checked in a screenshot instead of trusted by reading
+    /// would, so the tooltip's dark theme can be checked in a screenshot instead of trusted by reading
     /// the code, and the effect list itself does not need a mouse hover the review harness cannot
     /// send reliably against these controls.
     /// </summary>
@@ -845,7 +845,7 @@ internal sealed class SelectPopup : PopupForm
     /// <summary>
     /// Set only by <see cref="Program"/>'s review mode: with nothing else on screen to hold focus
     /// first, anything stealing it (another window, another process) would otherwise close this
-    /// popup before <see cref="ShowTipForReview"/>'s tooltip is ever seen - same reason
+    /// popup before <see cref="ShowTipForReview"/>'s tooltip is ever seen: same reason
     /// <see cref="SettingsPopup"/> has one of its own.
     /// </summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -939,7 +939,7 @@ internal sealed class SelectPopup : PopupForm
                 break;
 
             default:
-                // Everything else, Tab above all, is left alone - marking every key handled
+                // Everything else, Tab above all, is left alone: marking every key handled
                 // swallowed it.
                 base.OnKeyDown(e);
                 return;
@@ -953,7 +953,7 @@ internal sealed class SelectPopup : PopupForm
         index >= 0 && index < _items.Count && (_items[index].Editable || _items[index].Renamable);
 
     /// <summary>
-    /// Moves the highlight. Hint rows are stepped over - they cannot be picked - but the command
+    /// Moves the highlight. Hint rows are stepped over (they cannot be picked), but the command
     /// row can be reached, so "New preset" is not a mouse-only entry.
     /// </summary>
     private void MoveHighlight(Keys key)
@@ -986,7 +986,7 @@ internal sealed class SelectPopup : PopupForm
     protected override void OnMouseLeave(EventArgs e)
     {
         // Without this the row the pointer left over stays lit while the mouse is somewhere else
-        // entirely - OnMouseMove only ever fires inside the list.
+        // entirely: OnMouseMove only ever fires inside the list.
         if (_hovered >= 0)
         {
             _hovered = -1;
@@ -1028,7 +1028,7 @@ internal sealed class SelectPopup : PopupForm
         Cursor = hovered >= 0 && !_items[hovered].IsHint ? Cursors.Hand : Cursors.Default;
 
         // A custom preset row has F2/Delete as their only hint besides the two small icons
-        // themselves, and a built-in effect row explains what it does - either way shown for the
+        // themselves, and a built-in effect row explains what it does: either way shown for the
         // whole row, not just the icon, so it is easy to find.
         string? tip = hovered < 0
             ? null
@@ -1097,7 +1097,7 @@ internal sealed class SelectPopup : PopupForm
 
             if (ButtonRect(row, 2).Contains(e.Location))
             {
-                // Closes the list like edit does, straight into the new copy's editor - staying
+                // Closes the list like edit does, straight into the new copy's editor: staying
                 // open just left the copy sitting unnoticed in a list the user had to dismiss
                 // by hand to see what they got.
                 DuplicateRequested?.Invoke(this, _items[index]);
@@ -1144,7 +1144,7 @@ internal sealed class SelectPopup : PopupForm
             Rectangle row = RowRect(i);
             bool confirming = i == _confirming;
 
-            // Hover, or the keyboard's own position once an arrow key has been used - never the
+            // Hover, or the keyboard's own position once an arrow key has been used: never the
             // running entry just for being the running entry.
             bool active = !item.IsHint &&
                 (confirming || i == _hovered || (_keyboard && _hovered < 0 && i == _highlighted && _confirming < 0));
@@ -1213,7 +1213,7 @@ internal sealed class SelectPopup : PopupForm
             }
             else if (item.Renamable && (i == _hovered || (_keyboard && i == _highlighted)))
             {
-                // Only shown on hover/keyboard focus - a channel row is mostly just a choice,
+                // Only shown on hover/keyboard focus: a channel row is mostly just a choice,
                 // and a pencil on every single one would be noise the rest of the time.
                 PaintGlyphButton(g, ButtonRect(row, 0), Theme.TextMuted, PaintPencil);
             }
@@ -1255,7 +1255,7 @@ internal sealed class SelectPopup : PopupForm
     /// <summary>
     /// The glyphs below take their line weight from the box they are handed rather than from a
     /// flat number of pixels. The box has already grown with the display, so deriving from it is
-    /// what keeps a pencil or a cross the same weight relative to its button at every scale -
+    /// what keeps a pencil or a cross the same weight relative to its button at every scale:
     /// a fixed 1.6f would draw a hairline inside a doubled button.
     /// </summary>
     private static Pen GlyphPen(Rectangle box, Color colour, float weight) =>
@@ -1298,7 +1298,7 @@ internal sealed class SelectPopup : PopupForm
     }
 
     /// <summary>
-    /// Two overlapping squares - the front one drawn whole, the back one only where it still
+    /// Two overlapping squares: the front one drawn whole, the back one only where it still
     /// peeks out, rather than erasing the overlap with a fill in a colour that would have to
     /// match whatever is behind this row (plain, hovered or highlighted all differ).
     /// </summary>

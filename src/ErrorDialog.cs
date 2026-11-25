@@ -7,7 +7,7 @@ namespace AuraToggle;
 
 /// <summary>
 /// Shown instead of <see cref="MessageBox"/> for anything a switch or the app itself did not
-/// expect. Not modal, and - like <see cref="CustomPresetEditor"/> - does not close on an outside
+/// expect. Not modal, and (like <see cref="CustomPresetEditor"/>) does not close on an outside
 /// click: it carries the one copy of the detail text the user might still want to read or copy
 /// after clicking away, e.g. to open the log folder.
 /// </summary>
@@ -68,7 +68,7 @@ internal sealed class ErrorDialog : PopupForm
         _detailsToggle.LinkBehavior = LinkBehavior.NeverUnderline;
         _detailsToggle.BackColor = Theme.Surface;
         // LinkClicked only. It fires for a mouse click on the link and for Enter on the focused
-        // one alike, while Click fires on top of the mouse case - handling both toggled the
+        // one alike, while Click fires on top of the mouse case: handling both toggled the
         // details open and shut again in the same click. The label is nothing but this one link,
         // so there is no part of it a click could land on that LinkClicked would miss.
         _detailsToggle.LinkClicked += (_, _) => ToggleDetails();
@@ -107,7 +107,7 @@ internal sealed class ErrorDialog : PopupForm
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
 
-        // No title bar, and - like CustomPresetEditor - this stays open on an outside click, so
+        // No title bar, and (like CustomPresetEditor) this stays open on an outside click, so
         // it needs its own way to move: by the heading, and by the window's own background.
         WindowDrag.Enable(this, this, _heading);
     }
@@ -131,17 +131,17 @@ internal sealed class ErrorDialog : PopupForm
     /// <summary>
     /// Logs the exception and, only when a message loop is actually running (or is guaranteed to
     /// start right after, see <paramref name="requireMessageLoop"/>) to show it on, displays this
-    /// dialog. A crash before <c>Application.Run</c> - or one on the command line - has nowhere
+    /// dialog. A crash before <c>Application.Run</c> (or one on the command line) has nowhere
     /// to paint a window, so it is logged and left at that.
     /// </summary>
     /// <param name="requireMessageLoop">
     /// False only for <see cref="Program"/>'s review mode, which calls this before its own
-    /// <c>Application.Run()</c> - showing a form before the loop starts is valid WinForms, the
+    /// <c>Application.Run()</c>: showing a form before the loop starts is valid WinForms, the
     /// loop just has to actually follow, which the review path guarantees.
     /// </param>
     /// <remarks>
     /// <see cref="AuraNotFoundException"/> and <see cref="IOException"/> already carry a curated,
-    /// localised <see cref="Exception.Message"/> - that is shown as the body directly. Anything
+    /// localised <see cref="Exception.Message"/>: that is shown as the body directly. Anything
     /// else is a bug, whose raw message means nothing to the user, so the body stays the generic
     /// <see cref="Strings.ErrorUnexpected"/> and the real text goes into the detail area instead.
     /// </remarks>
@@ -269,7 +269,7 @@ internal sealed class ErrorDialog : PopupForm
         _close.FitToText(18);
 
         // The three buttons are translated text, so their combined width is not known until they
-        // are all sized - a fixed dialog width would clip or overlap them in German. The body
+        // are all sized: a fixed dialog width would clip or overlap them in German. The body
         // still wraps at the plain DialogWidth; that only leaves it narrower than a wider dialog,
         // never overlapping. The heading is folded in the same way, for the same reason.
         int gap = this.Scaled(8);

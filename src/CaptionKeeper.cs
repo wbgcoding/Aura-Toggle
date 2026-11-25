@@ -7,9 +7,9 @@ namespace AuraToggle;
 
 /// <summary>
 /// Keeps a window's title bar drawn as active while one of this tool's own popups has the focus.
-/// Every list, panel and editor here is a window of its own that takes the activation, so Windows
-/// dimmed the main window's caption each time one opened - a flicker on every click into a menu.
-/// The caption now only turns inactive once the tool as a whole has lost the activation.
+/// Every list, panel and editor here is a window of its own that takes the activation, which
+/// would dim the main window's caption on every click into a menu. The caption turns inactive
+/// only once the tool as a whole has lost the activation.
 /// </summary>
 internal sealed class CaptionKeeper : NativeWindow
 {

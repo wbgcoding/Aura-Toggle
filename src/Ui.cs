@@ -46,7 +46,7 @@ internal static class Theme
 {
     /// <summary>
     /// What a colour means, rather than what it is. Both palettes are listed in this order, so a
-    /// control's current colour is enough to tell which role it was given - which is what lets
+    /// control's current colour is enough to tell which role it was given, which is what lets
     /// a whole window be re-coloured after Windows switches theme.
     /// </summary>
     private enum Role
@@ -75,7 +75,7 @@ internal static class Theme
         Color.FromArgb(90, 150, 255),  // Accent
         Color.FromArgb(43, 55, 78),    // AccentSoft
         Color.FromArgb(68, 71, 77),    // Neutral
-        Color.FromArgb(61, 64, 70),    // NeutralSoft - lighter than Surface/SurfaceHover so a
+        Color.FromArgb(61, 64, 70),    // NeutralSoft: lighter than Surface/SurfaceHover so a
                                        // filled button stays visible against the popup background
         Color.FromArgb(255, 116, 108), // Danger
     };
@@ -107,7 +107,7 @@ internal static class Theme
     private static bool? _dark;
 
     /// <summary>
-    /// The fonts this window uses, shared rather than created per control - a font per popup
+    /// The fonts this window uses, shared rather than created per control: a font per popup
     /// would never be released.
     /// </summary>
     public static readonly Font Ui = new("Segoe UI", 9F);
@@ -118,7 +118,7 @@ internal static class Theme
 
     public static readonly Font Heading = new("Segoe UI", 11F, FontStyle.Bold);
 
-    /// <summary>Names a group inside a panel that already has a <see cref="Heading"/> of its own -
+    /// <summary>Names a group inside a panel that already has a <see cref="Heading"/> of its own:
     /// one step down, so the two do not compete for the same rank.</summary>
     public static readonly Font Subheading = new("Segoe UI", 10F, FontStyle.Bold);
 
@@ -210,7 +210,7 @@ internal static class Theme
     private static void Retint(Control control, Color[] from, Color[] to)
     {
         // A FlatControl inherits its background by default, but a panel that gave one of its own
-        // still holds the old palette's colour in it - and a custom paint starts by clearing to
+        // still holds the old palette's colour in it, and a custom paint starts by clearing to
         // exactly that. Translating it here keeps the relationship the panel asked for instead of
         // leaving white boxes on a window that has already gone dark.
         if (Translate(control.BackColor, from, to, inkOnly: false) is Color background)
@@ -339,7 +339,7 @@ internal static class Theme
     /// <remarks>
     /// Nothing is scaled for us. These forms set <see cref="ContainerControl.AutoScaleMode"/> but
     /// never <see cref="ContainerControl.AutoScaleDimensions"/>, and without that WinForms' own
-    /// auto-scaling does nothing at all - not to a size assigned in a constructor, not to a
+    /// auto-scaling does nothing at all: not to a size assigned in a constructor, not to a
     /// padding, not to a margin. Only fonts, and therefore measured text, grow by themselves.
     /// Every other length stays at 96 dpi until it is put through here: that is a half-size gear
     /// beside full-size text, and labels clipped by a limit written for a 96 dpi screen. Reading
@@ -348,7 +348,7 @@ internal static class Theme
     /// </remarks>
     public static int Scaled(this Control control, int length) => length * DpiOf(control) / 96;
 
-    /// <summary><see cref="Scaled"/> for fractional lengths, chiefly hairline pen widths - reads
+    /// <summary><see cref="Scaled"/> for fractional lengths, chiefly hairline pen widths: reads
     /// the same window dpi rather than the control's own <see cref="Control.DeviceDpi"/>.</summary>
     public static float ScaledF(this Control control, float length) => length * DpiOf(control) / 96f;
 
@@ -364,7 +364,7 @@ internal static class Theme
     /// <summary>
     /// The dpi of the window <paramref name="control"/> sits in, rather than the control's own.
     /// Windows tells a window about a display-scale change before it tells the controls inside it,
-    /// so for a while the two disagree - and a layout measured half in one scale and half in the
+    /// so for a while the two disagree, and a layout measured half in one scale and half in the
     /// other is wrong in a way that looks perfectly consistent to any check. One dpi for the whole
     /// window means the measurement is right from the first pass, whenever the children catch up.
     /// </summary>
@@ -398,10 +398,9 @@ internal static class Theme
     /// the font itself is the part that follows the display: WinForms replaces every control's
     /// font with a rescaled copy on a scale change (visible in <c>-review layout</c>, where the
     /// same font reads 9 pt on a 150 % display and 6 pt on a 100 % one). Scaling the result by the
-    /// display's dpi as well applied that same factor twice, which is why the window came out
-    /// half again as wide as it needed to be on a second monitor at 150 % - the text was measured
-    /// as if it were both bigger and on a bigger display, and everything in the row was stretched
-    /// to fill the extra room. The fixed distances around the text still go through
+    /// display's dpi as well would apply that same factor twice and make the window far wider
+    /// than needed on a second monitor at 150 %: the text would be measured as if it were both
+    /// bigger and on a bigger display, and everything in the row stretched to fill the extra room. The fixed distances around the text still go through
     /// <see cref="Scaled"/>; that is the one place the display scale belongs.
     /// </remarks>
     public static int MeasuredWidth(string text, Font font) =>
@@ -566,7 +565,7 @@ internal static class EffectPainter
     /// <summary>
     /// Draws the effect as it looks at <paramref name="seconds"/>, filling
     /// <paramref name="bounds"/> edge to edge. With <paramref name="animate"/> false, every
-    /// mode collapses to a single flat fill instead - cheaper to paint, and unambiguously
+    /// mode collapses to a single flat fill instead: cheaper to paint, and unambiguously
     /// reads as paused rather than as a frozen mid-motion gradient.
     /// </summary>
     /// <remarks>
@@ -663,8 +662,8 @@ internal static class EffectPainter
             SpectrumBrushes[size] = brush;
         }
 
-        // The brush's own rectangle only ever holds the size above; position - the animation
-        // shift and the caller's bounds.X/Y - lives entirely in the transform, reset and
+        // The brush's own rectangle only ever holds the size above; position (the animation
+        // shift and the caller's bounds.X/Y) lives entirely in the transform, reset and
         // reapplied every call rather than left to accumulate on the reused brush.
         double shift = ((phase % 1.0) + 1.0) % 1.0;
         brush.ResetTransform();
@@ -686,7 +685,7 @@ internal static class EffectPainter
 
     // Shared like the spectrum brushes above, one per size: the comet's gradient only needs its
     // size and the two colours it fades between, both cheap to compare, so a changed channel
-    // colour still replaces that size's brush - only an identical repaint reuses it.
+    // colour still replaces that size's brush: only an identical repaint reuses it.
     private sealed record ChaseBrush(LinearGradientBrush Brush, Color Dim, Color Colour);
 
     private static readonly Dictionary<SizeF, ChaseBrush> ChaseBrushes = new();
@@ -776,7 +775,7 @@ internal static class EffectPainter
             var area = new RectangleF(0, 0, bounds.Width, bounds.Height);
 
             // Spectrum cycle and rainbow breathing both show the same shared hue cycle on the
-            // real board, so they get the same icon here too - the live preview button still
+            // real board, so they get the same icon here too: the live preview button still
             // tells them apart via Render(), which stays hardware-accurate and untouched.
             if (mode is 4 or 6)
             {
@@ -804,7 +803,7 @@ internal static class EffectPainter
 
     /// <summary>
     /// A hairline along the icon's edge, but only for an icon that would otherwise disappear into
-    /// the panel it sits on - a white pill on a white window, a near-black one in dark mode. On a
+    /// the panel it sits on: a white pill on a white window, a near-black one in dark mode. On a
     /// coloured icon the same line reads as a rim around it, which is what made some of them look
     /// outlined and others not.
     /// </summary>
@@ -898,8 +897,8 @@ internal sealed class EffectSurface : IDisposable
 {
     private Bitmap? _buffer;
 
-    /// <summary>Every buffer pixel the shape does not fully cover, with how much of it it does -
-    /// <see cref="ApplyMask"/> - and the size and outline it was worked out for.</summary>
+    /// <summary>Every buffer pixel the shape does not fully cover, with how much of it it does
+    /// (<see cref="ApplyMask"/>) and the size and outline it was worked out for.</summary>
     private (int X, int Y, byte Cover)[]? _mask;
     private Size _maskSize;
     private PointF[] _maskPoints = Array.Empty<PointF>();
@@ -971,8 +970,8 @@ internal sealed class EffectSurface : IDisposable
     /// <summary>
     /// Cuts the buffer to <paramref name="shape"/> in place. A texture brush filling the path did
     /// the same, but copied the whole buffer on every frame to build itself. The shape only
-    /// changes with a resize, so the pixels it does not fully cover are worked out once - by
-    /// filling it, so the edge is the same anti-aliased one - and each frame only scales those.
+    /// changes with a resize, so the pixels it does not fully cover are worked out once (by
+    /// filling it, so the edge is the same anti-aliased one) and each frame only scales those.
     /// </summary>
     private void ApplyMask(GraphicsPath shape, Rectangle bounds)
     {
@@ -1117,7 +1116,7 @@ internal abstract class PopupForm : Form
     protected override void WndProc(ref Message m)
     {
         // WM_ACTIVATE losing the activation: when it went to another program, the main window
-        // has to drop the active caption it kept while this was open - see CaptionKeeper.
+        // has to drop the active caption it kept while this was open: see CaptionKeeper.
         if (m.Msg == 0x0006 && (m.WParam.ToInt64() & 0xFFFF) == 0)
         {
             CaptionKeeper.Recheck();
@@ -1194,7 +1193,7 @@ internal abstract class PopupForm : Form
         }
 
         // Off the screen at once. Left to WinForms the window stays up while it disposes the
-        // controls inside it one by one, and the rows were seen collapsing - the panel shrinking
+        // controls inside it one by one, and the rows visibly collapse: the panel shrinking
         // for a moment before it went.
         if (IsHandleCreated)
         {
@@ -1275,19 +1274,19 @@ internal abstract class PopupForm : Form
     /// </summary>
     /// <param name="flipAbove">
     /// The height of the control this drops from, plus the gap below it. A list that would run
-    /// past the bottom edge opens upward instead - above that control, not over it. Zero for a
+    /// past the bottom edge opens upward instead: above that control, not over it. Zero for a
     /// panel that only has to stay on screen.
     /// </param>
     /// <param name="horizontalMargin">
     /// The breathing room kept clear of the left/right screen edge, defaulting to the usual
     /// <c>Scaled(4)</c>. A panel anchored to a control that already keeps its own distance from
-    /// whatever it hangs off (the settings panel under the gear) passes 0 here - that distance is
+    /// whatever it hangs off (the settings panel under the gear) passes 0 here: that distance is
     /// baked into <paramref name="at"/> already, and stacking this margin on top of it would only
     /// push the panel further from the control than intended.
     /// </param>
     /// <param name="screen">
     /// The monitor to clamp against, when the caller already knows it more reliably than a lookup
-    /// from <paramref name="at"/> could - see <see cref="AuraToggle.SettingsPopup.Open"/> for why:
+    /// from <paramref name="at"/> could: see <see cref="AuraToggle.SettingsPopup.Open"/> for why:
     /// <paramref name="at"/> is often shifted left by this window's own width before it gets here,
     /// and on a monitor placed to the left of the one the anchor control is actually on, that
     /// shift alone can walk the point onto the wrong monitor and clamp against its bounds instead.
@@ -1302,8 +1301,8 @@ internal abstract class PopupForm : Form
 
     /// <summary>
     /// Pulls the window back onto its screen after it has grown. Every panel here sizes itself to
-    /// its contents, and contents arrive after it was placed - a hotkey row switched on, an effect
-    /// that brings colour chips with it - so the position it was given is no longer the one it
+    /// its contents, and contents arrive after it was placed (a hotkey row switched on, an effect
+    /// that brings colour chips with it), so the position it was given is no longer the one it
     /// needs. Without this the buttons at the bottom end up under the taskbar.
     /// </summary>
     protected void KeepOnScreen(int? horizontalMargin = null)
@@ -1338,8 +1337,8 @@ internal abstract class FlatControl : Control
 
         // BackColor is deliberately left alone so it keeps inheriting from whatever this sits
         // on. Pinning it to the window colour painted that colour into the corners outside the
-        // rounded shape, which on a panel of a different shade showed up as a square halo -
-        // the "ugly border" around buttons inside the popups.
+        // rounded shape, which on a panel of a different shade shows up as a square halo
+        // around buttons inside the popups.
         ForeColor = Theme.Text;
     }
 
@@ -1370,7 +1369,7 @@ internal abstract class FlatControl : Control
 
     /// <summary>
     /// The control's size at 96 dpi. Assigning it applies the scaled size now and again whenever
-    /// the display scale changes - these controls are laid out by size rather than by measuring
+    /// the display scale changes: these controls are laid out by size rather than by measuring
     /// their own content, and WinForms will not resize them here (the forms set
     /// <see cref="ContainerControl.AutoScaleMode"/> but never
     /// <see cref="ContainerControl.AutoScaleDimensions"/>, which makes its auto-scaling inert).
@@ -1524,7 +1523,7 @@ internal abstract class FlatControl : Control
 
 /// <summary>
 /// Lets a borderless window be dragged by parts of its own contents. The gesture is handed to
-/// Windows rather than moved from mouse events, so it behaves like any other title bar - it
+/// Windows rather than moved from mouse events, so it behaves like any other title bar: it
 /// snaps, it keeps up with the pointer, and releasing it needs no bookkeeping here.
 /// </summary>
 internal static class WindowDrag
@@ -1562,14 +1561,14 @@ internal static class WindowDrag
 
 /// <summary>
 /// Brings this process's own window out in front when it is first shown. DO NOT REMOVE OR WEAKEN
-/// THIS - a window opening behind Setup has come back three times, and each of the two mechanisms
-/// below is here because the other one is not enough on its own:
+/// THIS: a window opening behind Setup is an easy failure to reintroduce, and each of the two
+/// mechanisms below is here because the other one is not enough on its own:
 /// <list type="number">
 /// <item>
 /// Windows only lets the current foreground process, or one it started directly, activate a
 /// window. Setup hands off through a de-elevated relaunch, so this process is neither. Attaching
 /// this thread's input queue to the foreground window's for the one call is the standard way
-/// around that - the same trick the taskbar relies on to switch windows for the user.
+/// around that: the same trick the taskbar relies on to switch windows for the user.
 /// </item>
 /// <item>
 /// That trick cannot work against Setup itself: Setup runs elevated, and a process at a lower
@@ -1639,7 +1638,7 @@ internal static class ForegroundWindow
             return;
         }
 
-        // Still behind something that would not hand the foreground over - an elevated Setup is
+        // Still behind something that would not hand the foreground over: an elevated Setup is
         // exactly that case. Being visible in front is what matters here, not owning the focus.
         SetWindowPos(handle, TopMost, 0, 0, 0, 0, NoMove | NoSize | NoActivate | ShowWindow);
         SetWindowPos(handle, NoTopMost, 0, 0, 0, 0, NoMove | NoSize | NoActivate | ShowWindow);

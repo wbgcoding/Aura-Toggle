@@ -28,14 +28,14 @@ internal sealed class EffectButton : FlatControl
     private const int ShadowDropAt96 = 1;
     private const float ShadowStrength = 0.75f;
 
-    /// <summary>Gap between letters of the ON/OFF label, at 96 dpi - GDI+ has no letter-spacing
+    /// <summary>Gap between letters of the ON/OFF label, at 96 dpi: GDI+ has no letter-spacing
     /// of its own, so this is added by hand between characters drawn one at a time.</summary>
     private const int LetterSpacingAt96 = 4;
 
     private const TextFormatFlags LabelFlags =
         TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix;
 
-    /// <summary>The label these measurements belong to - <see cref="MeasureLabel"/>.</summary>
+    /// <summary>The label these measurements belong to: <see cref="MeasureLabel"/>.</summary>
     private string _labelSource = "";
     private int _labelSpacing = -1;
     private string[] _labelChars = Array.Empty<string>();
@@ -43,7 +43,7 @@ internal sealed class EffectButton : FlatControl
     private int _labelWidth;
     private int _labelHeight;
 
-    /// <summary>The label's shadow as a finished picture, and the colour it was made for -
+    /// <summary>The label's shadow as a finished picture, and the colour it was made for:
     /// <see cref="RenderShadow"/>. Built once per text, font and colour, so a frame costs one
     /// image draw for it instead of a text call per letter per shadow pass.</summary>
     private Bitmap? _shadowImage;
@@ -57,7 +57,7 @@ internal sealed class EffectButton : FlatControl
     private bool _paused;
     private bool _animate = true;
 
-    /// <summary>The bold variant of <see cref="Control.Font"/>, rebuilt only when that changes -
+    /// <summary>The bold variant of <see cref="Control.Font"/>, rebuilt only when that changes,
     /// which happens on every repaint's font lookup otherwise, 60 times a second while animating.</summary>
     private Font? _boldFont;
 
@@ -103,8 +103,8 @@ internal sealed class EffectButton : FlatControl
 
     /// <summary>
     /// What the button is animating right now, for the layout review to report. A custom preset
-    /// has no single effect of its own, so this is the one place the choice it makes - the effect
-    /// most of its channels run - can be read back instead of judged from a moving picture.
+    /// has no single effect of its own, so this is the one place the choice it makes (the effect
+    /// most of its channels run) can be read back instead of judged from a moving picture.
     /// </summary>
     internal (byte Mode, Color Colour) Showing => (_mode, _colour);
 
@@ -146,7 +146,7 @@ internal sealed class EffectButton : FlatControl
         }
     }
 
-    /// <summary>Stops the animation while nothing of the button can be seen - see
+    /// <summary>Stops the animation while nothing of the button can be seen: see
     /// <see cref="OcclusionWatch"/>.</summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Covered
@@ -228,7 +228,7 @@ internal sealed class EffectButton : FlatControl
         _boldFont?.Dispose();
         _boldFont = null;
 
-        // The cached label widths were measured with the font that just went - a display-scale
+        // The cached label widths were measured with the font that just went: a display-scale
         // change would otherwise keep drawing the state word at the old size's spacing.
         _labelSpacing = -1;
 
@@ -316,7 +316,7 @@ internal sealed class EffectButton : FlatControl
 
     /// <summary>
     /// The state word in wide upper case, drawn one letter at a time with a fixed gap between
-    /// them - GDI+ has no letter-spacing to ask for. Upper case is applied here, at paint time
+    /// them: GDI+ has no letter-spacing to ask for. Upper case is applied here, at paint time
     /// only: <see cref="Control.Text"/> itself stays "On"/"Off" (or "An"/"Aus"), which is what a
     /// screen reader spells out, so it must never become "O N" or a pre-uppercased string.
     /// </summary>
@@ -500,8 +500,8 @@ internal sealed class EffectButton : FlatControl
     /// <summary>
     /// Works the label out once for a given text, font and letter gap. At 60 fps the state word is
     /// the same three characters on every frame, and each one would otherwise cost a
-    /// <see cref="TextRenderer.MeasureText(Graphics, string, Font, Size, TextFormatFlags)"/> - a
-    /// GDI call - plus a string per character - work this cache turns into nothing.
+    /// <see cref="TextRenderer.MeasureText(Graphics, string, Font, Size, TextFormatFlags)"/> (a
+    /// GDI call) plus a string per character, work this cache turns into nothing.
     /// </summary>
     private void MeasureLabel(Graphics g, int spacing)
     {
@@ -663,7 +663,7 @@ internal sealed class ColourStrip : FlatControl
 
     /// <summary>
     /// The picker was up when the mouse went down on its chip, or had closed a moment before:
-    /// pressing the chip takes the focus from the picker, and the picker closes on that - before
+    /// pressing the chip takes the focus from the picker, and the picker closes on that: before
     /// or after the press itself is handled, depending on how Windows orders the two. Either way
     /// a second click on that chip means "close it", not "open another".
     /// </summary>
@@ -846,7 +846,7 @@ internal sealed class TextField : FlatControl
         };
 
         // Typing changes the inner box, not this control, so without passing the event on a host
-        // watching TextChanged never hears a keystroke - the preset editor's Create button would stay
+        // watching TextChanged never hears a keystroke: the preset editor's Create button would stay
         // greyed out however much was typed into it.
         _box.TextChanged += (_, _) => OnTextChanged(EventArgs.Empty);
         _box.KeyDown += (_, e) => Accepted?.Invoke(this, e);
@@ -925,7 +925,7 @@ internal sealed class TextField : FlatControl
         _box.SetBounds(inset, Math.Max(0, (Height - height) / 2), width, height);
 
         // A box that just got wider keeps the scroll offset it needed while it was narrow, which
-        // hid the start of a name that now fits whole - the rename field selects all its text
+        // hid the start of a name that now fits whole: the rename field selects all its text
         // before a popup opened on a scaled display has grown it to size.
         if (wider && _box.IsHandleCreated)
         {
@@ -1085,7 +1085,7 @@ internal sealed class ColourPickerPopup : PopupForm
     private readonly TextField _hex;
 
     // Computed rather than stored: WinForms scales the window itself for the display it opens on,
-    // and these are painted inside it - held as fixed 96 dpi rectangles they would leave the picker in
+    // and these are painted inside it: held as fixed 96 dpi rectangles they would leave the picker in
     // the top left corner of a window twice their size.
     private Rectangle SvRect => new(this.Scaled(Pad), this.Scaled(Pad), this.Scaled(SvSize), this.Scaled(SvSize));
 
@@ -1136,7 +1136,7 @@ internal sealed class ColourPickerPopup : PopupForm
         RebuildSvBitmap();
     }
 
-    /// <summary>Sizes the window and places the hex field - both scale with the display, unlike
+    /// <summary>Sizes the window and places the hex field: both scale with the display, unlike
     /// <see cref="SvRect"/>/<see cref="HueRect"/>'s painted geometry only.</summary>
     private void Reflow()
     {
@@ -1177,7 +1177,7 @@ internal sealed class ColourPickerPopup : PopupForm
 
     public Color Current => Theme.FromHsv(_hue, _saturation, _value);
 
-    /// <summary>Opens at a screen position. Not modal - a click anywhere else closes it.</summary>
+    /// <summary>Opens at a screen position. Not modal: a click anywhere else closes it.</summary>
     public void Open(Point at, IWin32Window? owner)
     {
         Place(at, this.Scaled(6));
@@ -1202,7 +1202,7 @@ internal sealed class ColourPickerPopup : PopupForm
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        // The hex field applies its content when it loses focus, and closing does exactly that -
+        // The hex field applies its content when it loses focus, and closing does exactly that,
         // which would push the colour the user had just cancelled with Escape.
         _closing = true;
         base.OnFormClosing(e);
@@ -1251,7 +1251,7 @@ internal sealed class ColourPickerPopup : PopupForm
 
     /// <summary>
     /// Repainted whenever the hue changes, which is once per mouse-move for the whole length of a
-    /// hue drag - so the bitmap and its row buffer are allocated once for the life of the popup
+    /// hue drag, so the bitmap and its row buffer are allocated once for the life of the popup
     /// and rewritten in place. Building a fresh 168x168 bitmap plus an 85 KB array per mouse-move
     /// is what made dragging the strip stutter. Raw pixel writes rather than SetPixel for the
     /// same reason.
@@ -1487,7 +1487,7 @@ internal sealed class PillButton : FlatControl
     private int? _fitPadding;
 
     /// <summary>
-    /// Wide enough for its own label plus padding, so a longer translation is never clipped -
+    /// Wide enough for its own label plus padding, so a longer translation is never clipped:
     /// the button has no ellipsis and no auto-size of its own.
     /// </summary>
     public void FitToText(int padding = 22)
@@ -1550,7 +1550,7 @@ internal sealed class PillButton : FlatControl
 
 /// <summary>
 /// Arms a <see cref="PillButton"/> on the first click, swapping it to a confirmation label for a
-/// few seconds before a second click fires the real action - no separate confirmation dialog.
+/// few seconds before a second click fires the real action: no separate confirmation dialog.
 /// Settings' Reset and the preset editor's Delete share this one copy of the timer and text swap.
 /// </summary>
 internal sealed class ArmedButton : IDisposable
@@ -1563,7 +1563,7 @@ internal sealed class ArmedButton : IDisposable
     private bool _armed;
 
     /// <param name="button">
-    /// Already carrying its idle label and its own styling (fill, foreground, size) - this only
+    /// Already carrying its idle label and its own styling (fill, foreground, size): this only
     /// adds the arm/confirm behaviour on top.
     /// </param>
     /// <param name="fitPadding">
@@ -1585,7 +1585,7 @@ internal sealed class ArmedButton : IDisposable
         _timer.Tick += (_, _) => Disarm();
     }
 
-    /// <summary>Fired on the second click while still armed - the confirmed action itself.</summary>
+    /// <summary>Fired on the second click while still armed: the confirmed action itself.</summary>
     public event EventHandler? Confirmed;
 
     private void OnClick()
@@ -1603,7 +1603,7 @@ internal sealed class ArmedButton : IDisposable
         Confirmed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Back to the idle label - the timer expiring, a confirmed click, or a caller
+    /// <summary>Back to the idle label: the timer expiring, a confirmed click, or a caller
     /// closing out from under it (a language switch, the popup itself closing) all take this
     /// path, so the button is never found already armed the next time it is seen.</summary>
     public void Disarm()
@@ -1615,7 +1615,7 @@ internal sealed class ArmedButton : IDisposable
     }
 
     /// <summary>
-    /// A language switch changes both labels out from under an already-constructed button - the
+    /// A language switch changes both labels out from under an already-constructed button: the
     /// idle and armed text passed to the constructor stop applying, so a caller that needs new
     /// wording after a switch has to give it here rather than only calling <see cref="Disarm"/>,
     /// which would just repaint the stale text it already holds.
@@ -1639,7 +1639,7 @@ internal sealed class ArmedButton : IDisposable
 }
 
 /// <summary>
-/// A slim slider. Used for the brightness the effect colour is scaled to before it is sent -
+/// A slim slider. Used for the brightness the effect colour is scaled to before it is sent:
 /// the controller has no brightness of its own.
 /// </summary>
 internal sealed class Slider : FlatControl
@@ -1668,7 +1668,7 @@ internal sealed class Slider : FlatControl
         AccessibleRole = AccessibleRole.Slider;
 
         // Arrow keys would otherwise fire one switch at the controller per keypress, and
-        // ToggleForm drops every request that arrives while the previous one is still running -
+        // ToggleForm drops every request that arrives while the previous one is still running,
         // so the value the user stopped on could be the one that never got sent.
         _commit.Tick += (_, _) =>
         {
@@ -1796,7 +1796,7 @@ internal sealed class Slider : FlatControl
 
         _dragging = false;
 
-        // A drag that ends where it started - or a plain click on the knob - has nothing to
+        // A drag that ends where it started (or a plain click on the knob) has nothing to
         // send, and every commit costs a full pass over the controller.
         if (_value != _pressedAt)
         {
@@ -1808,7 +1808,7 @@ internal sealed class Slider : FlatControl
         keyData is Keys.Left or Keys.Right or Keys.Up or Keys.Down or Keys.Home or Keys.End
             or Keys.PageUp or Keys.PageDown || base.IsInputKey(keyData);
 
-    /// <summary>Wheel movement not yet worth a whole notch - precision touchpads report small deltas.</summary>
+    /// <summary>Wheel movement not yet worth a whole notch: precision touchpads report small deltas.</summary>
     private int _wheelRemainder;
 
     protected override void OnMouseWheel(MouseEventArgs e)
@@ -1944,7 +1944,7 @@ internal sealed class DeleteButton : FlatControl
 }
 
 /// <summary>
-/// Icon button for exporting or importing a custom preset as a <c>.json</c> file - a labelled
+/// Icon button for exporting or importing a custom preset as a <c>.json</c> file: a labelled
 /// tray arrow rather than a text button, so the pair fits next to the name field instead of a
 /// row of its own. The direction alone tells them apart, same as every other icon-only control
 /// here, so callers are expected to give each one a tooltip and an <see cref="Control.AccessibleName"/>.
@@ -1958,8 +1958,8 @@ internal sealed class TransferButton : FlatControl
         AccessibleRole = AccessibleRole.PushButton;
     }
 
-    /// <summary>True for import: an arrow pointing up, out of the tray - a file coming into the
-    /// app. False for export: an arrow pointing down, into the tray - the preset going out.</summary>
+    /// <summary>True for import: an arrow pointing up, out of the tray (a file coming into the
+    /// app). False for export: an arrow pointing down, into the tray (the preset going out).</summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Import { get; set; }
 
@@ -2000,7 +2000,7 @@ internal sealed class TransferButton : FlatControl
 }
 
 /// <summary>
-/// Small popup to give one channel a name of its own. Not modal - a click anywhere else
+/// Small popup to give one channel a name of its own. Not modal: a click anywhere else
 /// dismisses it without saving, same as every popup here except the preset editor.
 /// </summary>
 internal sealed class RenamePopup : PopupForm
@@ -2019,7 +2019,7 @@ internal sealed class RenamePopup : PopupForm
         Font = Theme.Ui;
 
         // The popup has no title bar and the field no label beside it, so without this a screen
-        // reader announces an unnamed edit box - every other surface here names its controls.
+        // reader announces an unnamed edit box: every other surface here names its controls.
         AccessibleName = Strings.ChannelRenameAccessibleName;
         _name.AccessibleName = Strings.ChannelRenameAccessibleName;
         _name.Text = currentName;
@@ -2044,7 +2044,7 @@ internal sealed class RenamePopup : PopupForm
         _reset.DesignHeight = 30;
         _reset.Fill = Theme.NeutralSoft;
         _reset.ForeColor = Theme.Danger;
-        // Throws the channel's own name away - arms on the first click like every other
+        // Throws the channel's own name away: arms on the first click like every other
         // destructive button here, instead of acting on a single one.
         _resetArm = new ArmedButton(_reset, Strings.ChannelRenameReset, Strings.ChannelRenameResetConfirm, Pad);
         _resetArm.Confirmed += (_, _) =>
@@ -2052,7 +2052,7 @@ internal sealed class RenamePopup : PopupForm
             Renamed?.Invoke(this, "");
             Close();
         };
-        // The armed label is wider than the idle one - re-run layout whenever ArmedButton
+        // The armed label is wider than the idle one: re-run layout whenever ArmedButton
         // changes it, so the popup keeps fitting instead of clipping or overlapping Save.
         _reset.TextChanged += (_, _) => Reflow();
         Controls.Add(_reset);
@@ -2062,7 +2062,7 @@ internal sealed class RenamePopup : PopupForm
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
     }
 
-    /// <summary>Sizes and places every control from the 96 dpi constants - no hand-painted
+    /// <summary>Sizes and places every control from the 96 dpi constants: no hand-painted
     /// geometry of its own like <see cref="ColourPickerPopup"/>, just controls to lay out.</summary>
     private void Reflow()
     {

@@ -30,7 +30,7 @@ internal sealed partial class ToggleForm
     }
 
     /// <summary>
-    /// Every measurement the window's width depends on, as text - the check for a layout
+    /// Every measurement the window's width depends on, as text: the check for a layout
     /// fit that can only be judged at a real display scale. Reports the room the top
     /// row actually needs against the room it was given, so "cut off on the right" is a number
     /// here rather than a guess from a screenshot.
@@ -57,7 +57,7 @@ internal sealed partial class ToggleForm
             $"  channel     w={_channel.Width} visible={_channelShown}",
             $"  gear        w={_gear.Width} (expected {this.Scaled(GearSize)})",
             $"  colours     w={_colours.Width} visible={_colours.Visible}",
-            // The slider only exists for an effect brightness can reach - the one thing about it
+            // The slider only exists for an effect brightness can reach: the one thing about it
             // no screenshot of a still window can tell apart from a window that is simply short.
             $"  brightness  visible={_brightnessRow.Visible} h={_brightnessRow.Height}",
             // The reason and the retry button: shown only while discovery has come back empty.

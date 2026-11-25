@@ -55,7 +55,7 @@ internal sealed class CustomPresetEditor : PopupForm
     private readonly HashSet<string> _existingNames;
 
     /// <summary>
-    /// Set once Save has applied the preset, so closing does not undo it. Left false by Delete -
+    /// Set once Save has applied the preset, so closing does not undo it. Left false by Delete:
     /// nothing new was applied there, so the hardware still has to be put back to its own records.
     /// </summary>
     private bool _saved;
@@ -175,7 +175,7 @@ internal sealed class CustomPresetEditor : PopupForm
         nameRow.Controls.Add(_name, 0, 0);
 
         // Vertically centred against the taller name field rather than the row's default
-        // top-alignment - see TextField/TransferButton's own DesignHeight for the 4 px gap.
+        // top-alignment: see TextField/TransferButton's own DesignHeight for the 4 px gap.
         _export.Import = false;
         _export.AccessibleName = Strings.CustomPresetExport;
         _export.Click += (_, _) => ExportToFile();
@@ -281,7 +281,7 @@ internal sealed class CustomPresetEditor : PopupForm
         UpdateSaveState();
         FitToContent();
 
-        // The window has no title bar of its own, and - like ErrorDialog - it stays open rather
+        // The window has no title bar of its own, and (like ErrorDialog) it stays open rather
         // than closing on an outside click, so it needs its own way to move. Dragged by its
         // heading, and by its own background, which is what is left of the window once the rows
         // have their say.
@@ -336,7 +336,7 @@ internal sealed class CustomPresetEditor : PopupForm
 
     /// <summary>
     /// Raised once Save has written the preset to disk, carrying it so the window behind can
-    /// actually apply it - committing what the live preview already put on the hardware, and
+    /// actually apply it: committing what the live preview already put on the hardware, and
     /// bringing <c>state.json</c>/<c>channel-state.json</c> in step with what is now showing.
     /// Without this, saving left the board showing the new preset while every record still
     /// described the old one, and the very next unrelated action would snap it back.
@@ -358,7 +358,7 @@ internal sealed class CustomPresetEditor : PopupForm
     public event EventHandler? PreviewEnded;
 
     /// <summary>
-    /// Appends one control as a new row of the single-column list, with its own AutoSize style - the
+    /// Appends one control as a new row of the single-column list, with its own AutoSize style: the
     /// rows are only known as they are built, and a row without a style is sized by whatever it
     /// happens to contain.
     /// </summary>
@@ -373,7 +373,7 @@ internal sealed class CustomPresetEditor : PopupForm
     {
         string label = ChannelLabels.For(device, channel, nameDevice, chosen);
 
-        // One block per channel, and the block has to say which channel at a glance - the rows
+        // One block per channel, and the block has to say which channel at a glance: the rows
         // below it look identical from one channel to the next. A hairline above every block but
         // the first keeps them apart once the list is long enough to scroll.
         if (_rows.Count > 0)
@@ -507,7 +507,7 @@ internal sealed class CustomPresetEditor : PopupForm
         brightness.ValueChanged += (_, _) => ShowBrightnessValue(row);
 
         // Debounced by the slider itself, so dragging it sends one switch when it settles rather
-        // than one per pixel - the controller takes a few hundred ms per switch.
+        // than one per pixel: the controller takes a few hundred ms per switch.
         brightness.ValueCommitted += (_, _) => RaisePreview();
         ShowBrightnessValue(row);
 
@@ -599,7 +599,7 @@ internal sealed class CustomPresetEditor : PopupForm
 #endif
 
     /// <summary>
-    /// The chips and the brightness only make sense for the effects that actually carry a colour -
+    /// The chips and the brightness only make sense for the effects that actually carry a colour:
     /// the firmware colours the rest itself and takes no brightness either.
     /// </summary>
     private static void ShowColours(ChannelRow row)
@@ -617,13 +617,13 @@ internal sealed class CustomPresetEditor : PopupForm
     /// <summary>
     /// Keeps the window exactly as tall as its rows, which change with each effect. Every call
     /// before <see cref="Open"/> has run measures against <see cref="Screen.FromPoint"/> of
-    /// (0, 0) - wherever that lands is corrected once <see cref="Open"/> knows the real screen
+    /// (0, 0): wherever that lands is corrected once <see cref="Open"/> knows the real screen
     /// and re-measures against <paramref name="workingArea"/> instead.
     /// </summary>
     private void FitToContent(Rectangle? workingArea = null)
     {
-        // The header and button row are pinned outside _scroll, so their preferred height -
-        // plus the margin that separates each from the scrolling rows - has to be added by hand;
+        // The header and button row are pinned outside _scroll, so their preferred height
+        // plus the margin that separates each from the scrolling rows, has to be added by hand;
         // only _root's height still follows from AutoSize.
         int pinned = _header.PreferredSize.Height + _header.Margin.Vertical +
             _buttons.PreferredSize.Height + _buttons.Margin.Vertical;
@@ -631,7 +631,7 @@ internal sealed class CustomPresetEditor : PopupForm
         int available = (workingArea ?? Screen.FromPoint(Location).WorkingArea).Height - this.Scaled(48);
         bool scrolls = wanted > available;
 
-        // Scaled, because this runs again on every effect change - long after WinForms scaled the
+        // Scaled, because this runs again on every effect change: long after WinForms scaled the
         // window for the display it opened on. Assigning the plain 96 dpi number here squeezed the
         // panel back to half its width on a 200 % screen and cut the colour chips off with it.
         // The scrollbar goes through Theme.ScrollBarWidth for the same reason:
@@ -640,11 +640,11 @@ internal sealed class CustomPresetEditor : PopupForm
         ClientSize = new Size(
             this.Scaled(ContentWidth) + Padding.Horizontal +
                 (scrolls ? Theme.ScrollBarWidth(this) : 0),
-            // The pinned rows never scroll, so the clamp can only take height back from _scroll -
+            // The pinned rows never scroll, so the clamp can only take height back from _scroll:
             // never below what the header and buttons need for themselves.
             Math.Max(pinned + Padding.Vertical, Math.Min(wanted, available)));
 
-        // This runs on every effect change, long after Open() placed the window - a row that grows
+        // This runs on every effect change, long after Open() placed the window: a row that grows
         // by its colour chips and brightness slider would otherwise push Save and Delete off the
         // bottom of the screen.
         KeepOnScreen();
@@ -653,7 +653,7 @@ internal sealed class CustomPresetEditor : PopupForm
 #if REVIEW
     /// <summary>
     /// Proves the header and button row actually stay pinned outside <see cref="_scroll"/> instead
-    /// of it covering the whole client area with them drawn across it - a wrong Controls.Add order
+    /// of it covering the whole client area with them drawn across it: a wrong Controls.Add order
     /// measures perfectly fine, so the layout numbers alone never caught it. Printed by
     /// <c>-review editor</c>.
     /// </summary>
@@ -784,7 +784,7 @@ internal sealed class CustomPresetEditor : PopupForm
     }
 
     /// <summary>
-    /// Writes the rows as they currently stand - not necessarily saved yet - to a file the user
+    /// Writes the rows as they currently stand (not necessarily saved yet) to a file the user
     /// picks, in the same shape <c>presets.json</c> itself stores an entry in, plus a
     /// <c>kind</c>/<c>version</c> pair so <see cref="TryReadPresetFile"/> can tell it apart from
     /// any other JSON file a file picker might be pointed at.
@@ -869,7 +869,7 @@ internal sealed class CustomPresetEditor : PopupForm
         string.Join("_", name.Split(Path.GetInvalidFileNameChars()));
 
     /// <summary>
-    /// Reads a file <see cref="ExportToFile"/> wrote - or one written by hand to the same shape -
+    /// Reads a file <see cref="ExportToFile"/> wrote (or one written by hand to the same shape)
     /// and applies it to the open rows without saving, the same as <see cref="Fill"/> for an
     /// existing preset. A bad file leaves every row exactly as it was and says so, rather than
     /// throwing or half-applying something.
@@ -916,7 +916,7 @@ internal sealed class CustomPresetEditor : PopupForm
             using FileStream stream = File.OpenRead(path);
 
             // A preset of nine channels is a few hundred bytes. Anything past this cap is not one,
-            // and parsing it would pull the whole file into memory on the interface thread - the
+            // and parsing it would pull the whole file into memory on the interface thread: the
             // file picker accepts whatever it is pointed at, including something hostile.
             if (stream.Length > AuraFiles.MaxPresetFileBytes)
             {
@@ -955,11 +955,11 @@ internal sealed class CustomPresetEditor : PopupForm
     }
 
     /// <summary>
-    /// Matched by device key and channel when the file came from this same machine/profile -
+    /// Matched by device key and channel when the file came from this same machine/profile:
     /// an exact restore. A file from a different computer never has a device key that matches
     /// anything connected here, so the best it can still offer is "the same position in the same
-    /// order" instead - which is how both this editor and <see cref="ExportToFile"/> build the
-    /// list. A row with nothing to match, either way, is left exactly as it already stood -
+    /// order" instead, which is how both this editor and <see cref="ExportToFile"/> build the
+    /// list. A row with nothing to match, either way, is left exactly as it already stood:
     /// "extra channels in the file are skipped, missing ones stay as they are".
     /// </summary>
     private void ApplyImportedEntries(List<CustomPresetEntry> imported)
@@ -1003,7 +1003,7 @@ internal sealed class CustomPresetEditor : PopupForm
 
     /// <summary>
     /// Shows the rows as they stand on the real hardware, so the preset is judged by looking at
-    /// the machine rather than at nine small icons. Nothing is written - <see cref="PreviewEnded"/>
+    /// the machine rather than at nine small icons. Nothing is written: <see cref="PreviewEnded"/>
     /// puts the lighting back when the editor closes.
     /// </summary>
     private void RaisePreview()
@@ -1053,7 +1053,7 @@ internal sealed class CustomPresetEditor : PopupForm
 
     /// <summary>
     /// Opens next to the window. Deliberately the one popup that an outside click does not
-    /// dismiss - it holds text that has not been saved yet. Escape, Save and Delete close it.
+    /// dismiss: it holds text that has not been saved yet. Escape, Save and Delete close it.
     /// </summary>
     public void Open(Point at, IWin32Window? owner)
     {
@@ -1073,7 +1073,7 @@ internal sealed class CustomPresetEditor : PopupForm
         _name.FocusInput();
 
         // The rows are seeded from what each channel is already running, so the first preview is
-        // usually a no-op - but not when an existing preset was loaded into them.
+        // usually a no-op, but not when an existing preset was loaded into them.
         RaisePreview();
     }
 
@@ -1131,7 +1131,7 @@ internal sealed class CustomPresetEditor : PopupForm
     }
 
     /// <summary>Every row's spacing back at the current scale, then the window fitted to what that
-    /// measures - queued, since WinForms is still working through its own rescale.</summary>
+    /// measures: queued, since WinForms is still working through its own rescale.</summary>
     private void Resettle()
     {
         if (!IsHandleCreated || IsDisposed)

@@ -13,7 +13,7 @@ internal sealed partial class ToggleForm
     /// <summary>The application icon, embedded so the window matches the executable.</summary>
     private static Icon? LoadIcon() => LoadIcon("AuraToggle.aura.ico", SystemInformation.IconSize);
 
-    /// <summary>The "on" icon at tray size - the large titlebar <see cref="Icon"/> reused here
+    /// <summary>The "on" icon at tray size: the large titlebar <see cref="Icon"/> reused here
     /// was only ever downscaled by Windows, which read softer than loading it small directly.</summary>
     private static Icon? LoadIconOnTray() => LoadIcon("AuraToggle.aura.ico", SystemInformation.SmallIconSize);
 
@@ -209,7 +209,7 @@ internal sealed partial class ToggleForm
 
         if (_devices.Count == 0)
         {
-            // The tray icon was the only thing left to click while no controller was found - a
+            // The tray icon was the only thing left to click while no controller was found: a
             // reasonable moment to check again, since the user just came back to look.
             await DiscoverDevices();
         }
@@ -275,7 +275,7 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
         using var brush = new SolidBrush(Theme.Accent);
 
         // Sized from the box the menu gave it rather than in fixed pixels: a renderer is not a
-        // control, so it has no dpi of its own to scale against - but that box already carries the
+        // control, so it has no dpi of its own to scale against, but that box already carries the
         // menu's, which is the same thing one step earlier.
         Rectangle box = e.ImageRectangle;
         int dot = Math.Max(4, Math.Min(box.Width, box.Height) / 2);

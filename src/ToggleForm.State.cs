@@ -120,7 +120,7 @@ internal sealed partial class ToggleForm
         {
             if (AuraChannelStates.Get(remembered, deviceKey, own.Index) is not ChannelLighting look)
             {
-                // Never set on its own, so it is following the board - which is lit.
+                // Never set on its own, so it is following the board, which is lit.
                 anyOn = true;
                 continue;
             }

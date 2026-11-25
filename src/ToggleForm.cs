@@ -51,8 +51,8 @@ internal sealed partial class ToggleForm : Form
     /// <see cref="ApplyScaledMetrics"/> rather than written straight onto the controls, because
     /// <see cref="ContainerControl.AutoScaleDimensions"/> is deliberately never set here: with it unset
     /// WinForms' own auto-scaling does nothing at all, and everything that has to grow with the
-    /// display has to say so itself. Anything left as a plain number stayed 96 dpi sized on a
-    /// 150 % screen - a half-size gear next to full-size text, and window padding that did not
+    /// display has to say so itself. Anything left as a plain number stays 96 dpi sized on a
+    /// 150 % screen: a half-size gear next to full-size text, and window padding that did not
     /// grow with the content it was supposed to frame.
     /// </summary>
     private const int PadX = 16;
@@ -67,7 +67,7 @@ internal sealed partial class ToggleForm : Form
     private const int RetryGap = 8;
     private const int LabelInset = 2;
 
-    /// <summary>How far the settings panel's right edge sits inside the window's own - see
+    /// <summary>How far the settings panel's right edge sits inside the window's own: see
     /// <see cref="OnSettingsClick"/>.</summary>
     private const int SettingsEdgeGap = 4;
 
@@ -84,7 +84,7 @@ internal sealed partial class ToggleForm : Form
     private const uint IsmexSend = 0x0001;
 
     /// <summary>How long after an empty theme broadcast a frame refresh from outside counts as
-    /// its echo - it follows within a few milliseconds.</summary>
+    /// its echo: it follows within a few milliseconds.</summary>
     private const int ThemeEchoMs = 1000;
 
     /// <summary>WM_ENTERSIZEMOVE and WM_EXITSIZEMOVE: the window is following the mouse.</summary>
@@ -94,7 +94,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// True between those two. <see cref="KeepOnScreen"/> checks this and does nothing while it
-    /// holds, so nothing here repositions a window the user is still holding on to - but
+    /// holds, so nothing here repositions a window the user is still holding on to, but
     /// <see cref="SettleAfterDpiChange"/> does not check it: <c>WM_DPICHANGED</c> only
     /// arrives once Windows has already put the window on its new monitor and knows the new
     /// scale, so a re-measure at that point is not guessing between two displays, it is reading
@@ -129,16 +129,16 @@ internal sealed partial class ToggleForm : Form
     private OcclusionWatch? _occlusion;
     private readonly ToolStripMenuItem _trayLighting = new();
 
-    /// <summary>The built-in effects and custom presets, as in the window's list - see <see cref="RefreshTrayEffects"/>.</summary>
+    /// <summary>The built-in effects and custom presets, as in the window's list: see <see cref="RefreshTrayEffects"/>.</summary>
     private readonly ToolStripMenuItem _trayEffects = new();
 
     // A single left click on the tray icon toggles the lighting, but the first click of a
-    // double-click looks identical until the second one either arrives or does not - so it is
+    // double-click looks identical until the second one either arrives or does not, so it is
     // held here until SystemInformation.DoubleClickTime passes with no second click, and dropped
     // if DoubleClick fires first.
     private readonly System.Windows.Forms.Timer _trayClickTimer = new();
 
-    /// <summary>Delays the visible half of <see cref="SetBusy"/> - see <see cref="BusyFlashDelayMs"/>.</summary>
+    /// <summary>Delays the visible half of <see cref="SetBusy"/>: see <see cref="BusyFlashDelayMs"/>.</summary>
     private readonly System.Windows.Forms.Timer _busyTimer = new() { Interval = BusyFlashDelayMs };
 
     private AuraState _state;
@@ -151,7 +151,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>The latest request that arrived during a quiet hold, see <see cref="Run"/>.</summary>
     private Func<AuraState>? _afterQuiet;
 
-    /// <summary>A click on the big button arrived during a quiet hold - see <see cref="OnToggleClick"/>.
+    /// <summary>A click on the big button arrived during a quiet hold: see <see cref="OnToggleClick"/>.
     /// Only the latest of this and <see cref="_afterQuiet"/> is kept.</summary>
     private bool _clickAfterQuiet;
 
@@ -182,7 +182,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>When the settings panel last closed, so the gear does not immediately reopen it.</summary>
     private long _settingsClosedAt;
 
-    /// <summary>Set once <see cref="Reveal"/> has actually shown the window - guards against the
+    /// <summary>Set once <see cref="Reveal"/> has actually shown the window: guards against the
     /// 500 ms backstop timer and the post-discovery call both firing.</summary>
     private bool _revealed;
 
@@ -211,10 +211,10 @@ internal sealed partial class ToggleForm : Form
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
 
-        // Invisible until Reveal() decides there is something worth showing - see OnShown.
+        // Invisible until Reveal() decides there is something worth showing: see OnShown.
         Opacity = 0;
 
-        // Only trusted when the saved point still lands on a display that exists right now -
+        // Only trusted when the saved point still lands on a display that exists right now:
         // unplugging the second monitor a window sat on must not open it off-screen and
         // unreachable. Screen.AllScreens is queried fresh here rather than cached, since it is
         // Windows' own idea of the current monitor layout and construction only runs once anyway.
@@ -271,7 +271,7 @@ internal sealed partial class ToggleForm : Form
 
         // A display-scale change reaches these two in their own time: WinForms updates a child's
         // own dpi and replaces its font after this window has already been told, so the widths
-        // measured in between are still the old display's - and consistently so, which is why no
+        // measured in between are still the old display's, and consistently so, which is why no
         // check could tell. Re-measuring when the control itself reports the change keeps them
         // current.
         foreach (Control control in new Control[] { _effects, _channel })
@@ -304,7 +304,7 @@ internal sealed partial class ToggleForm : Form
         {
             ShowBrightnessValue();
 
-            // Render() sets this Value itself, below, to whatever it just painted - reading that
+            // Render() sets this Value itself, below, to whatever it just painted: reading that
             // assignment back here as if it were a fresh knob drag would repaint the button with
             // the board's brightness instead of the one Render() actually used (a custom preset's
             // most-used channel can carry its own, different from the board-wide value).
@@ -375,8 +375,8 @@ internal sealed partial class ToggleForm : Form
         _topRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         _topRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         // An explicit row style, not left to default: without AutoSize on the panel itself (see
-        // the comment above), an unstyled row's height stopped being reliably "as tall as its
-        // tallest cell" - the effect list's row could balloon on a selection change and starve
+        // the comment above), an unstyled row's height stops being reliably "as tall as its
+        // tallest cell": the effect list's row can balloon on a selection change and starve
         // the toggle button of the height _layout's own Percent row leaves for it.
         _topRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _topRow.Controls.Add(_effects, 0, 0);
@@ -393,7 +393,7 @@ internal sealed partial class ToggleForm : Form
         _layout.RowCount = 5;
         // Absolute, not AutoSize: a RowStyle.AutoSize row asks its cell's control for a preferred
         // height, but _topRow is a Dock=Fill child of this row and that combination makes the row
-        // engine guess rather than measure - the row reports 34 px and is handed 100, starving the
+        // engine guess rather than measure: the row reports 34 px and is handed 100, starving the
         // toggle row below it. Told the true number instead, kept current by ResizeToContent.
         _topRowHeight = new RowStyle(SizeType.Absolute, _topRow.PreferredSize.Height);
         _layout.RowStyles.Add(_topRowHeight);                        // effect list, channel, gear
@@ -414,13 +414,13 @@ internal sealed partial class ToggleForm : Form
         Render();
 
         // A first guess at the real width, so the window does not visibly grow the moment
-        // DiscoverDevices() finds out how wide the channel selector actually needs it to be -
+        // DiscoverDevices() finds out how wide the channel selector actually needs it to be:
         // the reveal backstop shows the window after half a second whether discovery has answered
         // or not, and on a board that takes longer than that the growth happened in plain sight.
         // Applied after Render(), not before: the selector is still hidden this early, so the
         // width Render() works out is the one for a row without it and would overwrite the guess.
-        // Never trusted outright - clamped the same as WantedWidth, in case a hand-edited file
-        // carries something absurd - and the Render() after discovery still corrects it if this
+        // Never trusted outright (clamped the same as WantedWidth, in case a hand-edited file
+        // carries something absurd) and the Render() after discovery still corrects it if this
         // guess turns out wrong (different monitor, renamed channel, new preset).
         if (_settings.WindowWidth is int savedWidth)
         {
@@ -509,7 +509,7 @@ internal sealed partial class ToggleForm : Form
         editor.PreviewRequested += (_, shown) => QueuePreview(() => Program.Preview(shown));
         editor.PreviewEnded += (_, _) => QueuePreview(Program.RestoreFromRecords);
 
-        // Save committed the preview to disk as a preset - applying it now is what makes the
+        // Save committed the preview to disk as a preset: applying it now is what makes the
         // hardware, state.json and channel-state.json agree on it, instead of the board showing
         // the new preset while every record still describes the old one. Queued rather than
         // dropped when busy: a Save that lands while the last live preview is still running would
@@ -558,7 +558,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Copies a preset under "&lt;name&gt; (2)", counting up on a collision, then opens the copy
-    /// in the editor straight away - the list that offered Duplicate is already closed by the
+    /// in the editor straight away: the list that offered Duplicate is already closed by the
     /// time this runs, so there is nothing left to interrupt. Cancelling out of the editor leaves
     /// the copy in place; it was saved the moment it was created, same as the original.
     /// </summary>
@@ -579,10 +579,10 @@ internal sealed partial class ToggleForm : Form
             int suffix = 2;
             do
             {
-                // A name already at AuraFiles.MaxPresetName leaves no room for the suffix -
+                // A name already at AuraFiles.MaxPresetName leaves no room for the suffix:
                 // AuraCustomPresets.Load re-caps every name to that length on the next read, which
                 // silently drops the suffix back off and leaves two presets sharing one name.
-                // AuraFiles.Caption, not a raw range - a plain cut can land inside a surrogate
+                // AuraFiles.Caption, not a raw range: a plain cut can land inside a surrogate
                 // pair (an emoji in the name) and hand Utf8JsonWriter half of one on save.
                 string suffixText = $" ({suffix})";
                 string baseName = AuraFiles.Caption(name, Math.Max(0, AuraFiles.MaxPresetName - suffixText.Length));
@@ -605,7 +605,7 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Forgets a preset name from the active state if it was the one running - the lighting
+    /// Forgets a preset name from the active state if it was the one running: the lighting
     /// keeps running, but it is no longer a named preset. Shared by both places a preset can be
     /// deleted from: the effect list's own drop down, and the editor's delete button.
     /// </summary>
@@ -614,7 +614,7 @@ internal sealed partial class ToggleForm : Form
         // Locked and re-read, like every other read-modify-write of state.json: the cached copy
         // here can be older than what a command line switch wrote a moment ago, and saving it
         // back would undo that. A switch keeps state.json between its read and its save under
-        // the hardware lock alone, so that lock is taken first - on a worker, because a burst
+        // the hardware lock alone, so that lock is taken first: on a worker, because a burst
         // can hold it for seconds and the window must keep painting meanwhile.
         AuraState? cleared = await Task.Run(() =>
         {
@@ -647,7 +647,7 @@ internal sealed partial class ToggleForm : Form
         // The big button sleeps while nothing of it can be seen.
         _occlusion = new OcclusionWatch(this, _toggle, covered => _toggle.Covered = covered);
 
-        // Backstop: whatever else happens, the window is visible within half a second - a hung
+        // Backstop: whatever else happens, the window is visible within half a second, so a hung
         // controller must never leave it sitting fully transparent.
         _revealTimer = new System.Windows.Forms.Timer { Interval = 500 };
         _revealTimer.Tick += (_, _) => Reveal();
@@ -657,7 +657,7 @@ internal sealed partial class ToggleForm : Form
         // open straight into the notification area.
         if (Program.LaunchedAtStartup)
         {
-            // Already hidden below, so there is nothing left for Opacity to hide - and
+            // Already hidden below, so there is nothing left for Opacity to hide, and
             // RestoreFromTray must never bring back a window that is still transparent.
             Opacity = 1;
             HideToTray();
@@ -667,7 +667,7 @@ internal sealed partial class ToggleForm : Form
 
         await DiscoverDevices();
 
-        // A manual open must never re-apply the configured start action - only a genuine
+        // A manual open must never re-apply the configured start action: only a genuine
         // Windows-logon launch may, since that is the only time LaunchedAtStartup is true.
         if (_devices.Count > 0 && Program.LaunchedAtStartup)
         {
@@ -682,7 +682,7 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Makes the window visible - once. Called after the first real measurement
+    /// Makes the window visible: once. Called after the first real measurement
     /// (<see cref="DiscoverDevices"/> and the <see cref="Render"/> it ends with, so the window
     /// never grows on screen) and from a 500 ms backstop timer in case a hung controller never
     /// gets that far.
@@ -703,7 +703,7 @@ internal sealed partial class ToggleForm : Form
         if (Visible)
         {
             // A fresh install hands off to this process through the installer's own de-elevated
-            // relaunch, which does not carry the right to activate a window - without this the
+            // relaunch, which does not carry the right to activate a window: without this the
             // very first start opened behind the installer instead of in front of it. Skipped
             // when the window is hidden to the tray (autostart): there is nothing to bring
             // forward.
@@ -736,7 +736,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Windows follows every "ImmersiveColorSet" broadcast with a frame refresh of its own,
-    /// sent from outside this thread, even when the theme did not change - and plenty of
+    /// sent from outside this thread, even when the theme did not change, and plenty of
     /// programs send that broadcast as they open or close. The refresh redraws the frame and
     /// erases the window's background twice over, which showed as the window, the animated
     /// button most of all, flashing whenever another window came or went. Inside
@@ -764,13 +764,13 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Looks for the controller and enables or disables the window's hardware-facing controls to
     /// match. Called again from <see cref="RestoreFromTray"/> when nothing was found the first
-    /// time - unplugging the tool's window into disabled controls forever is otherwise the only
+    /// time: unplugging the tool's window into disabled controls forever is otherwise the only
     /// outcome, since nothing else ever asks the hardware again.
     /// </summary>
     private async Task DiscoverDevices()
     {
         // Waited out first, then held. Two discoveries at once fight over the controller's
-        // answers - each one's handshake times out waiting for the other's reply - and the loser
+        // answers (each one's handshake times out waiting for the other's reply) and the loser
         // concludes there is no controller at all. The busy flag alone does not prevent that:
         // bringing the window back from the notification area discovers again whenever nothing
         // was found yet, which is exactly the state while the first sweep is still running.
@@ -832,7 +832,7 @@ internal sealed partial class ToggleForm : Form
 
         if (IsDisposed)
         {
-            // Quit from the notification area while discovery was still running - the window and
+            // Quit from the notification area while discovery was still running: the window and
             // its controls are already gone, and nothing here may reach the controller after
             // OnFormClosing has settled everything.
             return;
@@ -911,8 +911,8 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Every switchable target: all channels together, then - on machines with more than one
-    /// controller - each controller as a whole, then every single channel. One controller with
+    /// Every switchable target: all channels together, then (on machines with more than one
+    /// controller) each controller as a whole, then every single channel. One controller with
     /// four channels is exactly the case a per-controller list has nothing to offer.
     /// </summary>
     private void SetUpChannelSelector()
@@ -949,7 +949,7 @@ internal sealed partial class ToggleForm : Form
         {
             // Kept as narrow as its own longest label: the effect list takes the rest of the row,
             // and that is where a long preset name would otherwise be cut off. The list it opens
-            // is exactly as wide as its longest row, pencil included - a fixed minimum would leave a
+            // is exactly as wide as its longest row, pencil included: a fixed minimum would leave a
             // short list of channels sitting in a panel far wider than anything in it. The bounds
             // are scaled because what they bound is not: the measured label width grows with the
             // display, so a limit written for 96 dpi would clip every name on a 150 % screen.
@@ -1023,7 +1023,7 @@ internal sealed partial class ToggleForm : Form
         // hardware call to finish before it ever reaches its own assignment, and closing the popup
         // during that wait would cancel a field that was still null. The identify then started
         // anyway with nothing left able to stop it, parked on an infinite wait, and held the busy
-        // flag - and with it every control - for the rest of the session.
+        // flag (and with it every control) for the rest of the session.
         var cts = new CancellationTokenSource();
 
         // Seeded with the channel's own name, never the controller-qualified label the list shows.
@@ -1074,7 +1074,7 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Disposes the source of a rename popup once the run using its token has ended - disposing it
+    /// Disposes the source of a rename popup once the run using its token has ended: disposing it
     /// under a live <see cref="Program.Identify"/> would make that wait throw. Always called after
     /// the source was cancelled, which is what <see cref="CancelIdentify"/> relies on.
     /// </summary>
@@ -1106,7 +1106,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Lights the channel being renamed so its header is easy to find, holding the controller
-    /// quietly for as long as it runs - nothing else may write to it at the same time, and a
+    /// quietly for as long as it runs: nothing else may write to it at the same time, and a
     /// switch asked for meanwhile waits until the name box closes. Stopped by cancelling
     /// <see cref="_identifyCts"/>, which <see cref="Program.Identify"/> answers by putting every
     /// channel of that controller back to its own record before returning.
@@ -1115,7 +1115,7 @@ internal sealed partial class ToggleForm : Form
     {
         // The channel selector's own popup stays open across a switch (it is a window of its
         // own, not disabled by SetBusy), so the pencil can be clicked while _busy is already
-        // held elsewhere - the hotkey, the toggle button. Waiting it out here is what every other
+        // held elsewhere: the hotkey, the toggle button. Waiting it out here is what every other
         // hardware path already does; without it two DiscoverAll sweeps raced each other and this
         // method's own SetBusy(true) below re-enabled controls out from under a switch mid-flight.
         while (_busy && !IsDisposed)
@@ -1130,7 +1130,7 @@ internal sealed partial class ToggleForm : Form
 
         // A rename opened while a previous one is still running (the popup closes on
         // deactivation, but its own Program.Identify keeps holding the controller for a moment
-        // after Cancel() until it notices) has to wait that moment out - starting the new
+        // after Cancel() until it notices) has to wait that moment out: starting the new
         // AuraDevice.DiscoverAll straight away would race the old run's still-open handles on
         // the same controller.
         if (_identifyCts != null)
@@ -1145,7 +1145,7 @@ internal sealed partial class ToggleForm : Form
             }
             catch (Exception ex)
             {
-                // Same widened catch as the one below, and for the same reason - a refused
+                // Same widened catch as the one below, and for the same reason: a refused
                 // command throws InvalidOperationException, which would fall through here
                 // uncaught and take the newly requested rename down with the previous run's own
                 // failure. Every awaiter of the same Task sees this independently, so it is
@@ -1196,7 +1196,7 @@ internal sealed partial class ToggleForm : Form
         {
             // Nothing awaits this task (OpenChannelRename fires it with a discarded "_ ="), so
             // an unhandled fault here would vanish as an unobserved task exception instead of
-            // reaching the user or the log - the same reasoning ToggleForm.Run already follows
+            // reaching the user or the log: the same reasoning ToggleForm.Run already follows
             // for its own fire-and-forget switches. Catching every exception rather than only the
             // two expected ones for exactly that reason: a refused command throws
             // InvalidOperationException, which would disappear without a trace.
@@ -1238,8 +1238,8 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// The power a click on the big button asked for, shown while the controller is still being
-    /// written. Waiting for the hardware left the button sitting unchanged for the length of a
-    /// discovery and a burst of reports, then greyed it out, then flipped it - a visible hitch on
+    /// written. Waiting for the hardware would leave the button unchanged for the length of a
+    /// discovery and a burst of reports, then grey it out, then flip it: a visible hitch on
     /// every click. Cleared when the switch ends; the state it returns is then painted, so a
     /// failed switch flips back. Carries the target it was clicked for: the selector stays live
     /// during the switch, and another channel picked meanwhile shows its own power, not this one.
@@ -1250,7 +1250,7 @@ internal sealed partial class ToggleForm : Form
     /// <see cref="Displayed"/> as of the last <see cref="Render"/>, which every click handler
     /// reads instead of the property itself. <see cref="Displayed"/> parses
     /// <c>channel-state.json</c> from disk with a channel or controller selected, and Render
-    /// already runs after every action that could have changed it - reading it again per click
+    /// already runs after every action that could have changed it: reading it again per click
     /// was a second disk read for the same answer Render had just computed.
     /// </summary>
     private (byte Mode, Color Colour, bool On, byte Brightness) _displayed;
@@ -1258,7 +1258,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// The mode and colour <see cref="Render"/> actually painted the switch with, which for a
     /// custom preset is the most-used channel's effect, not <see cref="_displayed"/>'s own mode
-    /// and colour - see the custom-preset branch there. <see cref="PreviewBrightness"/> reads
+    /// and colour: see the custom-preset branch there. <see cref="PreviewBrightness"/> reads
     /// these instead of recomputing them, so dragging the slider previews the same thing Render
     /// last drew rather than a different, wrong answer for a custom preset.
     /// </summary>
@@ -1267,7 +1267,7 @@ internal sealed partial class ToggleForm : Form
     private Color _paintedColour;
 
     /// <summary>True only for the span of <see cref="Render"/>'s own write to <see
-    /// cref="_brightness"/>.Value - lets the ValueChanged handler tell that assignment apart
+    /// cref="_brightness"/>.Value: lets the ValueChanged handler tell that assignment apart
     /// from an actual knob drag.</summary>
     private bool _settingBrightnessFromRender;
 
@@ -1381,11 +1381,11 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Live-dims the switch while the slider is being dragged, before the value is committed to
-    /// the controller - <see cref="Render"/> already does the same dimming after every real
+    /// the controller: <see cref="Render"/> already does the same dimming after every real
     /// change, this just previews it a knob-drag early. Skipped for a firmware effect
     /// (<see cref="AuraPreset.UsesColour"/> false): those four cannot be dimmed at all, because
     /// the controller generates their colours itself, and a preview that ignored that would lie. Reads
-    /// only fields <see cref="Render"/> already set - no store, no measurement, so the call
+    /// only fields <see cref="Render"/> already set: no store, no measurement, so the call
     /// <see cref="Render"/> itself makes when it assigns <see cref="_brightness"/>.Value below
     /// stays harmless: it previews with the very values Render just painted.
     /// </summary>
@@ -1402,7 +1402,7 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Sent once the knob is released, for whatever the selector points at - one channel, one
+    /// Sent once the knob is released, for whatever the selector points at: one channel, one
     /// controller or the whole board, which is also what hands single channels back to the
     /// board-wide brightness.
     /// </summary>
@@ -1425,7 +1425,7 @@ internal sealed partial class ToggleForm : Form
         }
 
         // Pressing the gear while the panel is open deactivates it, so it has already closed and
-        // cleared itself by the time this click arrives - and the guard above would reopen it.
+        // cleared itself by the time this click arrives, and the guard above would reopen it.
         // A click that lands right after that close is the second half of the same gesture.
         if (Environment.TickCount64 - _settingsClosedAt < 250)
         {
@@ -1447,7 +1447,7 @@ internal sealed partial class ToggleForm : Form
             _toggle.Animate = settings.Animate;
 
             // Assigning TopMost, even to the value it already holds, makes WinForms reissue
-            // SetWindowPos(HWND_TOPMOST/HWND_NOTOPMOST) without SWP_NOACTIVATE - which activates
+            // SetWindowPos(HWND_TOPMOST/HWND_NOTOPMOST) without SWP_NOACTIVATE, which activates
             // this window and, with it, closes the settings panel sitting on top of it. Every
             // other option's Changed handler runs whether or not that option actually changed, so
             // this guard is what keeps the panel open for all of them, not just this one.
@@ -1475,7 +1475,7 @@ internal sealed partial class ToggleForm : Form
             popup.Dispose();
         };
 
-        // Drops from under the gear, but its right edge follows the window's - a few pixels inside
+        // Drops from under the gear, but its right edge follows the window's: a few pixels inside
         // it, not the gear's own. The big toggle button underneath runs the full content width, so
         // an edge lined up with the gear left a strip of the button showing next to the panel; from
         // the window's edge inward the panel covers it completely and still keeps a hairline of
@@ -1490,7 +1490,7 @@ internal sealed partial class ToggleForm : Form
 #if REVIEW
     /// <summary>
     /// Review mode only: opens the settings panel the same way a real gear click does, then keeps
-    /// it open past the deactivation that would otherwise close it immediately - with nothing else
+    /// it open past the deactivation that would otherwise close it immediately: with nothing else
     /// on screen to hold focus first, anything else stealing it (another window, another process)
     /// counts as one.
     /// </summary>
@@ -1519,7 +1519,7 @@ internal sealed partial class ToggleForm : Form
     internal void OpenChannelsForReview() => _channel.OpenForReview();
 
     /// <summary>Surface tool only: the tray menu with its effect list open, placed over the
-    /// window so a window shot takes it in - the real one opens at the notification area.</summary>
+    /// window so a window shot takes it in: the real one opens at the notification area.</summary>
     internal static IEnumerable<ToolStripDropDown> ReviewMenus =>
         Application.OpenForms.OfType<ToggleForm>()
             .SelectMany(f => new ToolStripDropDown?[] { f._tray.ContextMenuStrip, f._trayEffects.DropDown })
@@ -1565,7 +1565,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Review mode only: closes the settings panel synchronously if one is open, so a review can
     /// force a fresh <see cref="OpenSettingsForReview"/> at each simulated display scale instead of
-    /// reading the stale position of a panel that has been open since before the simulated move -
+    /// reading the stale position of a panel that has been open since before the simulated move:
     /// this popup is an owned top-level window, not a child, so it never follows the main window on
     /// its own.
     /// </summary>
@@ -1578,10 +1578,10 @@ internal sealed partial class ToggleForm : Form
 #if REVIEW
     /// <summary>
     /// The settings panel's placement against the window edge, the gear and the big toggle button
-    /// it opened from - it checks two conditions: a strip of the button left visible
+    /// it opened from. It checks two conditions: a strip of the button left visible
     /// next to the panel (anything but a positive <c>panel.Right - toggle.Right</c>), and the panel
     /// landing nowhere near the gear at all (the multi-monitor case where
-    /// <see cref="SettingsPopup.Open"/> clamped against the wrong monitor's bounds - a gap far
+    /// <see cref="SettingsPopup.Open"/> clamped against the wrong monitor's bounds; a gap far
     /// wider than <see cref="SettingsEdgeGap"/> is that, not rounding).
     /// </summary>
     internal string DescribeSettingsAnchor()
@@ -1644,7 +1644,7 @@ internal sealed partial class ToggleForm : Form
     /// Win32 level. A change made in the panel is then rolled back to <paramref name="previous"/>
     /// (and that one registered again), so the panel never shows a combination that does nothing.
     /// At startup, or after a reset, there is no panel and no previous setting: the failure is
-    /// only logged, and the stored switch and combination stay as they are - the other program may
+    /// only logged, and the stored switch and combination stay as they are: the other program may
     /// simply not be up yet, and a saved "off" would silently throw the user's choice away.
     /// </summary>
     private void ApplyHotkeySetting(SettingsPopup? popup, AuraSettings? previous = null)
@@ -1688,7 +1688,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Dragged onto a display with a different scale. WinForms rescales the controls' own bounds,
-    /// but not the widths this window measured for the display it was on before - and not the
+    /// but not the widths this window measured for the display it was on before, and not the
     /// metrics inside a custom paint, which read the current dpi and so only need a repaint. The
     /// popups are windows of their own and get told separately.
     /// </summary>
@@ -1725,7 +1725,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Re-applies every dpi-dependent measurement, then checks whether anything is short of
     /// room, the effect list's own text included, instead of trusting that one pass was enough. Runs while the window is still being dragged, on
-    /// purpose - see <see cref="_userMoving"/> - so the layout catches up to the new monitor
+    /// purpose (see <see cref="_userMoving"/>) so the layout catches up to the new monitor
     /// immediately instead of only once the mouse button comes back up.
     /// </summary>
     private void SettleAfterDpiChange(int attempt)
@@ -1749,8 +1749,8 @@ internal sealed partial class ToggleForm : Form
         Render();
 
         // "Nothing overflows" is only worth believing once the controls agree with the window
-        // about which display they are on. Until they do, every width here - the room measured
-        // and the room needed alike - comes from the same stale dpi, so they always match and the
+        // about which display they are on. Until they do, every width here (the room measured
+        // and the room needed alike) comes from the same stale dpi, so they always match and the
         // check always passes, which is exactly how the layout could be left wrong.
         bool settled = _effects.DeviceDpi == DeviceDpi && _channel.DeviceDpi == DeviceDpi;
         bool clipped = RightOverflow().Any(measured => measured.Overflow > 0);
@@ -1806,7 +1806,7 @@ internal sealed partial class ToggleForm : Form
             Settle(_identifyTask);
         }
 
-        // A preview that nothing has written down is still on the board - either from a preset
+        // A preview that nothing has written down is still on the board: either from a preset
         // editor that is still open (its own PreviewEnded fires only once this window is already
         // tearing down, and the restore behind it is an async continuation that never gets to run)
         // or from one closed a moment ago, whose restore is that very continuation. Either way the
@@ -1852,7 +1852,7 @@ internal sealed partial class ToggleForm : Form
     /// Gives one last hardware task the moment it needs to finish while the window closes. A full
     /// restore on a board with many channels costs two passes of two 8 ms-gapped writes each, and
     /// a single write can itself block for up to <c>Hid.WriteTimeoutMs</c> (3000 ms) on a stuck
-    /// controller - so the wait has to outlast that one write, not just the usual run.
+    /// controller, so the wait has to outlast that one write, not just the usual run.
     /// </summary>
     private static void Settle(Task? task)
     {
@@ -1868,7 +1868,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Review build only, and only with <c>AURA_TRACE</c> naming a file: every message that can
-    /// make the window repaint or move, plus each Render and resize, one timestamped line apiece -
+    /// make the window repaint or move, plus each Render and resize, one timestamped line apiece:
     /// how a flash that happens "sometimes, when another window opens" is caught on the VM.
     /// </summary>
     [System.Diagnostics.Conditional("REVIEW")]
@@ -1923,7 +1923,7 @@ internal sealed partial class ToggleForm : Form
 
             // Plenty of programs send the same broadcast as they open or close, with the theme
             // untouched. Such an empty one goes no further, and the frame refresh Windows sends
-            // after it is dropped - see DropForeignFrameRefresh. FollowSystemTheme above still
+            // after it is dropped: see DropForeignFrameRefresh. FollowSystemTheme above still
             // looks again once the message loop is back, in case the setting lands late.
             Theme.Forget();
             if (Theme.Dark == _dark)
@@ -1934,7 +1934,7 @@ internal sealed partial class ToggleForm : Form
             }
         }
 
-        // Always the whole board, regardless of what is selected in the window - the hotkey is a
+        // Always the whole board, regardless of what is selected in the window: the hotkey is a
         // blunt "make it dark" switch, not a stand-in for the channel selector.
         if (HotKey.IsHotKeyMessage(m.Msg, m.WParam) && !IsDisposed)
         {
@@ -1943,7 +1943,7 @@ internal sealed partial class ToggleForm : Form
 
         // The window is being dragged or resized by hand. Repositioning it while it is still
         // following the mouse would only fight the user, so KeepOnScreen holds off on that until
-        // the drag ends - but a WM_DPICHANGED that arrives mid-drag already names the new
+        // the drag ends, but a WM_DPICHANGED that arrives mid-drag already names the new
         // monitor and scale, so SettleAfterDpiChange does not wait for it; only the position is
         // held back. WM_EXITSIZEMOVE still queues one more settle, for whatever a child control's
         // own dpi query answered too late to catch while dragging (see SettleAfterDpiChange).
@@ -1969,7 +1969,7 @@ internal sealed partial class ToggleForm : Form
         Theme.Forget();
         if (_dark == Theme.Dark)
         {
-            // Something else about the colour scheme changed - the accent colour, say.
+            // Something else about the colour scheme changed: the accent colour, say.
             return;
         }
 
@@ -2011,8 +2011,8 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// Called from every path that ends the window being visible - minimising, closing to tray,
-    /// and the real close below - so the position sticks regardless of which one the user takes.
+    /// Called from every path that ends the window being visible (minimising, closing to tray,
+    /// and the real close below) so the position sticks regardless of which one the user takes.
     /// <see cref="RestoreBounds"/> rather than <see cref="Control.Location"/> once minimised: the
     /// live location while minimised is an off-screen placeholder Windows uses for the animation,
     /// not where the window actually sat.
@@ -2033,7 +2033,7 @@ internal sealed partial class ToggleForm : Form
         int? width96 = _lastWidth96 > 0 ? _lastWidth96 : null;
 
         // Reloaded and merged under the same lock every other settings writer uses, rather than
-        // saving this object's own possibly-stale copy of Settings - an open settings popup saves
+        // saving this object's own possibly-stale copy of Settings: an open settings popup saves
         // independently, and it landing between this method's read and write would otherwise be
         // overwritten right back out.
         using IDisposable guard = AuraFiles.Lock();
@@ -2053,14 +2053,14 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Runs a preview on the controller, latest wins. A switch takes a few hundred ms, and the
-    /// editor can easily produce another one in that time - dropping those (which is what
+    /// editor can easily produce another one in that time: dropping those (which is what
     /// <see cref="Run"/> does while busy) would leave the board showing an edit or two ago, so
     /// the newest one is held instead and run as soon as the previous finishes.
     /// </summary>
     /// <remarks>
     /// Waits out <see cref="_busy"/> before touching the controller, and holds it itself while
     /// the preview runs. Without that, a preview and a switch from <see cref="Run"/> could open
-    /// two concurrent <see cref="AuraDevice.DiscoverAll"/> sweeps - each one's handshake times
+    /// two concurrent <see cref="AuraDevice.DiscoverAll"/> sweeps: each one's handshake times
     /// out waiting for the other's reply, which is the same failure <see cref="OnShown"/>
     /// already locks the first discovery against.
     /// </remarks>
@@ -2098,7 +2098,7 @@ internal sealed partial class ToggleForm : Form
                 }
                 catch (Exception ex)
                 {
-                    // The preview is a convenience, not the change itself - a controller that
+                    // The preview is a convenience, not the change itself: a controller that
                     // went away mid-edit is reported when Save actually tries to apply it.
                     // Anything else is a bug, and this runs as async void: uncaught, it would
                     // leave the loop with _previewRunning stuck and take the process with it
@@ -2139,7 +2139,7 @@ internal sealed partial class ToggleForm : Form
     /// Waits the running action out instead of dropping this one. Only for callers where losing
     /// the call would leave something half done: saving a preset has already written it to disk,
     /// so the apply that follows has to happen even when the editor's own live preview still
-    /// holds the controller - and the editor is a window of its own, so <see cref="SetBusy"/>
+    /// holds the controller, and the editor is a window of its own, so <see cref="SetBusy"/>
     /// never disabled its Save button in the first place.
     /// </param>
     /// <param name="quiet">Holds the controller without the busy grey-out, see <see cref="SetBusy"/>:
@@ -2162,7 +2162,7 @@ internal sealed partial class ToggleForm : Form
             if (!queue)
             {
                 // Dropped, but the control that asked for it (a slider, a picked chip) is already
-                // showing the value that was refused - painted again from the real state.
+                // showing the value that was refused: painted again from the real state.
                 Render();
                 return;
             }
@@ -2190,11 +2190,11 @@ internal sealed partial class ToggleForm : Form
         {
             // AuraNotFoundException/IOException are expected hardware/IO conditions; anything
             // else is a bug, but this task is started fire-and-forget (WndProc, the hotkey, the
-            // toggle click) - left uncaught, it would simply vanish instead of reaching
+            // toggle click): left uncaught, it would simply vanish instead of reaching
             // Application.ThreadException. Both get the same treatment either way.
             if (IsDisposed)
             {
-                // Nothing left to show or update - the window is already gone.
+                // Nothing left to show or update: the window is already gone.
             }
             else if (Visible)
             {
@@ -2221,7 +2221,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// A typical brightness commit holds <see cref="_busy"/> for under 200 ms; greying out for that
-    /// long reads as a flash, not feedback - so the
+    /// long reads as a flash, not feedback, so the
     /// visible part of being busy waits <see cref="BusyFlashDelayMs"/> before it shows at all, and
     /// never shows for anything that finishes inside that delay.
     /// </summary>
@@ -2230,19 +2230,19 @@ internal sealed partial class ToggleForm : Form
     /// <param name="quiet">
     /// Holds the controller without any visible busy state, and with every control left live:
     /// a request made meanwhile is parked by <see cref="Run"/> rather than refused. For the preset
-    /// editor's live preview and the rename highlight - the preview runs once per change made in the
+    /// editor's live preview and the rename highlight: the preview runs once per change made in the
     /// editor, often longer than the delay above on a board with several channels, so every edit
     /// dimmed the big button and greyed the window out and back in.
     /// </param>
     private void SetBusy(bool busy, bool quiet = false)
     {
         // Dropping a request that arrives while one is already in flight must not wait for the
-        // delay below - only the *visible* grey-out does.
+        // delay below: only the *visible* grey-out does.
         bool endsQuietHold = !busy && _busyQuiet;
         _busy = busy;
         _busyQuiet = busy && quiet;
 
-        // Whatever was parked during the hold runs now - posted, so the caller finishes first.
+        // Whatever was parked during the hold runs now: posted, so the caller finishes first.
         // A preview that takes the controller again before it gets there parks it once more.
         if (endsQuietHold && _afterQuiet is Func<AuraState> parked && !IsDisposed)
         {
@@ -2280,7 +2280,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Fires <see cref="BusyFlashDelayMs"/> after a busy operation starts. A <see cref="SetBusy"/>
     /// call with <c>false</c> stops this timer before it ever ticks for anything that finished
-    /// inside the delay, so nothing here runs for those - <see cref="_busy"/> is the source of
+    /// inside the delay, so nothing here runs for those: <see cref="_busy"/> is the source of
     /// truth this checks, not the timer having been started.
     /// </summary>
     private void OnBusyTimerTick(object? sender, EventArgs e)
@@ -2371,7 +2371,7 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Reloads every stored file after <see cref="SettingsPopup"/> has deleted all five, so the
     /// window comes back to first-run defaults without a restart. Nothing here touches a
-    /// controller - what is on record for each channel changes, not what the hardware is doing,
+    /// controller: what is on record for each channel changes, not what the hardware is doing,
     /// which is exactly what a plain repaint after <see cref="RefreshTexts"/> already handles.
     /// </summary>
     private void ResetToDefaults()
@@ -2381,7 +2381,7 @@ internal sealed partial class ToggleForm : Form
         // The lighting on the board is not touched by a reset, so what the window knows about it
         // is written back: loading the freshly deleted file would show first-run defaults while
         // the controller keeps running something else. The custom presets are gone, so the name
-        // of the running one goes with them - the effect itself carries on.
+        // of the running one goes with them: the effect itself carries on.
         // The write goes to a worker: the hardware lock can be held for seconds by a burst.
         _state = _state with { CustomPreset = "" };
         AuraState toSave = _state;
@@ -2396,7 +2396,7 @@ internal sealed partial class ToggleForm : Form
         TopMost = _settings.AlwaysOnTop;
 
         // Reset can clear the hotkey, and a combination already registered with Windows keeps
-        // switching the lighting until it is handed back - the setting alone does not do that.
+        // switching the lighting until it is handed back: the setting alone does not do that.
         ApplyHotkeySetting(popup: null);
 
         Strings.Override = _settings.Language;
@@ -2472,7 +2472,7 @@ internal sealed partial class ToggleForm : Form
         // firmware-generated effects cannot be dimmed at all and the slider would be a control
         // that visibly does nothing. It follows the effect the button is actually animating,
         // which under a custom preset is that preset's most-used channel rather than the
-        // board-wide mode the preset replaced - the same test PreviewBrightness makes. Also hidden
+        // board-wide mode the preset replaced: the same test PreviewBrightness makes. Also hidden
         // while what the selector points at is off: a dimmer for lights that are dark has nothing
         // to show, and a stored value is not worth a control that looks live but does nothing.
         bool showBrightness = on && (AuraPresets.ByMode(_paintedMode)?.UsesColour ?? false);
@@ -2484,7 +2484,7 @@ internal sealed partial class ToggleForm : Form
         _brightnessRow.Visible = showBrightness;
 
         // Everything in the notification area speaks for the whole board, never for whatever
-        // single channel the selector happens to point at - the entry there switches the board
+        // single channel the selector happens to point at: the entry there switches the board
         // (same blunt gesture as the hotkey), so its label has to describe the board too.
         string boardEffect = _state.CustomPreset.Length > 0
             ? _state.CustomPreset
@@ -2494,7 +2494,7 @@ internal sealed partial class ToggleForm : Form
         _trayLighting.Checked = _state.On;
         UpdateTrayEffectChecks();
 
-        // NotifyIcon.Text throws past 128 characters - AuraFiles.Caption already keeps a stored
+        // NotifyIcon.Text throws past 128 characters: AuraFiles.Caption already keeps a stored
         // preset name (at most 40) well under that, but a long translated WindowTitle plus a
         // near-40-character preset name could still add up past it. Capped here at well under
         // half of 128, hard, so no combination of the two ever can.
@@ -2506,7 +2506,7 @@ internal sealed partial class ToggleForm : Form
     }
 
     /// <summary>
-    /// The entry a custom preset repeats most across its channels - the effect the board is mostly
+    /// The entry a custom preset repeats most across its channels: the effect the board is mostly
     /// running while that preset is on, which is what the button animates instead of the
     /// board-wide mode the preset replaced. The entry itself is returned rather than just the
     /// mode, so the button can take its colour and brightness from the same channel rather than
@@ -2539,7 +2539,7 @@ internal sealed partial class ToggleForm : Form
 
     /// <summary>
     /// Room for the chips and the brightness slider is only reserved for what is actually
-    /// visible - the firmware colours some effects itself, so the chips never apply to those,
+    /// visible: the firmware colours some effects itself, so the chips never apply to those,
     /// and a single channel sharing a controller-wide firmware effect has no brightness of its
     /// own to show either. The height is measured rather than hardcoded: at a larger display
     /// scale, or in German, the rows grow and a fixed number would eat into the button until it
@@ -2547,7 +2547,7 @@ internal sealed partial class ToggleForm : Form
     /// </summary>
     private void ResizeToContent(bool showColour, bool showBrightness)
     {
-        // Kept in step with what the row actually needs now - see _topRowHeight's own comment for
+        // Kept in step with what the row actually needs now: see _topRowHeight's own comment for
         // why this can't just be a RowStyle.AutoSize on _layout instead.
         _topRowHeight.Height = _topRow.PreferredSize.Height;
 
@@ -2585,16 +2585,16 @@ internal sealed partial class ToggleForm : Form
         // The panels inside the window keep the width they had before a display-scale change:
         // WinForms rescales their bounds itself, and the client size set above does not re-run the
         // dock pass for them afterwards. The effect list is then a few pixels narrower than the
-        // width this window was just sized for and ellipsises its own longest entry - "cut off on
-        // the right after moving to the other monitor", with nothing actually sticking out of the
-        // window, which is why every overflow check missed it. One layout pass here brings both up
+        // width this window was just sized for and ellipsises its own longest entry, cutting it off on
+        // the right after a move to the other monitor with nothing actually sticking out of the
+        // window, which is why overflow checks miss it. One layout pass here brings both up
         // to date.
         PerformLayout();
     }
 
     /// <summary>
     /// How far each visible top-row/colour-strip control's right edge sits past the content box,
-    /// in pixels - zero or negative once it fits. Measured, never corrected: a window that grows
+    /// in pixels; zero or negative once it fits. Measured, never corrected: a window that grows
     /// itself out of a bad measurement keeps the extra width when the measurement was only wrong
     /// because a display-scale change was still in flight, which is how a trip to the second
     /// monitor and back left the window permanently wider. The check drives the settle in
@@ -2619,7 +2619,7 @@ internal sealed partial class ToggleForm : Form
         // The other way to be short of room: everything sits inside the window, but the effect
         // list was handed less room than its longest entry needs and cuts the text off itself.
         // Reported in the same pixels-too-few units so one check covers both, and only while the
-        // window can still grow at all - at the maximum width a shortened entry is the intended
+        // window can still grow at all: at the maximum width a shortened entry is the intended
         // result (see WantedWidth), not a fault.
         int missing = _effects.PreferredWidthForItems(includeHints: false) - _effects.Width;
         if (_effects.Visible && missing > 0 && ClientSize.Width < this.Scaled(MaxWidth))
@@ -2631,13 +2631,13 @@ internal sealed partial class ToggleForm : Form
     /// <summary>
     /// Pulls the window back into the working area after it has grown. It is centred at its
     /// starting size, before the channel selector has widened it, so it grows to the right from
-    /// a position chosen for a narrower window - on a small screen at a high display scale that
+    /// a position chosen for a narrower window: on a small screen at a high display scale that
     /// pushed its right-hand edge, gear and all, off the side.
     /// </summary>
     /// <remarks>
     /// A window lying across two displays is left exactly where it is. Pulling it onto the display
     /// it happens to overlap most would put it fully on the other monitor, which changes the display
-    /// scale, which re-measures and pulls it back - the window would ping-pong between the two for
+    /// scale, which re-measures and pulls it back: the window would ping-pong between the two for
     /// as long as it took to land, and every measurement in between would be taken mid-flight.
     /// </remarks>
     private void KeepOnScreen()
@@ -2689,13 +2689,13 @@ internal sealed partial class ToggleForm : Form
     /// Wide enough for the top row to show its longest entry. A fixed width fits English but not
     /// German: with the channel selector shown, the effect list had barely 196 px left and cut off
     /// both "Lauflicht mit Ausblenden" and any preset name past about twenty characters. Capped, because a preset may be named up to forty characters and
-    /// a window that grows to match would be absurd - past the cap the list ellipsises again.
+    /// a window that grows to match would be absurd: past the cap the list ellipsises again.
     /// </summary>
     private int WantedWidth
     {
         get
         {
-            // A hint row is never shown closed - it cannot be picked - so it must not drive how
+            // A hint row is never shown closed (it cannot be picked), so it must not drive how
             // wide the window becomes; the popup that opens still measures it via FitEffectList.
             int row = _effects.PreferredWidthForItems(includeHints: false) + _effects.Margin.Horizontal
                 + _gear.Width + _gear.Margin.Horizontal;

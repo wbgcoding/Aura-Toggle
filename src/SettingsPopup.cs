@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace AuraToggle;
 
 /// <summary>
-/// The small panel behind the gear. Every switch applies straight away - there is no OK
+/// The small panel behind the gear. Every switch applies straight away: there is no OK
 /// button, because there is nothing here worth confirming.
 /// </summary>
 internal sealed class SettingsPopup : PopupForm
@@ -37,7 +37,7 @@ internal sealed class SettingsPopup : PopupForm
     private int _pendingHotkey;
 
     /// <summary>
-    /// <see cref="Environment.TickCount64"/> of the last change this panel itself applied - a
+    /// <see cref="Environment.TickCount64"/> of the last change this panel itself applied: a
     /// switch's own <c>Changed</c> handler in <see cref="ToggleForm"/> can reassign
     /// <c>TopMost</c> or otherwise touch the main window, and Windows activates that window for
     /// some of those touches without <c>SWP_NOACTIVATE</c>. <see cref="OnDeactivate"/> treats an
@@ -54,8 +54,8 @@ internal sealed class SettingsPopup : PopupForm
 
     /// <summary>
     /// Where <see cref="Open"/> was told to put the panel's right edge and top, and the monitor to
-    /// clamp both against. Kept because the panel is re-fitted after it has been placed - a monitor
-    /// at a different scale than the one the panel was created on hands back a different width -
+    /// clamp both against. Kept because the panel is re-fitted after it has been placed (a monitor
+    /// at a different scale than the one the panel was created on hands back a different width)
     /// and every one of those re-fits has to put the right edge back on the same screen coordinate.
     /// </summary>
     private Point _anchor;
@@ -112,7 +112,7 @@ internal sealed class SettingsPopup : PopupForm
         AddSwitch(6, () => Strings.SettingAutoStart, _autoStart, AuraSettings.AutoStart);
         _startActionLabel = AddLabel(7, () => Strings.SettingStartAction);
         // The built-in effects are applied in the colour the board was last given, so that is
-        // the colour their icons are drawn in - the default white vanished on the light panel.
+        // the colour their icons are drawn in: the default white vanishes on the light panel.
         AuraState current = AuraState.Load();
         _startAction.Colour = Color.FromArgb(current.Red, current.Green, current.Blue);
         AddSelect(8, _startAction, () => Strings.SettingStartAction, StartActions(), settings.StartAction);
@@ -183,7 +183,7 @@ internal sealed class SettingsPopup : PopupForm
     /// <summary>
     /// Width measured too, not just height: the labels are translated and do not ellipsise, so a
     /// fixed 276 would clip the longer German ones once the font grows with the display scale. Called
-    /// again whenever a row is shown or hidden - the hotkey field only exists while the switch
+    /// again whenever a row is shown or hidden: the hotkey field only exists while the switch
     /// above it is on, and an empty row leaves the panel taller than it needs to be.
     /// </summary>
     private void FitToContent()
@@ -210,7 +210,7 @@ internal sealed class SettingsPopup : PopupForm
         }
         else
         {
-            // No horizontal margin, same reason as Open() below - re-clamping with the default
+            // No horizontal margin, same reason as Open() below: re-clamping with the default
             // margin would pull the panel back off the window edge it was lined up with.
             KeepOnScreen(horizontalMargin: 0);
         }
@@ -218,7 +218,7 @@ internal sealed class SettingsPopup : PopupForm
 
     /// <summary>
     /// The start action can only ever fire on a real Windows-startup launch, so the row is dead
-    /// weight while autostart is off - same reasoning as the hotkey row only existing while its
+    /// weight while autostart is off: same reasoning as the hotkey row only existing while its
     /// own switch is on. Closing after the start lighting only means something once there is a
     /// start lighting to set.
     /// </summary>
@@ -241,7 +241,7 @@ internal sealed class SettingsPopup : PopupForm
 
     /// <summary>
     /// Raised after the stored files are gone, so the window behind this panel can reload
-    /// its own copies of them and repaint - resetting is not worth a restart.
+    /// its own copies of them and repaint: resetting is not worth a restart.
     /// </summary>
     public event EventHandler? Reset;
 
@@ -309,7 +309,7 @@ internal sealed class SettingsPopup : PopupForm
         select.BackColor = Theme.Surface;
 
         // Its label is a separate control on the row above, so the drop down has to carry the
-        // text itself or a screen reader announces an unnamed combo box - same reasoning as
+        // text itself or a screen reader announces an unnamed combo box: same reasoning as
         // AddSwitch below.
         select.AccessibleName = name();
         _relocalise.Add(() => select.AccessibleName = name());
@@ -402,7 +402,7 @@ internal sealed class SettingsPopup : PopupForm
             return;
         }
 
-        // Not one of the stored files ResetAll clears - it lives in the registry - but it is
+        // Not one of the stored files ResetAll clears (it lives in the registry) but it is
         // still one of the switches on this very panel, so "reset settings" leaving it on was as
         // inconsistent as leaving the language or the hotkey behind.
         AuraSettings.AutoStart = false;
@@ -465,7 +465,7 @@ internal sealed class SettingsPopup : PopupForm
 
     private static bool IsModifierOnly(Keys key) => HotKey.IsModifierKey((int)key);
 
-    /// <summary>"Ctrl+Alt+L" - Win is packed and recognised like the others, but not offered by
+    /// <summary>"Ctrl+Alt+L": Win is packed and recognised like the others, but not offered by
     /// the recorder: Windows itself intercepts most Win combinations before a WinForms KeyDown
     /// ever sees them, which would make half the recorded combinations silently not work.</summary>
     private static string HotkeyText(int packed)
@@ -498,7 +498,7 @@ internal sealed class SettingsPopup : PopupForm
     }
 
     /// <summary>
-    /// Called by <see cref="ToggleForm"/> when registering the new combination failed - already
+    /// Called by <see cref="ToggleForm"/> when registering the new combination failed: already
     /// in use elsewhere. Puts the panel back on the switch and combination that still work
     /// rather than pretending the new one took.
     /// </summary>
@@ -531,7 +531,7 @@ internal sealed class SettingsPopup : PopupForm
         FitToContent();
 
         // Reloaded and merged under the same lock every other settings writer uses, rather than
-        // building on this popup's own possibly-stale Settings snapshot - a window-position save
+        // building on this popup's own possibly-stale Settings snapshot: a window-position save
         // can write independently while this popup is open, and landing between two Apply() calls
         // would otherwise be overwritten right back out (the field it just wrote reverted to
         // whatever this popup had in memory).
@@ -553,7 +553,7 @@ internal sealed class SettingsPopup : PopupForm
 
         if (languageChanged)
         {
-            // Relocalises this panel in place - closing it here would undo exactly the click
+            // Relocalises this panel in place: closing it here would undo exactly the click
             // that just chose the new language.
             Strings.Override = Settings.Language;
             RefreshLanguage();
@@ -599,7 +599,7 @@ internal sealed class SettingsPopup : PopupForm
         // already-shifted point: on a monitor placed to the left of the one the window is really
         // on, subtracting this panel's own width from at.X can walk the point onto that other
         // monitor, and clamping against ITS bounds is what put the panel nowhere near the gear at
-        // all - roughly centred under it with most of it hanging off the window, on exactly one
+        // all: roughly centred under it with most of it hanging off the window, on exactly one
         // monitor in a multi-monitor layout and nowhere else, which is what made it so easy to
         // miss until someone had that layout.
         _anchor = at;
@@ -635,7 +635,7 @@ internal sealed class SettingsPopup : PopupForm
 
     /// <summary>
     /// Review mode only: re-fits the panel at <paramref name="percent"/> of its measured width, the
-    /// way a move onto a monitor at another scale does - the regression proof that a resize after
+    /// way a move onto a monitor at another scale does. It shows whether a resize after
     /// placement keeps the right edge against the window instead of walking the panel out from
     /// under the gear.
     /// </summary>
@@ -704,7 +704,7 @@ internal sealed class SettingsPopup : PopupForm
         }
 
         // One of this panel's own switches just touched the main window (TopMost above all) and
-        // that activated it instead of the user clicking away - reclaim activation instead of
+        // that activated it instead of the user clicking away: reclaim activation instead of
         // reading it as a dismissal. Reset itself is exempt: closing there is the action, not an
         // option, same as the comment above already treats a child popup.
         if (Environment.TickCount64 - _appliedAt < ReactivateWindowMs)
@@ -729,8 +729,8 @@ internal sealed class SettingsPopup : PopupForm
                 return;
             }
 
-            // A hotkey needs at least one modifier - without one it would swallow ordinary
-            // typing everywhere else in Windows - so a bare key press is not enough on its own,
+            // A hotkey needs at least one modifier (without one it would swallow ordinary
+            // typing everywhere else in Windows), so a bare key press is not enough on its own,
             // and a modifier on its own just keeps waiting for the key that goes with it.
             int modifiers = (e.Control ? HotKey.ModControl : 0) | (e.Alt ? HotKey.ModAlt : 0) |
                 (e.Shift ? HotKey.ModShift : 0);
