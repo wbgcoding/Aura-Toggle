@@ -32,6 +32,28 @@ public sealed class AuraFilesTests : PersistenceTest
         Assert.Equal(15000, AuraFiles.HardwareLockTimeoutMs);
     }
 
+    [Fact]
+    public void ShortLockWaitsEndWithTheirScope()
+    {
+        using (new LockHolder(AuraFiles.TryHardwareLock))
+        using (AuraFiles.ShortLockWaits(filesMs: 100, hardwareMs: 100))
+        {
+            Assert.Null(AuraFiles.TryHardwareLock());
+        }
+
+        // Back at the shipped wait: a lock released a moment later is still taken.
+        var late = new LockHolder(AuraFiles.TryHardwareLock);
+        var releaser = new Thread(() =>
+        {
+            Thread.Sleep(300);
+            late.Dispose();
+        }) { IsBackground = true };
+        releaser.Start();
+
+        using IDisposable? taken = AuraFiles.TryHardwareLock();
+        Assert.NotNull(taken);
+    }
+
     [Theory]
     [InlineData("dev", 0, "dev|0")]
     [InlineData("a|b", 2, "a|b|2")]
@@ -966,6 +988,7 @@ public sealed class AuraFilesTests : PersistenceTest
     {
         SeedEveryStoredFile();
 
+        using IDisposable shortWaits = AuraFiles.ShortLockWaits(filesMs: 2000, hardwareMs: 300);
         using var holder = new LockHolder(AuraFiles.TryHardwareLock);
         IDisposable? secondAcquire = null;
         var another = new Thread(() => secondAcquire = AuraFiles.TryHardwareLock()) { IsBackground = true };
@@ -1071,7 +1094,8 @@ public sealed class AuraFilesTests : PersistenceTest
     [Fact]
     public void AWaitThatRunsOutCarriesOnWithoutTheFilesLock()
     {
-        // The files lock gives up after two seconds rather than hanging a switch for good.
+        // The files lock gives up after its wait rather than hanging a switch for good.
+        using IDisposable shortWaits = AuraFiles.ShortLockWaits(filesMs: 200, hardwareMs: 15000);
         using var holder = new LockHolder(AuraFiles.Lock);
         bool done = false;
         var other = new Thread(() =>

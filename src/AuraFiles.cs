@@ -30,6 +30,31 @@ internal static class AuraFiles
     /// </summary>
     public const int HardwareLockTimeoutMs = 15000;
 
+    private static int _filesWaitMs = LockTimeoutMs;
+    private static int _hardwareWaitMs = HardwareLockTimeoutMs;
+
+#if REVIEW
+    /// <summary>
+    /// Review build only: shorter lock waits until the result is disposed, so a test that has to
+    /// wait one out does not sit through the full fifteen seconds.
+    /// </summary>
+    public static IDisposable ShortLockWaits(int filesMs, int hardwareMs)
+    {
+        _filesWaitMs = filesMs;
+        _hardwareWaitMs = hardwareMs;
+        return new Restore();
+    }
+
+    private sealed class Restore : IDisposable
+    {
+        public void Dispose()
+        {
+            _filesWaitMs = LockTimeoutMs;
+            _hardwareWaitMs = HardwareLockTimeoutMs;
+        }
+    }
+#endif
+
     public static string Folder { get; private set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "aura-toggle");
 
@@ -695,19 +720,19 @@ internal static class AuraFiles
     /// invocation running at the same time cannot each read, change and save a different copy of
     /// the same file. Short: it is never held across a controller burst.
     /// </summary>
-    public static IDisposable Lock() => new FileLock(@"Global\AuraToggle.Files", "AuraToggle.Files", LockTimeoutMs);
+    public static IDisposable Lock() => new FileLock(@"Global\AuraToggle.Files", "AuraToggle.Files", _filesWaitMs);
 
     /// <summary>
     /// Held for as long as a caller talks to the controller. A wait that runs out still carries
     /// on without the lock, as the files lock does.
     /// </summary>
     public static IDisposable HardwareLock() =>
-        new FileLock(@"Global\AuraToggle.Hardware", "AuraToggle.Hardware", HardwareLockTimeoutMs);
+        new FileLock(@"Global\AuraToggle.Hardware", "AuraToggle.Hardware", _hardwareWaitMs);
 
     /// <summary>The hardware lock, or null when it did not come free within the wait.</summary>
     public static IDisposable? TryHardwareLock()
     {
-        var held = new FileLock(@"Global\AuraToggle.Hardware", "AuraToggle.Hardware", HardwareLockTimeoutMs);
+        var held = new FileLock(@"Global\AuraToggle.Hardware", "AuraToggle.Hardware", _hardwareWaitMs);
         if (held.Held)
         {
             return held;
@@ -718,7 +743,7 @@ internal static class AuraFiles
     }
 
     /// <summary>Serialises writes to the log file between processes and threads.</summary>
-    public static IDisposable LogLock() => new FileLock(@"Global\AuraToggle.Log", "AuraToggle.Log", LockTimeoutMs);
+    public static IDisposable LogLock() => new FileLock(@"Global\AuraToggle.Log", "AuraToggle.Log", _filesWaitMs);
 
     private sealed class FileLock : IDisposable
     {
