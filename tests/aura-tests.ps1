@@ -101,7 +101,12 @@ function Invoke-Aura {
 }
 
 function Test-Case {
-    param([string]$Name, [scriptblock]$Body)
+    param([switch]$NeedsController, [string]$Name, [scriptblock]$Body)
+    if ($NeedsController -and -not $script:hasController) {
+        Write-Host "  SKIP  $Name -- no Aura controller on this machine"
+        $script:skipped++
+        return
+    }
     try {
         & $Body
         Write-Host "  PASS  $Name"
@@ -111,6 +116,12 @@ function Test-Case {
         $script:failed++
     }
 }
+
+# Cases that switch the lighting need a real controller; on a machine without one (the test VM)
+# they are reported as skipped instead of failing on exit code 3.
+$skipped = 0
+$hasController = (Invoke-Aura @("-list")).ExitCode -ne 3
+Write-Host "Aura controller found: $hasController"
 
 # The review build drops this marker once every simulated scale move has been measured, so a case
 # waits exactly as long as the passes take instead of a guessed number of seconds.
@@ -173,14 +184,14 @@ Test-Case "more than one argument exits 2" {
 }
 
 foreach ($form in "-off", "--off", "/off", "off", "-OFF") {
-    Test-Case "'$form' switches off" {
+    Test-Case -NeedsController "'$form' switches off" {
         Assert-Equal 0 (Invoke-Aura @($form)).ExitCode "exit code"
         Assert-Equal $false ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state"
     }
 }
 
 foreach ($form in "-on", "--on", "/on", "on", "-ON") {
-    Test-Case "'$form' switches on" {
+    Test-Case -NeedsController "'$form' switches on" {
         Assert-Equal 0 (Invoke-Aura @($form)).ExitCode "exit code"
         Assert-Equal $true ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state"
     }
@@ -188,22 +199,22 @@ foreach ($form in "-on", "--on", "/on", "on", "-ON") {
 
 Write-Host "Presets"
 
-Test-Case "-preset rainbow selects effect 5" {
+Test-Case -NeedsController "-preset rainbow selects effect 5" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "rainbow")).ExitCode "exit code"
     Assert-Equal 5 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
-Test-Case "a preset name with spaces is accepted" {
+Test-Case -NeedsController "a preset name with spaces is accepted" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "Spectrum Cycle")).ExitCode "exit code"
     Assert-Equal 4 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
-Test-Case "punctuation in a preset name is ignored" {
+Test-Case -NeedsController "punctuation in a preset name is ignored" {
     Assert-Equal 0 (Invoke-Aura @("--preset", "chase_fade")).ExitCode "exit code"
     Assert-Equal 7 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
-Test-Case "a preset switches the lighting on" {
+Test-Case -NeedsController "a preset switches the lighting on" {
     [void](Invoke-Aura @("-off"))
     [void](Invoke-Aura @("-preset", "wave"))
     Assert-Equal $true ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state"
@@ -219,7 +230,7 @@ Test-Case "-preset without a name exits 2" {
     Assert-Equal 2 (Invoke-Aura @("-preset")).ExitCode "exit code"
 }
 
-Test-Case "a preset takes a hex colour" {
+Test-Case -NeedsController "a preset takes a hex colour" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "static", "#20C0FF")).ExitCode "exit code"
     $stored = Get-Content $state -Raw | ConvertFrom-Json
     Assert-Equal 32 $stored.red "red"
@@ -227,7 +238,7 @@ Test-Case "a preset takes a hex colour" {
     Assert-Equal 255 $stored.blue "blue"
 }
 
-Test-Case "a preset takes a colour name" {
+Test-Case -NeedsController "a preset takes a colour name" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "static", "Lime")).ExitCode "exit code"
     Assert-Equal 0 ((Get-Content $state -Raw | ConvertFrom-Json).red) "red"
 }
@@ -246,17 +257,17 @@ Test-Case "a system colour name exits 2" {
 
 Write-Host "Brightness"
 
-Test-Case "-brightness sets the stored percentage" {
+Test-Case -NeedsController "-brightness sets the stored percentage" {
     Assert-Equal 0 (Invoke-Aura @("-brightness", "50")).ExitCode "exit code"
     Assert-Equal 50 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "brightness"
 }
 
-Test-Case "a brightness below the floor is clamped, not rejected" {
+Test-Case -NeedsController "a brightness below the floor is clamped, not rejected" {
     Assert-Equal 0 (Invoke-Aura @("-brightness", "0")).ExitCode "exit code"
     Assert-Equal 10 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "brightness"
 }
 
-Test-Case "-brightness 100 is accepted" {
+Test-Case -NeedsController "-brightness 100 is accepted" {
     Assert-Equal 0 (Invoke-Aura @("-brightness", "100")).ExitCode "exit code"
     Assert-Equal 100 ((Get-Content $state -Raw | ConvertFrom-Json).brightness) "brightness"
 }
@@ -271,7 +282,7 @@ Test-Case "-brightness without a value exits 2" {
     Assert-Equal 2 (Invoke-Aura @("-brightness")).ExitCode "exit code"
 }
 
-Test-Case "brightness never dims what is stored, only what is sent" {
+Test-Case -NeedsController "brightness never dims what is stored, only what is sent" {
     [void](Invoke-Aura @("-brightness", "40"))
     [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
 
@@ -291,7 +302,7 @@ Test-Case "brightness never dims what is stored, only what is sent" {
     [void](Invoke-Aura @("-brightness", "100"))
 }
 
-Test-Case "-brightness while off only stores the percentage" {
+Test-Case -NeedsController "-brightness while off only stores the percentage" {
     [void](Invoke-Aura @("-off"))
     Assert-Equal 0 (Invoke-Aura @("-brightness", "60")).ExitCode "exit code"
     $stored = Get-Content $state -Raw | ConvertFrom-Json
@@ -302,7 +313,7 @@ Test-Case "-brightness while off only stores the percentage" {
 
 Write-Host "Per channel state"
 
-Test-Case "-off marks every channel off but keeps its effect and colour" {
+Test-Case -NeedsController "-off marks every channel off but keeps its effect and colour" {
     [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
     [void](Invoke-Aura @("-off"))
 
@@ -315,7 +326,7 @@ Test-Case "-off marks every channel off but keeps its effect and colour" {
     }
 }
 
-Test-Case "-on brings every channel back on with its own colour" {
+Test-Case -NeedsController "-on brings every channel back on with its own colour" {
     [void](Invoke-Aura @("-on"))
     foreach ($entry in Get-RealChannelEntries (Get-Content $channelState -Raw | ConvertFrom-Json)) {
         Assert-Equal $true $entry.Value.on "channel on"
@@ -324,7 +335,7 @@ Test-Case "-on brings every channel back on with its own colour" {
     Assert-Equal $true ((Get-Content $state -Raw | ConvertFrom-Json).on) "board state"
 }
 
-Test-Case "a board-wide brightness hands every channel back to the board" {
+Test-Case -NeedsController "a board-wide brightness hands every channel back to the board" {
     [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
     Assert-Equal 0 (Invoke-Aura @("-brightness", "55")).ExitCode "exit code"
 
@@ -337,7 +348,7 @@ Test-Case "a board-wide brightness hands every channel back to the board" {
     [void](Invoke-Aura @("-brightness", "100"))
 }
 
-Test-Case "a channel keeps its own brightness when its colour changes" {
+Test-Case -NeedsController "a channel keeps its own brightness when its colour changes" {
     [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
 
     # The keys are the real device paths, so they are taken from the file the tool just wrote
@@ -364,7 +375,7 @@ Test-Case "a channel keeps its own brightness when its colour changes" {
     [void](Invoke-Aura @("-brightness", "100"))
 }
 
-Test-Case "a custom preset applies its own brightness per channel" {
+Test-Case -NeedsController "a custom preset applies its own brightness per channel" {
     [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
     [void](Invoke-Aura @("-brightness", "100"))
 
@@ -410,7 +421,7 @@ Test-Case "a custom preset applies its own brightness per channel" {
     }
 }
 
-Test-Case "a channel record without 'on' counts as on" {
+Test-Case -NeedsController "a channel record without 'on' counts as on" {
     # What a file written before channels remembered their power state looks like.
     Set-Content -Path $channelState -Encoding utf8 `
         -Value '{"legacy|0":{"mode":1,"red":10,"green":20,"blue":30}}'
@@ -420,30 +431,30 @@ Test-Case "a channel record without 'on' counts as on" {
 
 Write-Host "Damaged files"
 
-Test-Case "an unusable brightness in a channel record is ignored" {
+Test-Case -NeedsController "an unusable brightness in a channel record is ignored" {
     Set-Content -Path $channelState -Encoding ascii -NoNewline `
         -Value '{"legacy|0":{"mode":1,"red":10,"green":20,"blue":30,"brightness":"loud"}}'
     Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
 }
 
 foreach ($junk in '[]', '5', '"x"', 'null', '{"broken":', 'not json') {
-    Test-Case "a damaged channel-state.json is ignored ($junk)" {
+    Test-Case -NeedsController "a damaged channel-state.json is ignored ($junk)" {
         Set-Content -Path $channelState -Value $junk -Encoding ascii -NoNewline
         Assert-Equal 0 (Invoke-Aura @("-preset", "rainbow")).ExitCode "exit code"
     }
 
-    Test-Case "a damaged presets.json is ignored ($junk)" {
+    Test-Case -NeedsController "a damaged presets.json is ignored ($junk)" {
         Set-Content -Path $presets -Value $junk -Encoding ascii -NoNewline
         Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
     }
 
-    Test-Case "a damaged settings.json still starts ($junk)" {
+    Test-Case -NeedsController "a damaged settings.json still starts ($junk)" {
         Set-Content -Path $settings -Value $junk -Encoding ascii -NoNewline
         Assert-Equal 0 (Invoke-Aura @("-preset", "rainbow")).ExitCode "exit code"
     }
 }
 
-Test-Case "a forced write failure leaves no .tmp file behind" {
+Test-Case -NeedsController "a forced write failure leaves no .tmp file behind" {
     $locked = [System.IO.File]::Open($state, [System.IO.FileMode]::Open, `
         [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
     try {
@@ -475,14 +486,14 @@ Test-Case "a custom preset naming a missing controller does not claim success" {
     if ($lastLine -notmatch "ERROR") { throw "no error line logged: $lastLine" }
 }
 
-Test-Case "a remembered preset that no longer exists falls back to a normal restore" {
+Test-Case -NeedsController "a remembered preset that no longer exists falls back to a normal restore" {
     Set-Content -Path $presets -Value '[]' -Encoding ascii -NoNewline
     Set-Content -Path $state -Encoding utf8 `
         -Value '{"on":true,"mode":5,"red":255,"green":255,"blue":255,"customPreset":"Gone","brightness":100}'
     Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
 }
 
-Test-Case "brightness survives an off/on round trip" {
+Test-Case -NeedsController "brightness survives an off/on round trip" {
     [void](Invoke-Aura @("-brightness", "40"))
     [void](Invoke-Aura @("-off"))
     [void](Invoke-Aura @("-on"))
@@ -498,26 +509,26 @@ Test-Case "switching off keeps the stored effect" {
     Assert-Equal $before ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
-Test-Case "switching off twice stays off without error" {
+Test-Case -NeedsController "switching off twice stays off without error" {
     Assert-Equal 0 (Invoke-Aura @("-off")).ExitCode "exit code"
     Assert-Equal 0 (Invoke-Aura @("-off")).ExitCode "exit code"
     Assert-Equal $false ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state"
 }
 
-Test-Case "a damaged state file falls back to the default effect" {
+Test-Case -NeedsController "a damaged state file falls back to the default effect" {
     Set-Content -Path $state -Value "not json" -Encoding ascii
     Assert-Equal 0 (Invoke-Aura @("-on")).ExitCode "exit code"
     Assert-Equal 5 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
-Test-Case "a preset survives an off/on round trip" {
+Test-Case -NeedsController "a preset survives an off/on round trip" {
     [void](Invoke-Aura @("-preset", "chase"))
     [void](Invoke-Aura @("-off"))
     [void](Invoke-Aura @("-on"))
     Assert-Equal 9 ((Get-Content $state -Raw | ConvertFrom-Json).mode) "effect mode"
 }
 
-Test-Case "-toggle switches off when on, then on again" {
+Test-Case -NeedsController "-toggle switches off when on, then on again" {
     [void](Invoke-Aura @("-on"))
     Assert-Equal 0 (Invoke-Aura @("-toggle")).ExitCode "exit code"
     Assert-Equal $false ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state after first toggle"
@@ -525,7 +536,7 @@ Test-Case "-toggle switches off when on, then on again" {
     Assert-Equal $true ((Get-Content $state -Raw | ConvertFrom-Json).on) "stored state after second toggle"
 }
 
-Test-Case "-toggle on one channel follows only that channel's own state" {
+Test-Case -NeedsController "-toggle on one channel follows only that channel's own state" {
     [void](Invoke-Aura @("-on"))
     [void](Invoke-Aura @("-off", "-channel", "1"))
     Assert-Equal 0 (Invoke-Aura @("-toggle", "-channel", "1")).ExitCode "exit code"
@@ -536,19 +547,19 @@ Test-Case "-toggle on one channel follows only that channel's own state" {
 
 Write-Host "Targeting"
 
-Test-Case "-channel accepts the flat number from -list" {
+Test-Case -NeedsController "-channel accepts the flat number from -list" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "static", "red", "-channel", "1")).ExitCode "exit code"
 }
 
-Test-Case "-channel accepts the controller.channel form from -list" {
+Test-Case -NeedsController "-channel accepts the controller.channel form from -list" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "static", "lime", "-channel", "1.2")).ExitCode "exit code"
 }
 
-Test-Case "-channel accepts a default channel name" {
+Test-Case -NeedsController "-channel accepts a default channel name" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "static", "blue", "-channel", "ARGB 1")).ExitCode "exit code"
 }
 
-Test-Case "-channel accepts a name of the user's own" {
+Test-Case -NeedsController "-channel accepts a name of the user's own" {
     # The real device key is whatever the app itself just wrote to channel-state.json - there is
     # no CLI way to learn it beforehand, so read it back rather than guessing at one. It is a HID
     # path with backslashes, which need escaping to land in valid JSON.
@@ -560,28 +571,28 @@ Test-Case "-channel accepts a name of the user's own" {
     Assert-Equal 0 (Invoke-Aura @("-preset", "static", "yellow", "-channel", "MyHeader")).ExitCode "exit code"
 }
 
-Test-Case "-channel with an unknown target exits 2 and lists the possible ones" {
+Test-Case -NeedsController "-channel with an unknown target exits 2 and lists the possible ones" {
     $r = Invoke-Aura @("-preset", "static", "red", "-channel", "does-not-exist")
     Assert-Equal 2 $r.ExitCode "exit code"
     if ($r.StdErr -notmatch "1\.1") { throw "no candidate list on stderr" }
 }
 
-Test-Case "-device targets a whole controller" {
+Test-Case -NeedsController "-device targets a whole controller" {
     Assert-Equal 0 (Invoke-Aura @("-on", "-device", "1")).ExitCode "exit code"
 }
 
-Test-Case "an unknown -device number exits 2" {
+Test-Case -NeedsController "an unknown -device number exits 2" {
     Assert-Equal 2 (Invoke-Aura @("-on", "-device", "99")).ExitCode "exit code"
 }
 
-Test-Case "-status prints the board and one line per channel" {
+Test-Case -NeedsController "-status prints the board and one line per channel" {
     $r = Invoke-Aura @("-status")
     Assert-Equal 0 $r.ExitCode "exit code"
     if ($r.StdOut -notmatch "(?m)^Board\t") { throw "no board line: $($r.StdOut)" }
     if ($r.StdOut -notmatch "1\.1") { throw "no channel line: $($r.StdOut)" }
 }
 
-Test-Case "-status --json prints one parseable line" {
+Test-Case -NeedsController "-status --json prints one parseable line" {
     [void](Invoke-Aura @("-preset", "static", "#20C0FF"))
     $r = Invoke-Aura @("-status", "--json")
     Assert-Equal 0 $r.ExitCode "exit code"
@@ -635,7 +646,7 @@ Test-Case "-help rejects a targeting option that does not apply to it" {
     Assert-Equal 2 $r.ExitCode "exit code"
 }
 
-Test-Case "-custom applies a saved preset by name" {
+Test-Case -NeedsController "-custom applies a saved preset by name" {
     $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
     $deviceKey = ($first.Name -split '\|')[0]
     $escapedKey = $deviceKey -replace '\\', '\\'
@@ -645,7 +656,7 @@ Test-Case "-custom applies a saved preset by name" {
     Assert-Equal "CliPreset" ((Get-Content $state -Raw | ConvertFrom-Json).customPreset) "active preset"
 }
 
-Test-Case "-custom applies a saved preset by its number from -list" {
+Test-Case -NeedsController "-custom applies a saved preset by its number from -list" {
     $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
     $deviceKey = ($first.Name -split '\|')[0]
     $escapedKey = $deviceKey -replace '\\', '\\'
@@ -673,7 +684,7 @@ Test-Case "-list rejects -channel, since it has nothing to target" {
     Assert-Equal 2 (Invoke-Aura @("-list", "-channel", "1")).ExitCode "exit code"
 }
 
-Test-Case "-list names a saved custom preset" {
+Test-Case -NeedsController "-list names a saved custom preset" {
     $first = Get-RealChannelKey (Get-Content $channelState -Raw | ConvertFrom-Json)
     $deviceKey = ($first.Name -split '\|')[0]
     $escapedKey = $deviceKey -replace '\\', '\\'
@@ -685,7 +696,7 @@ Test-Case "-list names a saved custom preset" {
     if ($r.StdOut -notmatch "ListedPreset") { throw "preset name missing from -list" }
 }
 
-Test-Case "-list omits the Presets block when none are saved" {
+Test-Case -NeedsController "-list omits the Presets block when none are saved" {
     Set-Content -Path $presets -Value "[]" -Encoding ascii -NoNewline
     $r = Invoke-Aura @("-list")
     Assert-Equal 0 $r.ExitCode "exit code"
@@ -727,7 +738,14 @@ foreach ($linkName in "Aura On.lnk", "Aura Off.lnk") {
         $shortcut = $shell.CreateShortcut($link)
         $expected = if ($linkName -eq "Aura On.lnk") { "-on" } else { "-off" }
         Assert-Equal $expected $shortcut.Arguments "arguments"
-        Assert-Equal (Resolve-Path $Exe).Path $shortcut.TargetPath "target"
+        # A copied folder keeps the build machine's absolute path; the relative one checked above
+        # is what finds the exe then.
+        if (Test-Path $shortcut.TargetPath) {
+            Assert-Equal (Resolve-Path $Exe).Path $shortcut.TargetPath "target"
+        }
+        else {
+            Assert-Equal (Split-Path $Exe -Leaf) (Split-Path $shortcut.TargetPath -Leaf) "target file"
+        }
     }
 }
 
@@ -762,7 +780,7 @@ Test-Case "-autostart with close-after-start and a vanished preset exits at once
     }
 }
 
-Test-Case "-autostart with close-after-start switches off and exits without a window" {
+Test-Case -NeedsController "-autostart with close-after-start switches off and exits without a window" {
     [void](Invoke-Aura @("-on"))
     Set-Content -Path $settings -Encoding ascii -Value '{"startAction":"off","closeAfterStart":true}'
     try {
@@ -1262,6 +1280,9 @@ finally {
 }
 
 Write-Host ""
+if ($skipped -gt 0) {
+    Write-Host "$skipped test(s) skipped: they need an Aura controller"
+}
 if ($failed -gt 0) {
     Write-Host "$failed test(s) failed"
     exit 1
