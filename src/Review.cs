@@ -27,7 +27,7 @@ internal static partial class Program
     /// the toggle button it opened from), or "tip" (the
     /// real effect list with its first hinted row's tooltip already showing, since the review
     /// harness cannot reliably hover this control). Interacting with the settings panel still
-    /// saves to the real settings.json, same as it would from the main window - this is a shortcut
+    /// saves to the real settings.json, same as it would from the main window: this is a shortcut
     /// to the real control, not a sandboxed mock of it.
     /// </summary>
     private static int RunReview(string surface, string argument)
@@ -148,7 +148,7 @@ internal static partial class Program
             shown = popup;
         }
 
-        // These two carry no measurement report of their own - what matters for them is that a
+        // These two carry no measurement report of their own: what matters for them is that a
         // display-scale change puts their spacing back at the new scale rather than leaving it as
         // the display they opened on had it, which the totals below make visible.
         Queue<int> scales = ParseScales(argument);
@@ -157,8 +157,8 @@ internal static partial class Program
             var reports = new List<string>();
             void Report(string heading) => WriteReport(reports, heading, DescribeSpacing(shown));
 
-            // Written even with no scale given - without this, plain "-review editor" left the
-            // file untouched, and the anchoring proof below it never ran either.
+            // Written even with no scale given, so a plain "-review editor" still produces the
+            // report and runs the anchoring check below.
             Report($"as opened, {shown.DeviceDpi * 100 / 96}%");
 
             if (scales.Count > 0)
@@ -301,7 +301,7 @@ internal static partial class Program
 
     /// <summary>
     /// Prints one measurement pass and keeps every pass so far in
-    /// <c>%TEMP%\aura-layout.txt</c> - this is a WinExe, so when it is started by anything that
+    /// <c>%TEMP%\aura-layout.txt</c>: this is a WinExe, so when it is started by anything that
     /// owns no console (a scheduled task, a test runner) the console output goes nowhere.
     /// </summary>
     /// <summary>Written to <c>%TEMP%</c> once every simulated scale move has been measured.</summary>
@@ -326,8 +326,8 @@ internal static partial class Program
 
     /// <summary>
     /// Two controllers with three and two channels: enough to force the channel selector into the
-    /// main window's top row - the widest that row ever gets, and so the case that overflows
-    /// first - and enough to give the preset editor more than one block of rows.
+    /// main window's top row (the widest that row ever gets, and so the case that overflows
+    /// first) and enough to give the preset editor more than one block of rows.
     /// </summary>
     private static List<AuraDeviceSummary> ReviewControllers() => new()
     {
@@ -361,8 +361,8 @@ internal static partial class Program
 
     /// <summary>
     /// Opens the real window against stand-in controllers and prints what it measured, so a
-    /// "cut off on the right" report can be reproduced and proved fixed at any display scale
-    /// without a controller and without reading pixels off a screenshot.
+    /// a window that clips its content on the right can be caught at any display scale without a
+    /// controller and without reading pixels off a screenshot.
     /// </summary>
     private static int ReviewLayout(string scaleArgument)
     {
@@ -375,14 +375,14 @@ internal static partial class Program
 
         // The size the window will first become visible at. Discovery may take longer than the
         // reveal backstop waits, so anything that changes between here and "as opened" is growth
-        // the user gets to watch. Only the client size is read - measuring the controls would
+        // the user gets to watch. Only the client size is read: measuring the controls would
         // force the handle open before Show() and change the very thing under review.
         WriteReport(reports, "before shown",
             $"clientsize    {form.ClientSize.Width}x{form.ClientSize.Height}");
 
         form.Shown += async (_, _) =>
         {
-            // The window measures itself after discovery, which OnShown runs asynchronously -
+            // The window measures itself after discovery, which OnShown runs asynchronously:
             // reading straight away would report the sizes from before the channel selector
             // appeared, which is exactly the measurement in question.
             await Task.Yield();
@@ -399,9 +399,8 @@ internal static partial class Program
 
     /// <summary>
     /// Opens the real window then its settings panel exactly as a gear click would, and prints the
-    /// gear/toggle/panel geometry - the regression proof for the panel leaving a strip of the big
-    /// button visible on its right, without a controller and without reading pixels off a
-    /// screenshot.
+    /// gear/toggle/panel geometry, which shows whether the panel leaves a strip of the big button
+    /// visible on its right, without a controller and without reading pixels off a screenshot.
     /// </summary>
     private static int ReviewGear(string scaleArgument)
     {
@@ -412,13 +411,12 @@ internal static partial class Program
 
         void Report(string heading) => WriteReport(reports, heading, form.DescribeSettingsAnchor(), "aura-gear.txt");
 
-        // Snaps the window flush against the screen's right edge - an Aero-snapped or dragged-to-
-        // the-edge window, which is what actually triggers PopupForm.OnScreen's clamp and the
-        // reported sliver of the toggle button staying visible next to the panel. Centred, the
+        // Snaps the window flush against the screen's right edge: an Aero-snapped or dragged-to-
+        // the-edge window, which is what actually triggers PopupForm.OnScreen's clamp and can leave a
+        // sliver of the toggle button visible next to the panel. Centred, the
         // panel never gets near the clamp and the report would read all zeroes. Anchored on the
-        // client area's right edge - the same one the panel hangs from - rather than the window's
-        // outer bounds, which include DWM's invisible resize border and were off by two dozen px in
-        // practice; tracked through Resize because the window still has measuring left to do at this
+        // client area's right edge (the same one the panel hangs from) rather than the window's
+        // outer bounds, which include DWM's invisible resize border and are off by two dozen px; tracked through Resize because the window still has measuring left to do at this
         // point, same reason as ReviewLayout's first yield.
         async Task SnapAndReopenSettings(string heading)
         {
@@ -441,7 +439,7 @@ internal static partial class Program
             Report(heading);
 
             // The panel is its own top-level window, so a simulated move only ever changes the main
-            // window's scale - the panel keeps the real screen's dpi and never re-fits, which is
+            // window's scale: the panel keeps the real screen's dpi and never re-fits, which is
             // exactly the step that walks it out from under the gear on a second monitor.
             // Re-fitting it half again as wide stands in for that resize on a single screen.
             form.RefitSettingsForReview(150);
@@ -455,9 +453,9 @@ internal static partial class Program
             await SnapAndReopenSettings($"as opened, {form.DeviceDpi * 100 / 96}%, snapped to the right screen edge");
 
             // Each scale is a fresh gear click after the simulated move settles, not a read of the
-            // panel that was already open - the panel is an owned top-level window, not a child of
+            // panel that was already open: the panel is an owned top-level window, not a child of
             // the main one, so Windows never moves it along on its own and reading its stale
-            // position would report a huge, unrelated misalignment instead of this bug.
+            // position would report a huge, unrelated misalignment instead of the real one.
             Queue<int> scales = ParseScales(scaleArgument);
             while (scales.Count > 0)
             {
@@ -468,7 +466,7 @@ internal static partial class Program
                 await SnapAndReopenSettings($"reopened at {scale}%, snapped to the right screen edge");
             }
 
-            // Left open on purpose, same as ReviewLayout - the numbers above say whether the panel
+            // Left open on purpose, same as ReviewLayout: the numbers above say whether the panel
             // clips the button, the window itself is what shows how it actually looks.
         };
 
@@ -493,15 +491,15 @@ internal static partial class Program
     private const uint DpiChangedMessage = 0x02E0;
 
     /// <summary>Windows' "the user just started/stopped dragging or resizing this window"
-    /// notifications - sent here around <see cref="DpiChangedMessage"/> so a scale change mid-drag
+    /// notifications: sent here around <see cref="DpiChangedMessage"/> so a scale change mid-drag
     /// is reproduced without a second monitor (see <see cref="ToggleForm.SettleAfterDpiChange"/>).</summary>
     private const uint EnterSizeMoveMessage = 0x0231;
 
     private const uint ExitSizeMoveMessage = 0x0232;
 
     /// <summary>
-    /// Walks the window through several scales in turn, so a round trip - out to the second
-    /// monitor and back - is one run. A window that does not come back to the size it started at
+    /// Walks the window through several scales in turn, so a round trip (out to the second
+    /// monitor and back) is one run. A window that does not come back to the size it started at
     /// is exactly what the last report of the run says.
     /// </summary>
     private static void MoveThroughScales(Form form, Queue<int> scales, Action<string> report)
@@ -525,13 +523,13 @@ internal static partial class Program
 
     /// <summary>
     /// Puts the window through exactly what dragging it onto a second monitor at
-    /// <paramref name="scale"/> percent does - the messages Windows itself sends, with the window
-    /// rectangle it would suggest - and reports what the layout measured afterwards. The point of
+    /// <paramref name="scale"/> percent does (the messages Windows itself sends, with the window
+    /// rectangle it would suggest) and reports what the layout measured afterwards. The point of
     /// doing it this way: the process keeps the system dpi it started with, so the mismatch
     /// between window dpi and text dpi that only ever appeared on a real second monitor is
     /// reproduced on a single display, and a "cut off on the right" report becomes a number here
     /// instead of something only a second physical monitor could show. WM_DPICHANGED arrives while
-    /// WM_ENTERSIZEMOVE is still in effect and WM_EXITSIZEMOVE does not follow until well after -
+    /// WM_ENTERSIZEMOVE is still in effect and WM_EXITSIZEMOVE does not follow until well after:
     /// a real drag between two monitors crosses the scale change with the mouse button still
     /// down, so the layout must not wait for a release that has not happened yet.
     /// </summary>
@@ -553,7 +551,7 @@ internal static partial class Program
 
         // The window re-measures itself on a timer after a scale change, so one reading straight
         // afterwards proves nothing; these cover every attempt it makes plus a margin. The
-        // simulated drag stays "in progress" through the 600 ms pass, then releases - so the same
+        // simulated drag stays "in progress" through the 600 ms pass, then releases, so the same
         // run proves both halves: the layout catching up while still dragging, and the final
         // settle once WM_EXITSIZEMOVE follows.
         var passes = new Queue<int>(new[] { 0, 250, 600, 1200, 2000 });
@@ -1169,7 +1167,7 @@ internal static partial class Program
         {
             // AURA_SHOT_WAIT holds the window this many seconds longer before the surface opens: time
             // to change the display scale while the process runs, which leaves it measuring text at
-            // the scale it started with - the mixed state a second monitor at another scale puts a
+            // the scale it started with: the mixed state a second monitor at another scale puts a
             // user in, and the one case the simulated move cannot produce for a freshly opened popup.
             int wait = int.TryParse(Environment.GetEnvironmentVariable("AURA_SHOT_WAIT"), out int seconds)
                 ? Math.Clamp(seconds, 0, 120) * 1000 : 0;
@@ -1197,7 +1195,7 @@ internal static partial class Program
 
                 // The settings panel's own placement proof: a panel that fits but sits over the
                 // gear it opened from measures clean above. Only where the panel and the window
-                // share a scale - after a simulated move the panel keeps the real display's, a
+                // share a scale: after a simulated move the panel keeps the real display's, a
                 // mix no user ever sees, and its edge then follows the window's late re-measures.
                 if (id.StartsWith("settings", StringComparison.Ordinal) &&
                     Application.OpenForms.OfType<ToggleForm>().FirstOrDefault() is ToggleForm owner &&
@@ -1259,7 +1257,7 @@ internal static partial class Program
             }
 
             // This one has no window to open from, so with AURA_SHOT_WAIT set it is created
-            // only once the wait is over - after the display scale changed, like an error raised
+            // only once the wait is over: after the display scale changed, like an error raised
             // while the main window sits on a second monitor.
             if (int.TryParse(Environment.GetEnvironmentVariable("AURA_SHOT_WAIT"), out int held) && held > 0)
             {
@@ -1372,7 +1370,7 @@ internal static partial class Program
 
     /// <summary>
     /// Every visible window of the process, each rendered on its own and laid out where it sits on
-    /// screen - so popups land over the window they opened from, and nothing that happens to be in
+    /// screen, so popups land over the window they opened from, and nothing that happens to be in
     /// front of them on the desktop ends up in the picture.
     /// </summary>
     private static Bitmap CaptureSurface()

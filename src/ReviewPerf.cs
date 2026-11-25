@@ -197,7 +197,7 @@ internal static partial class Program
         form.Shown += (_, _) =>
         {
             // Set once the window exists: given up front, it never reached the window, which then
-            // opened behind the one it was meant to cover - a process in the background may not
+            // opened behind the one it was meant to cover: a process in the background may not
             // put its window in front by being shown.
             form.TopMost = true;
             File.AppendAllText(trace, $"shown {form.Bounds} topmost {form.TopMost}{Environment.NewLine}");

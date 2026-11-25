@@ -57,8 +57,8 @@ internal static partial class Program
 
     /// <summary>
     /// "-review caption": opens the real window against stand-in controllers, then opens the effect
-    /// list and closes it again each way a user does - Escape, picking a row, a click back on the
-    /// window - and reads the title bar after every step, both as Windows keeps it (the active
+    /// list and closes it again each way a user does (Escape, picking a row, a click back on the
+    /// window) and reads the title bar after every step, both as Windows keeps it (the active
     /// caption flag) and as it is drawn (how dark the title text is). The caption has to stay active
     /// throughout: the list belongs to the window. PASS/FAIL to %TEMP%\aura-caption.txt, exit 1 on
     /// any FAIL.

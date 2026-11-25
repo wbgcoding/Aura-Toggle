@@ -39,15 +39,15 @@ internal static partial class Program
     public static bool LaunchedAtStartup { get; private set; }
 
     /// <summary>
-    /// Set once the main window exists, so a fatal exception on a worker thread - where
+    /// Set once the main window exists, so a fatal exception on a worker thread (where
     /// <see cref="Application.MessageLoop"/> reads false, that property being per-thread rather
-    /// than per-process - still has somewhere to marshal the error dialog to instead of falling
+    /// than per-process) still has somewhere to marshal the error dialog to instead of falling
     /// through to a silent <see cref="Environment.Exit"/>.
     /// </summary>
     private static ToggleForm? _mainForm;
 
     /// <summary>
-    /// The version as the release carries it - "1.1.0", not the four part assembly version
+    /// The version as the release carries it: "1.1.0", not the four part assembly version
     /// "1.1.0.0", so what the tool reports matches the tag and the setup's file name.
     /// </summary>
     internal static string VersionText =>
@@ -239,7 +239,7 @@ internal static partial class Program
             }
             catch (Exception ex) when (ex is AuraNotFoundException or IOException)
             {
-                // The controller dropping out for a moment is exactly what this is for - the
+                // The controller dropping out for a moment is exactly what this is for: the
                 // next round tries again.
                 AuraLog.Warn($"Start action re-assert: {ex.GetType().Name}: {ex.Message}");
             }
@@ -293,11 +293,11 @@ internal static partial class Program
 
     /// <summary>
     /// A plain named <see cref="Mutex"/> lives in the caller's Terminal Services session, not the
-    /// machine - two sessions of the same account (a physical logon plus a Remote Desktop one)
+    /// machine: two sessions of the same account (a physical logon plus a Remote Desktop one)
     /// would each see themselves as the first instance and both open the one physical controller.
     /// The "Global\" prefix makes it machine-wide instead, which is what "one instance" is meant
     /// to guarantee here. Falls back to a session-local name if creating a global object is
-    /// denied - a locked-down policy blocking that is rare, and failing open (one instance per
+    /// denied: a locked-down policy blocking that is rare, and failing open (one instance per
     /// session) beats not starting at all.
     /// </summary>
     private static Mutex CreateSingleInstanceMutex(out bool first)
@@ -315,7 +315,7 @@ internal static partial class Program
 
     /// <summary>
     /// The last line of defence: an exception nothing more specific caught. Logged always; shown
-    /// in <see cref="ErrorDialog"/> whenever there is a UI thread left to paint it on - the
+    /// in <see cref="ErrorDialog"/> whenever there is a UI thread left to paint it on: the
     /// command-line branch never starts one, so it falls through to stderr and exit code 5
     /// instead, matching how <see cref="AuraNotFoundException"/> and <see cref="IOException"/> are
     /// already reported there.
@@ -324,13 +324,13 @@ internal static partial class Program
     /// <see cref="Application.MessageLoop"/> is per-thread: it reads true on the UI thread (the
     /// common case, <see cref="Application.ThreadException"/>) but false for
     /// <see cref="AppDomain.UnhandledException"/> firing on a worker thread, even with the
-    /// window very much still open - that would fall through to <see cref="Environment.Exit"/>
+    /// window very much still open: that would fall through to <see cref="Environment.Exit"/>
     /// with nothing shown at all. <see cref="_mainForm"/> covers that case by marshalling the
     /// dialog over with <see cref="Control.BeginInvoke(Delegate)"/> instead.
     /// </remarks>
     private static void HandleFatal(Exception ex, string context)
     {
-        // Exiting only once the dialog itself closes - Application.Exit tears down every form on
+        // Exiting only once the dialog itself closes: Application.Exit tears down every form on
         // the thread, so calling it right away closed the dialog before the user could read or
         // copy the one detail text describing what went wrong.
         if (Application.MessageLoop)
@@ -343,7 +343,7 @@ internal static partial class Program
         {
             try
             {
-                // BeginInvoke only queues the dialog - it does not wait for it, and this method
+                // BeginInvoke only queues the dialog: it does not wait for it, and this method
                 // returning is exactly what AppDomain.UnhandledException treats as "handled",
                 // after which the runtime tears the process down right away. Undoing that requires
                 // actually blocking this (crashing) thread until the dialog closes, or the queued
@@ -371,7 +371,7 @@ internal static partial class Program
             }
             catch (InvalidOperationException)
             {
-                // The handle died between the check above and the call - fall through to the
+                // The handle died between the check above and the call: fall through to the
                 // console/exit path below like there was never a window to use.
             }
         }
@@ -391,7 +391,7 @@ internal static partial class Program
 
         string command = Normalise(rest[0]);
 
-        // These four never look at deviceArg/channelArg at all - a custom preset names its own
+        // These four never look at deviceArg/channelArg at all: a custom preset names its own
         // channels, and the other three have nothing to target. Silently dropping a -device or
         // -channel typed alongside one of them read as "it worked" when it did nothing.
         if ((deviceArg != null || channelArg != null) &&
@@ -429,7 +429,7 @@ internal static partial class Program
         if (command == "custom" && rest.Count == 2)
         {
             // By name first, since that is unambiguous; a name has to lose to a number that
-            // happens to also be a preset's name, but not the other way round - PrintList's own
+            // happens to also be a preset's name, but not the other way round: PrintList's own
             // numbering only stays valid for as long as nothing is added, removed or reordered.
             // The command line accepts forgiving spelling like -preset does; the name the program
             // itself remembers (state.CustomPreset) was written by us, so that stays exact-only.
@@ -523,7 +523,7 @@ internal static partial class Program
         {
             return (targetDevice, targetChannel, devices, summaries) =>
             {
-                // A single channel decides by its own remembered state, not the board's - the whole
+                // A single channel decides by its own remembered state, not the board's: the whole
                 // point of targeting one channel is that it can differ from the others. A channel
                 // with no record of its own has never been switched on its own, so it still follows
                 // whatever the board is doing.
@@ -574,7 +574,7 @@ internal static partial class Program
             }
 
             // Below the floor is clamped rather than rejected: "-brightness 0" reads as "as dim as
-            // this tool goes", not a typo worth an error - unlike a value above the ceiling, which
+            // this tool goes", not a typo worth an error: unlike a value above the ceiling, which
             // is far more likely to be one.
             byte level = Math.Max(percent, AuraState.MinBrightness);
             return (targetDevice, targetChannel, devices, _) =>
@@ -601,7 +601,7 @@ internal static partial class Program
         for (int i = 0; i < args.Length; i++)
         {
             // Unlike -on/-off, which accept a bare word precisely because they take no value of
-            // their own, these two consume whatever token follows - so a leading dash (or slash)
+            // their own, these two consume whatever token follows, so a leading dash (or slash)
             // is required to tell the flag apart from a positional value that happens to spell
             // the same word, such as a channel or preset genuinely named "device" or "channel".
             bool flagLike = args[i].Length > 0 && (args[i][0] == '-' || args[i][0] == '/');
@@ -703,7 +703,7 @@ internal static partial class Program
 
     /// <summary>
     /// Matches, in order: the flat number from <c>-list</c>, the "controller.channel" form, the
-    /// default channel name in either language, and a name of the user's own - the same forgiving
+    /// default channel name in either language, and a name of the user's own: the same forgiving
     /// compare (case, spaces, hyphens ignored) already used for preset names. Zero or more than
     /// one match is not resolved here; the caller reports it as unknown or ambiguous either way,
     /// with every entry in <paramref name="pool"/> listed as a possible target.
@@ -756,7 +756,7 @@ internal static partial class Program
         ? Strings.InLanguage("ChannelOnboard", language)
         : string.Format(CultureInfo.InvariantCulture, Strings.InLanguage("ChannelHeader", language), channel.Header);
 
-    /// <summary>"&lt;flat&gt;\t&lt;device&gt;.&lt;channel&gt;\t&lt;name&gt;" - the identifiers
+    /// <summary>"&lt;flat&gt;\t&lt;device&gt;.&lt;channel&gt;\t&lt;name&gt;": the identifiers
     /// <c>-channel</c> accepts, always in English regardless of the display language so a script
     /// reading <c>-list</c> does not break when the user switches it.</summary>
     internal static string DescribeChannel(ChannelEntry entry) =>
@@ -902,7 +902,7 @@ internal static partial class Program
 
     /// <summary>
     /// One line of JSON, machine-readable output for <c>-status --json</c>. A channel with no
-    /// record of its own reports the board's own effect and colour - what it would actually run -
+    /// record of its own reports the board's own effect and colour (what it would actually run)
     /// with brightness 0, the same "follows the board" sentinel <c>channel-state.json</c> itself
     /// uses, rather than a null the caller would have to special-case.
     /// </summary>
@@ -986,7 +986,7 @@ internal static partial class Program
     /// </summary>
     /// <param name="deviceKey">
     /// Limits the switch to one controller, matched by <see cref="AuraDevice.Key"/>. Null or
-    /// empty means every controller - the default, and the only option on the command line.
+    /// empty means every controller: the default, and the only option on the command line.
     /// A remembered custom preset always targets every controller it names, so it is only
     /// re-applied when switching every device on at once.
     /// </param>
@@ -1035,7 +1035,7 @@ internal static partial class Program
         // does not make the tray claim the whole board went dark.
         bool anyOn = on
             // Each channel comes back to its own last look, not to one colour smeared across the
-            // board - and without rewriting what is remembered, which a plain Send would do.
+            // board, and without rewriting what is remembered, which a plain Send would do.
             ? Restore(state, deviceKey, channel, open)
             : Send(AuraState.ModeOff, state, deviceKey, channel, open);
 
@@ -1195,12 +1195,12 @@ internal static partial class Program
             }
 
             // A new effect or colour carries no brightness, so the one this channel was given
-            // keeps applying - the same rule the stored record follows.
+            // keeps applying: the same rule the stored record follows.
             (byte red, byte green, byte blue) = AuraState.Dim(apply.Red, apply.Green, apply.Blue,
                 chosen && brightness.HasValue ? brightness.Value : Brightness(apply.Brightness != 0 ? apply : own, state));
 
             // A named channel takes the mode it was given, even when its record says it was
-            // off - being named is what switches it back on. An untouched one keeps its own
+            // off: being named is what switches it back on. An untouched one keeps its own
             // state, off included. A caller that only changes how bright a channel is
             // (keepPower) is not asking for it to come on, so there the record decides for
             // named channels too.
@@ -1222,7 +1222,7 @@ internal static partial class Program
 
     /// <summary>
     /// Writes a controller's channels in one go: the channels the caller named get
-    /// <paramref name="look"/> - or their own record, when it is null - and every other channel
+    /// <paramref name="look"/> (or their own record, when it is null) and every other channel
     /// of the same controller is written again exactly as it already stands.
     /// </summary>
     /// <remarks>
@@ -1230,7 +1230,7 @@ internal static partial class Program
     /// new effect across its channels unless every one of them is named in the same burst, which
     /// is why a static header next to an animated one would end up running the same effect as its
     /// neighbour. Channels that have never been set on their own are left alone, since there
-    /// is nothing to re-assert and guessing would overwrite the BIOS lighting - except when a
+    /// is nothing to re-assert and guessing would overwrite the BIOS lighting: except when a
     /// firmware mode is picked, which the hardware runs on every channel anyway
     /// (<see cref="ShareEngine"/>).
     /// </remarks>
@@ -1267,7 +1267,7 @@ internal static partial class Program
 
             try
             {
-                // Every channel of this controller in one burst - sending them one at a time
+                // Every channel of this controller in one burst: sending them one at a time
                 // would leave the onboard zone lit and settled a dozen reports before the last
                 // header caught up, which reads as the board coming on in stages.
                 device.Apply(looks);
@@ -1278,7 +1278,7 @@ internal static partial class Program
             {
                 // One controller dropping a report must not undo what every other controller in
                 // this mix already received, and must not leave this device's own channels
-                // unrecorded either - the write and the record are the same burst, so part of what
+                // unrecorded either: the write and the record are the same burst, so part of what
                 // was named here may well have reached the hardware before it gave up.
                 AuraLog.Error($"Apply: {device.Name} ({looks.Count} channel(s))", ex);
                 failure = ex;
@@ -1407,7 +1407,7 @@ internal static partial class Program
         Send(preset.Mode, state with { Red = red, Green = green, Blue = blue }, deviceKey, channel, open);
 
         // Mode and colour only move into the board-wide record when the whole board was the
-        // target - a single channel or controller picking its own effect must not silently
+        // target: a single channel or controller picking its own effect must not silently
         // become what every other, untouched channel falls back to the next time nothing else
         // names them (BoardWide(state) is exactly that fallback).
         AuraState next = wholeBoard
@@ -1422,13 +1422,13 @@ internal static partial class Program
     /// Changes the brightness and re-sends the running effect so it takes hold at once.
     /// </summary>
     /// <param name="deviceKey">
-    /// One controller, or null for the whole board - which is the only option on the command
+    /// One controller, or null for the whole board, which is the only option on the command
     /// line, and also what clears any brightness a single channel was given of its own.
     /// </param>
     /// <param name="channel">One channel of that controller, or -1 for all of them.</param>
     /// <remarks>
     /// The controller has no brightness register: this scales the colour that the effect
-    /// command carries. Effects the firmware colours itself - the spectrum and rainbow modes -
+    /// command carries. Effects the firmware colours itself (the spectrum and rainbow modes)
     /// therefore cannot be dimmed at all, and the window hides the slider for them.
     /// </remarks>
     public static AuraState SetBrightness(byte percent, string? deviceKey = null, int channel = -1) =>
@@ -1442,7 +1442,7 @@ internal static partial class Program
         percent = Math.Clamp(percent, AuraState.MinBrightness, AuraState.MaxBrightness);
 
         AuraState state = AuraState.Load();
-        // Same formula ApplyPreset uses for the same concept - every real caller currently only
+        // Same formula ApplyPreset uses for the same concept: every real caller currently only
         // ever pairs an empty deviceKey with channel < 0, but the check should say so itself
         // rather than assume it.
         bool wholeBoard = string.IsNullOrEmpty(deviceKey) && channel < 0;
@@ -1458,7 +1458,7 @@ internal static partial class Program
         {
             state.Save();
 
-            // The whole-board slider is a blunt "every channel to this value" control - a preset
+            // The whole-board slider is a blunt "every channel to this value" control: a preset
             // entry's own baked-in brightness must not survive it, or dragging "all" would visibly
             // do nothing to whichever channels the preset happens to dim on its own.
             return ApplyCustomPreset(preset, brightnessOverride: percent);
@@ -1550,8 +1550,8 @@ internal static partial class Program
     /// Set only by the whole-board brightness slider: every channel the preset touches takes
     /// this value regardless of what the preset entry or the channel's own record says, since
     /// "all channels to this brightness" would otherwise visibly do nothing to a channel the
-    /// preset dims on its own. Null for every other caller, where each entry's own brightness -
-    /// or the channel's own record when the entry carries none - keeps applying.
+    /// preset dims on its own. Null for every other caller, where each entry's own brightness,
+    /// or the channel's own record when the entry carries none, keeps applying.
     /// </param>
     public static AuraState ApplyCustomPreset(CustomPreset preset, byte? brightnessOverride = null) =>
         ApplyCustomPresetCore(preset, brightnessOverride, restoreOthers: false)!;
@@ -1578,7 +1578,7 @@ internal static partial class Program
         bool delivered = false;
 
         // Every entry and every gap-filled channel lands here first, then each controller gets
-        // one Apply() call for its whole mix - one call per channel would leave the onboard
+        // one Apply() call for its whole mix: one call per channel would leave the onboard
         // zone lit and settled a dozen reports before the last header caught up.
         var perDevice = new Dictionary<string, List<ChannelLook>>();
 
@@ -1607,15 +1607,15 @@ internal static partial class Program
                     }
 
                     // A brightness override means "forget every per-channel brightness", so it is
-                    // recorded as 0 (follow the board) rather than the transient override value -
+                    // recorded as 0 (follow the board) rather than the transient override value:
                     // the same "0 means follow the board" rule channel-state.json follows everywhere
                     // else.
                     var look = new ChannelLighting(entry.Mode, entry.Red, entry.Green, entry.Blue,
                         On: true, brightnessOverride.HasValue ? (byte)0 : entry.Brightness);
 
-                    // Each channel is dimmed to its own brightness - a preset carries an effect and
+                    // Each channel is dimmed to its own brightness: a preset carries an effect and
                     // a colour, not a brightness, so what the channel was given keeps applying.
-                    // The preset's own brightness for that channel, or - when it carries none -
+                    // The preset's own brightness for that channel, or (when it carries none)
                     // whatever the channel is already dimmed to.
                     byte percent = brightnessOverride ?? (entry.Brightness != 0
                         ? entry.Brightness
@@ -1630,7 +1630,7 @@ internal static partial class Program
                 }
             }
 
-            // A preset only has to name the channels its own look applies to - the controller
+            // A preset only has to name the channels its own look applies to: the controller
             // still applies an effect across every channel of a controller in one burst unless
             // the whole mix arrives together, so anything left out on a
             // controller the preset touches is re-asserted from its own record here, the same
@@ -1640,7 +1640,7 @@ internal static partial class Program
             // the preset or not: "all channels to this brightness" has to mean literally every
             // channel, matching what the plain (non-preset) whole-board slider already does via
             // AuraChannelStates.SetBrightness. Without this, a channel the preset does not
-            // mention - on the same controller or a second one entirely - would keep whatever
+            // mention (on the same controller or a second one entirely) would keep whatever
             // brightness it already had while everything the preset does name jumped to the new
             // value, and the slider would look as if it did nothing.
             var gapFillDevices = brightnessOverride.HasValue
@@ -1681,7 +1681,7 @@ internal static partial class Program
                 // One engine for the firmware-generated modes per controller, same rule as
                 // ApplyMix: within one controller the first entry (lowest channel index) that
                 // carries one of those modes decides, and every other channel of the burst that is
-                // on a firmware mode of its own takes it - the later of two such entries would
+                // on a firmware mode of its own takes it: the later of two such entries would
                 // otherwise win on the board while the first one's record claims otherwise. Colour
                 // entries stay as they are, and the records follow what is sent.
                 var infos = device.Channels.Select(c => new EngineChannel(c.Index,
@@ -1712,7 +1712,7 @@ internal static partial class Program
 
                 try
                 {
-                    // Every channel of this controller in one burst, same as ApplyMix - and the
+                    // Every channel of this controller in one burst, same as ApplyMix, and the
                     // same reasoning for catching per device: one controller dropping a report
                     // must not undo what every other controller in this preset already received.
                     device.Apply(looks);
@@ -1751,7 +1751,7 @@ internal static partial class Program
         }
 
         // Whether anything actually got through, not the same question as whether any channel
-        // was named - see ApplyMix for why this has to be its own check.
+        // was named: see ApplyMix for why this has to be its own check.
         if (failure != null && !delivered)
         {
             throw failure;
@@ -1773,7 +1773,7 @@ internal static partial class Program
             throw new AuraNotFoundException(Strings.ErrorControllerNotFound, 3, worthRetrying: false);
         }
 
-        // A preset sets each channel individually, so each one remembers its own look - written
+        // A preset sets each channel individually, so each one remembers its own look: written
         // in one pass instead of once per entry. A brightness override's 0 means "follow the
         // board" and has to land as written, not be read back as "unset" and swapped for the
         // channel's previous value, which would make the whole-board slider do nothing.
@@ -1831,8 +1831,8 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// Lights one channel white at full brightness and takes every other channel on the board -
-    /// every controller, not just the one the channel belongs to - to a static black. One lit
+    /// Lights one channel white at full brightness and takes every other channel on the board
+    /// (every controller, not just the one the channel belongs to) to a static black. One lit
     /// header against an otherwise dark board leaves nothing to work out.
     /// <para>
     /// Black here means the static mode carrying the colour 0,0,0, which is what the brightness
@@ -1840,25 +1840,25 @@ internal static partial class Program
     /// own, colours are scaled before they are sent. Mode off is not used: on boards whose headers
     /// share one bus, an off neighbour can still catch stray colour. A static black holds the
     /// channel dark. If a board ever does show a glow on a neighbour, the answer is a faint white
-    /// on the others - not a blink: toggling a channel in a loop runs into the dynamic-lighting
+    /// on the others, not a blink, because toggling a channel in a loop runs into the dynamic-lighting
     /// limit that silently drops the colour command past a certain channel index, so it never
     /// blinks at all.
     /// </para>
     /// Runs until <paramref name="token"/> is cancelled, then puts every channel it touched back
-    /// to what <c>channel-state.json</c> already says it should be - nothing is written here, this
+    /// to what <c>channel-state.json</c> already says it should be: nothing is written here, this
     /// only replays what was already on record.
     /// </summary>
     /// <remarks>
     /// Each controller's dark channels and its white one go out in the same burst, not as separate
     /// operations. Sending every black first and the target channel's colour last, as its own later
-    /// call, hit the same dropped-command limit on the higher-indexed headers - arriving well
+    /// call, hit the same dropped-command limit on the higher-indexed headers: arriving well
     /// behind a run of other reports is exactly the pattern that trips it.
     /// </remarks>
     public static void Identify(string deviceKey, int channel, CancellationToken token)
     {
         // The controller talks to one caller at a time: the discovery and the lighting burst
-        // below each hold the hardware lock, the open-ended wait between them deliberately does not
-        // - a rename popup can stay open for minutes, and nothing else may be shut out for that.
+        // below each hold the hardware lock, the open-ended wait between them deliberately does not,
+        // because a rename popup can stay open for minutes and nothing else may be shut out for that.
         List<AuraDevice> devices;
         using (AuraFiles.HardwareLock())
         {
@@ -1869,7 +1869,7 @@ internal static partial class Program
         {
             if (!devices.Exists(d => d.Key == deviceKey))
             {
-                // Unplugged since the window last saw it - nothing to light, and no reason to
+                // Unplugged since the window last saw it: nothing to light, and no reason to
                 // darken the controllers that are still there.
                 return;
             }
@@ -1903,7 +1903,7 @@ internal static partial class Program
             finally
             {
                 // Even when lighting the target channel itself failed, whatever this did turn dark
-                // still needs to go back to its own record - a failure here must not leave a
+                // still needs to go back to its own record: a failure here must not leave a
                 // controller stuck dark with channel-state.json still describing it as lit.
                 using (AuraFiles.HardwareLock())
                 {
@@ -1923,7 +1923,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// Shows a preset on the hardware without recording any of it - for the editor's live
+    /// Shows a preset on the hardware without recording any of it: for the editor's live
     /// preview, where the lighting has to follow every change but nothing is committed until
     /// Save. Channels the preset does not name are held dark, so what is on the board is exactly
     /// what the preset describes.
@@ -2059,7 +2059,7 @@ internal static partial class Program
     private static bool _consoleAttached;
 
     /// <summary>
-    /// Attaching is idempotent by itself, but repeated calls still cost a kernel round trip -
+    /// Attaching is idempotent by itself, but repeated calls still cost a kernel round trip:
     /// worth latching since <c>-list</c>/<c>-status</c> on a multi-controller board call this
     /// once per line.
     /// </summary>
@@ -2072,7 +2072,7 @@ internal static partial class Program
         }
     }
 
-    /// <summary>Reports to the console of the calling shell - this is a WinExe and owns none.</summary>
+    /// <summary>Reports to the console of the calling shell: this is a WinExe and owns none.</summary>
     private static void WriteError(string message)
     {
         EnsureConsole();
