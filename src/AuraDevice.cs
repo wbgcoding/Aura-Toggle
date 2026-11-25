@@ -160,6 +160,16 @@ internal sealed class AuraDevice : IDisposable
     private readonly record struct Channel(byte Index, int StartLed, int LedCount, int Header);
 
     /// <summary>
+    /// The controllers one discovery opened, plus the path of every candidate interface it saw,
+    /// including those that were busy or would not answer: a controller another program held
+    /// during this sweep is still plugged in, and must not count as gone.
+    /// </summary>
+    internal sealed class DiscoveredDevices(IEnumerable<string> presentPaths) : List<AuraDevice>
+    {
+        public IReadOnlyCollection<string> PresentPaths { get; } = presentPaths.ToArray();
+    }
+
+    /// <summary>
     /// Product id, command set and the config table fields the layout comes from, for the log: a
     /// board that behaves oddly can then be told apart from the reference one without guessing.
     /// </summary>
@@ -204,7 +214,7 @@ internal sealed class AuraDevice : IDisposable
         candidates.AddRange(present.Where(info =>
             !KnownProductIds.Contains(info.Pid) && info.UsagePage == AuraMainboardUsagePage));
 
-        var devices = new List<AuraDevice>();
+        var devices = new DiscoveredDevices(candidates.Select(info => info.Path));
         int accessDenied = 0;
         int tooShort = candidates.Count(info => info.OutputReportLength < ReportLength);
         int noAnswer = 0;

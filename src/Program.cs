@@ -454,6 +454,11 @@ internal static partial class Program
 
         if (deviceArg == null && channelArg == null)
         {
+            // Held around the whole command, not only the switch: a toggle reads the stored
+            // state first, and a shortcut pressed twice in quick succession would otherwise let
+            // both runs read the same state and switch the same way. The mutex is re-entrant,
+            // so the lock Switch takes itself on this thread does not wait on this one.
+            using IDisposable untargetedGuard = AuraFiles.HardwareLock();
             return apply(null, -1, null, null);
         }
 
@@ -1354,7 +1359,16 @@ internal static partial class Program
     /// The keys of the controllers found this run, handed to the channel records so an attached
     /// controller's look is never aged out.
     /// </summary>
-    internal static string[] Attached(List<AuraDevice> devices) => devices.Select(d => d.Key).ToArray();
+    internal static string[] Attached(List<AuraDevice> devices)
+    {
+        IEnumerable<string> keys = devices.Select(d => d.Key);
+
+        // A controller that was busy or unreachable in this sweep is still attached: its
+        // remembered channels must not age out just because it did not answer this once.
+        return (devices is AuraDevice.DiscoveredDevices discovered ? keys.Concat(discovered.PresentPaths) : keys)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
 
     private static void Close(List<AuraDevice> devices)
     {

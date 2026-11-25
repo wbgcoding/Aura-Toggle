@@ -742,6 +742,18 @@ public sealed class ProgramSwitchTests : DataFolderTest
         Assert.Empty(Attached(new List<AuraDevice>()));
     }
 
+    // A controller another program held during the sweep is still plugged in: its remembered
+    // channels must not age out because it did not answer this once.
+    [Fact]
+    public void AttachedAlsoCountsCandidatesTheSweepCouldNotOpen()
+    {
+        using FakeController a = A();
+        var discovered = new AuraDevice.DiscoveredDevices(new[] { "a", "busy" });
+        discovered.AddRange(Open(a));
+
+        Assert.Equal(new[] { "a", "busy" }, Attached(discovered));
+    }
+
     // A channel with no record has never been set on its own, so it follows the board and counts as on.
     [Fact]
     public void AnyChannelOnCountsAChannelWithoutARecordAsOn()
