@@ -513,6 +513,9 @@ internal sealed class SettingsPopup : PopupForm
 
         _hotkeyRecord.Visible = enabled;
         _hotkeyHint.Visible = true;
+        // Setting Checked raises no event, so the close note that depends on the
+        // hotkey switch has to be refreshed here before the height is fitted.
+        UpdateStartActionVisibility();
         FitToContent();
     }
 
