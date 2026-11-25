@@ -304,6 +304,9 @@ internal static partial class Program
     /// <c>%TEMP%\aura-layout.txt</c> - this is a WinExe, so when it is started by anything that
     /// owns no console (a scheduled task, a test runner) the console output goes nowhere.
     /// </summary>
+    /// <summary>Written to <c>%TEMP%</c> once every simulated scale move has been measured.</summary>
+    private const string PassesDoneFile = "aura-passes.done";
+
     private static void WriteReport(List<string> reports, string heading, string body, string fileName = "aura-layout.txt")
     {
         string report = $"--- {heading} ---{Environment.NewLine}{body}";
@@ -505,6 +508,15 @@ internal static partial class Program
     {
         if (scales.Count == 0)
         {
+            // What the suite waits for instead of guessing how long the passes take.
+            try
+            {
+                File.WriteAllText(Path.Combine(Path.GetTempPath(), PassesDoneFile), "");
+            }
+            catch (Exception ex) when (AuraFiles.IsExpected(ex))
+            {
+            }
+
             return;
         }
 

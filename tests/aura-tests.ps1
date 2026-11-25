@@ -112,6 +112,29 @@ function Test-Case {
     }
 }
 
+# The review build drops this marker once every simulated scale move has been measured, so a case
+# waits exactly as long as the passes take instead of a guessed number of seconds.
+$passesDone = Join-Path $env:TEMP "aura-passes.done"
+
+function Start-ReviewPasses {
+    param([string[]]$Arguments)
+    Remove-Item $passesDone -Force -ErrorAction SilentlyContinue
+    return Start-Process $ReviewExe -ArgumentList $Arguments -PassThru
+}
+
+function Wait-Until {
+    param([scriptblock]$Condition, [string]$What, [int]$TimeoutSeconds = 60)
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while (-not (& $Condition)) {
+        if ((Get-Date) -gt $deadline) { throw "$What did not happen within $TimeoutSeconds s" }
+        Start-Sleep -Milliseconds 200
+    }
+}
+
+function Wait-ReviewPasses {
+    Wait-Until { Test-Path $passesDone } "the review passes finishing"
+}
+
 function Assert-Equal {
     param($Expected, $Actual, [string]$What)
     if ($Expected -ne $Actual) {
@@ -795,8 +818,10 @@ Test-Case "-autostart shows no window, but the process stays running and can be 
 
 Test-Case "window opens, closes and leaves no process behind" {
     $process = Start-Process $Exe -PassThru
-    Start-Sleep -Seconds 3
-    $process.Refresh()
+    Wait-Until {
+        $process.Refresh()
+        $process.HasExited -or ($process.MainWindowHandle -ne 0 -and $process.MainWindowTitle -like "Aura*")
+    } "the window opening" 30
     if ($process.HasExited) { throw "process exited immediately" }
     # The title gains the controller name once the device has answered.
     if ($process.MainWindowTitle -notlike "Aura*") { throw "unexpected title '$($process.MainWindowTitle)'" }
@@ -835,9 +860,9 @@ Test-Case "the button animates a custom preset's most used effect" {
     Set-Content -Path $state -Encoding utf8 `
         -Value '{"on":true,"mode":5,"red":255,"green":255,"blue":255,"brightness":100,"customPreset":"Suite Mix"}'
 
-    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout" -PassThru
+    $process = Start-ReviewPasses @("-review", "layout")
     try {
-        Start-Sleep -Seconds 6
+        Wait-ReviewPasses
         if (-not (Test-Path $report)) { throw "no layout report was written" }
 
         $line = @(Get-Content $report | Where-Object { $_ -match "^button" }) | Select-Object -Last 1
@@ -866,9 +891,9 @@ foreach ($surface in @(@{ Name = "settings"; Padding = "28,24" }, @{ Name = "edi
         $report = Join-Path $env:TEMP "aura-layout.txt"
         Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-        $process = Start-Process $ReviewExe -ArgumentList "-review", $surface.Name, "200" -PassThru
+        $process = Start-ReviewPasses @("-review", $surface.Name, "200")
         try {
-            Start-Sleep -Seconds 5
+            Wait-ReviewPasses
             if (-not (Test-Path $report)) { throw "no report was written" }
 
             $last = (Get-Content $report -Raw) -split "--- " | Select-Object -Last 1
@@ -895,9 +920,9 @@ Test-Case "the window opens at the width it will keep, before anything is discov
 
     function Invoke-LayoutRun {
         Remove-Item $report -Force -ErrorAction SilentlyContinue
-        $process = Start-Process $ReviewExe -ArgumentList "-review", "layout" -PassThru
+        $process = Start-ReviewPasses @("-review", "layout")
         try {
-            Start-Sleep -Seconds 4
+            Wait-ReviewPasses
             if (-not (Test-Path $report)) { throw "no layout report was written" }
             $text = Get-Content $report -Raw
             # Closed rather than killed: the width is written down on the way out.
@@ -940,9 +965,9 @@ Test-Case "the window comes back to the same size after a round trip" {
     $report = Join-Path $env:TEMP "aura-layout.txt"
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", "150,200,150" -PassThru
+    $process = Start-ReviewPasses @("-review", "layout", "150,200,150")
     try {
-        Start-Sleep -Seconds 20
+        Wait-ReviewPasses
         if (-not (Test-Path $report)) { throw "no layout report was written" }
 
         $blocks = @((Get-Content $report -Raw) -split "--- " | Where-Object { $_ -match "move to 150%" })
@@ -973,9 +998,9 @@ Test-Case "the layout catches up mid-drag, not only after release" {
     $report = Join-Path $env:TEMP "aura-layout.txt"
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", "200" -PassThru
+    $process = Start-ReviewPasses @("-review", "layout", "200")
     try {
-        Start-Sleep -Seconds 5
+        Wait-ReviewPasses
         if (-not (Test-Path $report)) { throw "no layout report was written" }
 
         $dragging = (Get-Content $report -Raw) -split "--- " |
@@ -999,9 +1024,9 @@ Test-Case "the window is only as wide as the display scale asks for" {
     $report = Join-Path $env:TEMP "aura-layout.txt"
     Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-    $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", "100,200" -PassThru
+    $process = Start-ReviewPasses @("-review", "layout", "100,200")
     try {
-        Start-Sleep -Seconds 14
+        Wait-ReviewPasses
         if (-not (Test-Path $report)) { throw "no layout report was written" }
 
         $blocks = @((Get-Content $report -Raw) -split "--- ")
@@ -1030,9 +1055,9 @@ foreach ($scale in 100, 125, 200) {
         $report = Join-Path $env:TEMP "aura-layout.txt"
         Remove-Item $report -Force -ErrorAction SilentlyContinue
 
-        $process = Start-Process $ReviewExe -ArgumentList "-review", "layout", $scale -PassThru
+        $process = Start-ReviewPasses @("-review", "layout", $scale)
         try {
-            Start-Sleep -Seconds 5
+            Wait-ReviewPasses
             if (-not (Test-Path $report)) { throw "no layout report was written" }
 
             # Only the last pass matters: the earlier ones are the window on its way there.
@@ -1132,8 +1157,7 @@ Test-Case "the effect-list tooltip actually draws in the current theme" {
 
     $process = Start-Process $ReviewExe -ArgumentList "-review", "tip" -PassThru
     try {
-        Start-Sleep -Seconds 3
-        if (-not (Test-Path $png)) { throw "no aura-tip.png was written" }
+        Wait-Until { (Test-Path $png) -and (Get-Item $png).Length -gt 0 } "aura-tip.png being written" 30
 
         Add-Type -AssemblyName System.Drawing
         $bmp = [System.Drawing.Bitmap]::new($png)
