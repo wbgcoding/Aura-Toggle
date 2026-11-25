@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>プリセットを保存できませんでした。ディスクがいっぱいか、別のプログラムがファイルを使用している可能性があります。そのプログラムを閉じてから、もう一度保存してください。</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>プリセット一覧が上限サイズに達したため、プリセットを保存できませんでした。不要なプリセットを削除してから、もう一度保存してください。</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>詳細</value>
   </data>

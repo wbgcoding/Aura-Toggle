@@ -729,6 +729,7 @@ internal sealed class CustomPresetEditor : PopupForm
 
         CustomPreset saved;
         bool written;
+        string failure = "";
         using (IDisposable guard = AuraFiles.Lock())
         {
             List<CustomPreset> presets = AuraCustomPresets.Load();
@@ -739,6 +740,10 @@ internal sealed class CustomPresetEditor : PopupForm
             presets.RemoveAll(p => p.Name == name || p.Name == _editing);
             presets.Add(saved);
             written = AuraCustomPresets.Save(presets);
+            if (!written)
+            {
+                failure = AuraCustomPresets.SaveFailedText(presets);
+            }
 
             if (written && _editing != null)
             {
@@ -750,7 +755,7 @@ internal sealed class CustomPresetEditor : PopupForm
         {
             // Nothing reached the disk: staying open keeps the user's rows, and neither the list
             // nor the controller is told about a preset that does not exist.
-            ErrorDialog.Report(new IOException(Strings.ErrorSaveFailed), "Save preset", this);
+            ErrorDialog.Report(new IOException(failure), "Save preset", this);
             return;
         }
 
@@ -811,8 +816,10 @@ internal sealed class CustomPresetEditor : PopupForm
         }
 
         // Written beside the target and moved over it, so a failed write never leaves a cut-off
-        // copy in place of a file that was already there.
-        string temp = dialog.FileName + ".tmp";
+        // copy in place of a file that was already there. A random name, so a file of the user's
+        // that happens to be called "<target>.tmp" is never overwritten or deleted.
+        string temp = Path.Combine(Path.GetDirectoryName(dialog.FileName) ?? "",
+            Path.GetRandomFileName() + ".tmp");
         try
         {
             using (FileStream stream = File.Create(temp))

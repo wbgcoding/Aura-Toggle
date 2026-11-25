@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 
 namespace AuraToggle;
@@ -171,7 +172,30 @@ internal static class AuraCustomPresets
         return candidate;
     }
 
-    public static bool Save(List<CustomPreset> presets) => AuraFiles.Write(FileName, writer =>
+    public static bool Save(List<CustomPreset> presets) =>
+        AuraFiles.Write(FileName, writer => WriteAll(writer, presets));
+
+    /// <summary>
+    /// True when the list would be larger than a presets file may be, which is why
+    /// <see cref="Save"/> refused it: the user then needs to delete presets, and retrying
+    /// the save cannot help. Only asked after a failed save, so the second pass costs nothing.
+    /// </summary>
+    public static bool TooLarge(List<CustomPreset> presets)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            WriteAll(writer, presets);
+        }
+
+        return stream.Length > AuraFiles.MaxPresetFileBytes;
+    }
+
+    /// <summary>The error text for a save of <paramref name="presets"/> that did not reach the disk.</summary>
+    public static string SaveFailedText(List<CustomPreset> presets) =>
+        TooLarge(presets) ? Strings.ErrorPresetsTooLarge : Strings.ErrorSaveFailed;
+
+    private static void WriteAll(Utf8JsonWriter writer, List<CustomPreset> presets)
     {
         writer.WriteStartArray();
         foreach (CustomPreset preset in presets)
@@ -198,5 +222,5 @@ internal static class AuraCustomPresets
         }
 
         writer.WriteEndArray();
-    });
+    }
 }

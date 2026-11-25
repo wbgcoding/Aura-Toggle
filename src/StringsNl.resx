@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>De voorinstelling kon niet worden opgeslagen. Misschien is de schijf vol, of een ander programma gebruikt het bestand. Sluit dat programma en sla opnieuw op.</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>De voorinstelling kon niet worden opgeslagen, omdat de lijst met voorinstellingen de maximale grootte heeft bereikt. Verwijder voorinstellingen die je niet meer nodig hebt en sla daarna opnieuw op.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Details</value>
   </data>

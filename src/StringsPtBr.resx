@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>Não foi possível salvar a predefinição. O disco pode estar cheio ou outro programa pode estar usando o arquivo. Feche esse programa e salve de novo.</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>Não foi possível salvar a predefinição porque a lista de predefinições atingiu o tamanho máximo. Exclua as predefinições de que você não precisa mais e salve de novo.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Detalhes</value>
   </data>

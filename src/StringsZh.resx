@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>无法保存预设。磁盘可能已满，或有其他程序正占用该文件。请关闭该程序后再保存一次。</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>预设列表已达到大小上限，因此无法保存预设。请删除不再需要的预设，然后再保存一次。</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>详细信息</value>
   </data>

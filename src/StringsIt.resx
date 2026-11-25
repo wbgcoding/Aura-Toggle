@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>Impossibile salvare la preimpostazione. Il disco potrebbe essere pieno oppure un altro programma sta usando il file. Chiudilo e salva di nuovo.</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>Impossibile salvare la preimpostazione perché l'elenco delle preimpostazioni ha raggiunto la dimensione massima. Elimina le preimpostazioni che non ti servono più, poi salva di nuovo.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Dettagli</value>
   </data>

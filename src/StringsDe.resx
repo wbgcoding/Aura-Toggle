@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>Das Preset konnte nicht gespeichert werden. Die Festplatte ist vielleicht voll, oder ein anderes Programm h&#228;lt die Datei. Schlie&#223;e es und speichere erneut.</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>Das Preset konnte nicht gespeichert werden, weil die Preset-Liste ihre Gr&#246;&#223;engrenze erreicht hat. L&#246;sche Presets, die du nicht mehr brauchst, und speichere dann erneut.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Details</value>
   </data>

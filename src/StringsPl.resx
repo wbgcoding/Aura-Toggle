@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>Nie udało się zapisać presetu. Dysk może być pełny albo inny program blokuje plik. Zamknij ten program i zapisz ponownie.</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>Nie udało się zapisać presetu, ponieważ lista presetów osiągnęła maksymalny rozmiar. Usuń presety, których już nie potrzebujesz, i zapisz ponownie.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Szczegóły</value>
   </data>

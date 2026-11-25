@@ -204,6 +204,8 @@ internal static class Strings
 
     public static string ErrorSaveFailed => Get("ErrorSaveFailed");
 
+    public static string ErrorPresetsTooLarge => Get("ErrorPresetsTooLarge");
+
     public static string ErrorDetails => Get("ErrorDetails");
 
     public static string ErrorCopyDetails => Get("ErrorCopyDetails");

@@ -305,6 +305,9 @@
   <data name="ErrorSaveFailed" xml:space="preserve">
     <value>No se pudo guardar el preajuste. Puede que el disco esté lleno o que otro programa esté usando el archivo. Ciérralo y vuelve a guardar.</value>
   </data>
+  <data name="ErrorPresetsTooLarge" xml:space="preserve">
+    <value>No se pudo guardar el preajuste porque la lista de preajustes ha alcanzado su tamaño máximo. Elimina los preajustes que ya no necesites y vuelve a guardar.</value>
+  </data>
   <data name="ErrorDetails" xml:space="preserve">
     <value>Detalles</value>
   </data>

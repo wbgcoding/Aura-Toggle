@@ -595,7 +595,7 @@ internal sealed partial class ToggleForm : Form
             presets.Add(copy);
             if (!AuraCustomPresets.Save(presets))
             {
-                ShowError(new IOException(Strings.ErrorSaveFailed), "Duplicate preset");
+                ShowError(new IOException(AuraCustomPresets.SaveFailedText(presets)), "Duplicate preset");
                 return;
             }
         }

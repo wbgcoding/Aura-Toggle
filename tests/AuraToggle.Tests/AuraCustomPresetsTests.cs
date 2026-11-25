@@ -639,6 +639,26 @@ public sealed class AuraCustomPresetsTests : PersistenceTest
         Assert.Empty(AuraCustomPresets.Load());
     }
 
+    // A list over the file size limit is refused, and the error names that reason instead of a
+    // full disk: retrying the save could never help.
+    [Fact]
+    public void AListOverTheSizeLimitIsRefusedWithItsOwnReason()
+    {
+        string longKey = new string('k', 4000);
+        var presets = Enumerable.Range(0, 80)
+            .Select(i => new CustomPreset("P" + i, new List<CustomPresetEntry> { Entry(longKey) }))
+            .ToList();
+
+        Assert.True(AuraCustomPresets.TooLarge(presets));
+        Assert.False(AuraCustomPresets.Save(presets));
+        Assert.Equal(Strings.ErrorPresetsTooLarge, AuraCustomPresets.SaveFailedText(presets));
+        Assert.False(File.Exists(Path.Combine(AuraFiles.Folder, AuraCustomPresets.FileName)));
+
+        List<CustomPreset> small = presets.Take(1).ToList();
+        Assert.False(AuraCustomPresets.TooLarge(small));
+        Assert.Equal(Strings.ErrorSaveFailed, AuraCustomPresets.SaveFailedText(small));
+    }
+
     [Fact]
     public void SaveOfAPresetWithoutEntriesIsDroppedOnTheNextLoad()
     {
