@@ -11,7 +11,7 @@ internal sealed record AuraPreset(string Key, byte Mode, string ResourceKey, boo
 
     /// <summary>
     /// One half-sentence explaining what the effect does, shown as a tooltip on its row in the
-    /// drop down. Derived from <see cref="ResourceKey"/> rather than a second table to look up -
+    /// drop down. Derived from <see cref="ResourceKey"/> rather than a second table to look up:
     /// "PresetStatic" always has an "EffectHintStatic" next to it in both .resx files.
     /// </summary>
     public string HintText => Strings.Preset("EffectHint" + ResourceKey["Preset".Length..]);
@@ -22,7 +22,7 @@ internal sealed record AuraPreset(string Key, byte Mode, string ResourceKey, boo
 
 /// <summary>
 /// The effects offered to the user. Deliberately limited to the modes that are known to work
-/// on the Aura mainboard controllers - unverified mode numbers are not exposed.
+/// on the Aura mainboard controllers: unverified mode numbers are not exposed.
 /// </summary>
 internal static class AuraPresets
 {
@@ -44,7 +44,7 @@ internal static class AuraPresets
 
     /// <summary>
     /// Finds a preset by name. Spelling is forgiving: casing, spaces, hyphens and underscores
-    /// are ignored, and the display name is accepted in any of the interface languages - not just
+    /// are ignored, and the display name is accepted in any of the interface languages: not just
     /// whichever one the interface happens to be set to, so a script written as
     /// <c>-preset Regenbogen</c> keeps working after the user switches to English. Matches how
     /// <c>-channel</c> already resolves a channel's default name. The command line's <c>-custom</c>

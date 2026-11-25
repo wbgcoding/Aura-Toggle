@@ -87,7 +87,7 @@ internal sealed record AuraSettings(
 
     public static AuraSettings Load()
     {
-        // A damaged or unreadable settings file must not stop the tool from switching lights -
+        // A damaged or unreadable settings file must not stop the tool from switching lights,
         // and this runs before anything else in Main, so throwing here means never starting.
         using JsonDocument? document = AuraFiles.Read(FileName, JsonValueKind.Object);
         if (document == null)
@@ -136,7 +136,7 @@ internal sealed record AuraSettings(
     /// itself would never produce (<see cref="SettingsPopup"/> insists on at least one modifier
     /// and a real key). Registering a bare key globally would swallow ordinary typing system-wide,
     /// and registering no key at all fails outright and switches the setting back off with no
-    /// explanation - so anything malformed falls back to the default combination instead.
+    /// explanation, so anything malformed falls back to the default combination instead.
     /// </summary>
     private static int ValidHotkey(int packed)
     {
@@ -202,7 +202,7 @@ internal sealed record AuraSettings(
 
     /// <summary>
     /// The exe a Run value starts, or null for a value this type could not have written. Hand-edited
-    /// values do not start with a quote the way the setter below always writes one - treated as
+    /// values do not start with a quote the way the setter below always writes one: treated as
     /// belonging to someone else, not matched.
     /// </summary>
     private static string? RunTarget(string value)
@@ -236,7 +236,7 @@ internal sealed record AuraSettings(
                 using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKey);
 
                 // A portable copy moved or deleted after the Run entry was written leaves the
-                // entry itself behind - Windows starts nothing from it, so its mere presence
+                // entry itself behind: Windows starts nothing from it, so its mere presence
                 // must not read as "on". Compared against the path actually running now: only a
                 // value this copy itself could have written counts.
                 if (key?.GetValue(RunValue) is not string value || Environment.ProcessPath is not string exe)

@@ -186,7 +186,7 @@ internal static class Hid
                 return null;
             }
 
-            // Best effort: not every device exposes a product string, and that is fine - the
+            // Best effort: not every device exposes a product string, and that is fine, so the
             // caller falls back to a generic name built from the product id.
             var productBuilder = new StringBuilder(126);
             string product = HidD_GetProductString(probe, productBuilder, productBuilder.Capacity * 2)
@@ -224,7 +224,7 @@ internal static class Hid
             handle.Dispose();
 
             // Only a real sharing violation means another process already has this interface open.
-            // Anything else - the device unplugged between enumeration and here, above all - is not
+            // Anything else (the device unplugged between enumeration and here, above all) is not
             // "busy", and reporting it that way sends the user looking for a program to close that
             // was never there.
             if (error != ERROR_SHARING_VIOLATION)
@@ -277,7 +277,7 @@ internal sealed class HidStream : IDisposable
     /// <summary>
     /// Set once a write has timed out. The abandoned write still owns the stream and the
     /// caller's buffer, so starting a second WriteAsync on the same stream while it is still
-    /// pending would race it - the same reasoning <see cref="_readAbandoned"/> exists for.
+    /// pending would race it: the same reasoning <see cref="_readAbandoned"/> exists for.
     /// </summary>
     private bool _writeAbandoned;
 
@@ -303,7 +303,7 @@ internal sealed class HidStream : IDisposable
         var cancel = new CancellationTokenSource();
         Task write = _stream.WriteAsync(report, 0, report.Length, cancel.Token);
 
-        // Disposed exactly once, whenever the write itself finally settles - the normal case
+        // Disposed exactly once, whenever the write itself finally settles: the normal case
         // (already scheduled here, runs almost immediately) and the abandoned-on-timeout case
         // (runs later, whenever the controller's answer or the cancellation actually lands) alike.
         // A second, conditional dispose in a finally below would race this same continuation for
@@ -346,7 +346,7 @@ internal sealed class HidStream : IDisposable
         var cancel = new CancellationTokenSource();
         Task<int> read = _stream.ReadAsync(buffer, 0, buffer.Length, cancel.Token);
 
-        // Disposed exactly once, whenever the read itself finally settles - see the identical
+        // Disposed exactly once, whenever the read itself finally settles: see the identical
         // comment in Write() above.
         _ = read.ContinueWith(_ => cancel.Dispose(), TaskScheduler.Default);
 
@@ -372,7 +372,7 @@ internal sealed class HidStream : IDisposable
     /// <summary>
     /// Cancels a source that may already have been disposed. The exchange it belongs to can
     /// complete in the moment between the wait above giving up and this line, and the
-    /// continuation that disposes it then wins the race - a controller that answers right on the
+    /// continuation that disposes it then wins the race: a controller that answers right on the
     /// timeout would otherwise take the whole app down with it.
     /// </summary>
     private static void CancelQuietly(CancellationTokenSource cancel)

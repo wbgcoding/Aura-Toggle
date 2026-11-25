@@ -18,8 +18,8 @@ namespace AuraToggle;
 /// a window handle that went away.
 /// </summary>
 /// <remarks>
-/// Errs towards "visible": a window that might let the control show through - see-through,
-/// click-through or with per-pixel transparency - never counts as covering it.
+/// Errs towards "visible": a window that might let the control show through (see-through,
+/// click-through or with per-pixel transparency) never counts as covering it.
 /// </remarks>
 internal sealed class OcclusionWatch : IDisposable
 {
@@ -125,8 +125,8 @@ internal sealed class OcclusionWatch : IDisposable
     }
 
     /// <summary>Only a prompt to look again: whether the session is locked is read fresh on every
-    /// check (<see cref="InputDesktopIsOurs"/>), so a missed unlock - a remote reconnect raises
-    /// others - cannot leave the animation asleep.</summary>
+    /// check (<see cref="InputDesktopIsOurs"/>), so a missed unlock (a remote reconnect raises
+    /// others) cannot leave the animation asleep.</summary>
     private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e) => Queue();
 
     private void OnWinEvent(IntPtr hook, uint winEvent, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
@@ -141,7 +141,7 @@ internal sealed class OcclusionWatch : IDisposable
         Queue();
     }
 
-    /// <summary>One check per pass of the message loop, however many events arrived in it -
+    /// <summary>One check per pass of the message loop, however many events arrived in it:
     /// dragging a window raises hundreds.</summary>
     private void Queue()
     {
@@ -254,7 +254,7 @@ internal sealed class OcclusionWatch : IDisposable
         }
 
         // The frame as drawn, without the invisible resize border Windows 10 and later add
-        // around it - that border would otherwise "cover" a strip of whatever sits beside it.
+        // around it: that border would otherwise "cover" a strip of whatever sits beside it.
         if (DwmGetWindowAttribute(window, DwmwaExtendedFrameBounds, out Rect frame, Marshal.SizeOf<Rect>()) != 0
             && !GetWindowRect(window, out frame))
         {

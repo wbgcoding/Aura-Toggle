@@ -35,7 +35,7 @@ internal static class AuraChannelStates
     /// <summary>
     /// How long a channel's record outlives the last time anything wrote to it. The point of the
     /// file is that a controller unplugged for a while still comes back to its own look, so this
-    /// has to be generous - but without it the file keeps a row for every header of every
+    /// has to be generous, but without it the file keeps a row for every header of every
     /// controller ever plugged into the machine, for good. Only a record whose controller is not
     /// among the attached ones ages out: an attached channel nobody touched for a month (a header
     /// never switched on its own) keeps its look however old it is.
@@ -64,7 +64,7 @@ internal static class AuraChannelStates
         states.TryGetValue(Key(deviceKey, channel), out ChannelLighting? lighting) ? lighting : null;
 
     /// <summary>
-    /// Records one look against every channel it was applied to, in a single write - a switch
+    /// Records one look against every channel it was applied to, in a single write: a switch
     /// covering every channel of every controller would otherwise rewrite the file per channel.
     /// </summary>
     /// <param name="attached">The keys of the controllers present right now; see <see cref="KeepDays"/>.</param>
@@ -90,7 +90,7 @@ internal static class AuraChannelStates
     /// </summary>
     /// <param name="keepBrightness">
     /// False only for the whole-board brightness slider applying a preset: every look it passes
-    /// already carries the new value (0, meaning "follow the board" - the same rule every other
+    /// already carries the new value (0, meaning "follow the board": the same rule every other
     /// brightness-0 record follows), and that has to stick rather than be read back as "unset" and
     /// replaced with whatever the channel had before. Keeping it true for every other caller is
     /// what makes an effect or colour change leave a channel's own brightness alone.
@@ -114,7 +114,7 @@ internal static class AuraChannelStates
     /// remember, so switching a channel off and on again returns it to its own look.
     /// </summary>
     /// <param name="fallback">
-    /// What to record for a channel that has never been set on its own - the lighting the board
+    /// What to record for a channel that has never been set on its own: the lighting the board
     /// is running, so a channel switched off and on again does not come back as something else.
     /// </param>
     public static void SetPower(IEnumerable<(string DeviceKey, int Channel)> targets, bool on,
@@ -182,7 +182,7 @@ internal static class AuraChannelStates
                 }
 
                 // Same rule AuraDevice.Verified applies before a mode reaches the hardware: only
-                // a mode this build actually knows - or "off" - is trusted from a hand-edited or
+                // a mode this build actually knows (or "off") is trusted from a hand-edited or
                 // outdated file, otherwise the window would name an effect the board never runs.
                 byte mode = AuraPresets.ValidChannelMode(AuraFiles.StoredMode(property.Value, "mode"));
 
@@ -195,7 +195,7 @@ internal static class AuraChannelStates
                     // which is what it meant back then.
                     AuraFiles.JsonFlag(property.Value, "on", true),
                     // Missing means the channel follows the board-wide brightness, which is also
-                    // what every record written before brightness went per channel means - left
+                    // what every record written before brightness went per channel means: left
                     // as zero rather than clamped into range, unlike a genuine stored value.
                     AuraFiles.StoredBrightness(property.Value, "brightness"),
                     AuraFiles.JsonNumber(property.Value, "seen", 0));

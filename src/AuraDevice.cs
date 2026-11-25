@@ -39,7 +39,7 @@ internal sealed record AuraDeviceSummary(string Key, string Name, List<AuraChann
 
 /// <summary>
 /// What one channel is to run, as part of a mix sent in a single burst. A channel the controller
-/// does not have is ignored rather than an error - the records outlive the hardware they describe.
+/// does not have is ignored rather than an error: the records outlive the hardware they describe.
 /// </summary>
 internal readonly record struct ChannelLook(int Channel, byte Mode, byte Red, byte Green, byte Blue);
 
@@ -73,7 +73,7 @@ internal static class ChannelLabels
 /// <summary>
 /// One ASUS Aura USB LED controller. Speaks the vendor HID protocol directly:
 /// 65 byte reports, report id 0xEC, command in the first payload byte.
-/// Only volatile commands are used - the controller flash is never written.
+/// Only volatile commands are used: the controller flash is never written.
 /// </summary>
 internal sealed class AuraDevice : IDisposable
 {
@@ -124,7 +124,7 @@ internal sealed class AuraDevice : IDisposable
 
         // configTable[0x1D], plain 12V RGB headers, is deliberately not read: the reference board
         // is ARGB only, so there is no hardware here to verify what commands a classic RGB header
-        // actually takes - very possibly not 0x35/0x36, which assume per-LED addressing a
+        // actually takes: very possibly not 0x35/0x36, which assume per-LED addressing a
         // non-addressable header does not have. Wiring it up without a board to test against
         // would be guessing at somebody else's hardware, which this project does not do.
 
@@ -143,7 +143,7 @@ internal sealed class AuraDevice : IDisposable
             _channels.Add(new Channel((byte)_channels.Count, startLed, 1, Header: i + 1));
 
             // A header whose slot lands at bit 16 or beyond gets no colour command at all (see
-            // SendEffectColor) - logged so a "this channel won't take a colour" report is not a
+            // SendEffectColor): logged so a "this channel won't take a colour" report is not a
             // guessing game, on a board with more onboard LEDs than the reference one.
             if (startLed >= 16)
             {
@@ -220,7 +220,7 @@ internal sealed class AuraDevice : IDisposable
                 AuraDevice? device = TryHandshake(stream);
                 if (device == null)
                 {
-                    // Opened, but did not answer the firmware query as an Aura controller - the
+                    // Opened, but did not answer the firmware query as an Aura controller: the
                     // usual case for a second, unrelated interface on the same physical device.
                     noAnswer++;
                     stream.Dispose();
@@ -275,7 +275,7 @@ internal sealed class AuraDevice : IDisposable
             if (accessDenied == 0 && unreachableCause != null)
             {
                 // A controller is there but would not talk to us: that is a communication error
-                // (exit code 5), not "no controller" (3) - the user should look at the cable or
+                // (exit code 5), not "no controller" (3): the user should look at the cable or
                 // the driver, not at whether the board has Aura at all.
                 throw unreachableCause;
             }
@@ -290,14 +290,14 @@ internal sealed class AuraDevice : IDisposable
 
     /// <summary>
     /// Every controller present, for the title bar and the per-device selector. Empty when
-    /// none is reachable - everything here is what the hardware actually reports, since the
+    /// none is reachable: everything here is what the hardware actually reports, since the
     /// running effect cannot be read back.
     /// </summary>
     public static List<AuraDeviceSummary> ListDevices() => ListDevices(out _);
 
     /// <summary>
     /// Same as <see cref="ListDevices()"/>, but <paramref name="errorExitCode"/> carries why the
-    /// list came back empty - 3 (not found), 4 (busy) or 5 (would not answer) - so callers can
+    /// list came back empty: 3 (not found), 4 (busy) or 5 (would not answer), so callers can
     /// report the real cause instead of collapsing all of them into "not found".
     /// </summary>
     public static List<AuraDeviceSummary> ListDevices(out int errorExitCode)
@@ -421,7 +421,7 @@ internal sealed class AuraDevice : IDisposable
     }
 
     /// <summary>
-    /// Applies a whole mix - a mode and colour per channel - in one burst. Volatile only -
+    /// Applies a whole mix (a mode and colour per channel) in one burst. Volatile only:
     /// without the commit command the controller keeps its stored configuration and a reboot
     /// restores it.
     /// </summary>
@@ -471,8 +471,8 @@ internal sealed class AuraDevice : IDisposable
 
     /// <summary>
     /// The mode arrives from state.json, presets.json or channel-state.json, all of which are
-    /// plain text in the user's profile. Only the modes verified on this hardware may be sent - an
-    /// unverified number is exactly the fuzzing the project forbids - so anything else falls back
+    /// plain text in the user's profile. Only the modes verified on this hardware may be sent: an
+    /// unverified number is exactly the fuzzing the project forbids, so anything else falls back
     /// to the ASUS default.
     /// </summary>
     internal static byte Verified(byte mode) =>
@@ -481,8 +481,8 @@ internal sealed class AuraDevice : IDisposable
     /// <summary>
     /// Whether a colour command is worth sending for this mode. Only the four the firmware colours
     /// itself (spectrum cycle, rainbow, rainbow breathing, wave) say no. "Off" and any mode this
-    /// build does not know keep their colour command, so the paths that matter most - switching
-    /// the board off above all - still send the full set of reports.
+    /// build does not know keep their colour command, so the paths that matter most (switching
+    /// the board off above all) still send the full set of reports.
     /// </summary>
     internal static bool CarriesColour(byte mode) => AuraPresets.ByMode(mode)?.UsesColour != false;
 
@@ -537,9 +537,9 @@ internal sealed class AuraDevice : IDisposable
 
     /// <summary>
     /// The only commands this tool is ever allowed to send. Everything here is verified on the
-    /// reference board and volatile; anything else - above all the commit command 0x3F - writes
+    /// reference board and volatile; anything else (above all the commit command 0x3F) writes
     /// the controller flash and can brick it. Enforced rather than merely documented, so a
-    /// future edit cannot quietly widen it - by every caller that reaches the hardware, static
+    /// future edit cannot quietly widen it: by every caller that reaches the hardware, static
     /// <see cref="Request"/> during the handshake included, not just this instance's own <see cref="Write"/>.
     /// </summary>
     private static readonly byte[] AllowedCommands =
@@ -573,7 +573,7 @@ internal sealed class AuraDevice : IDisposable
             // The controller needs a moment between commands, otherwise later channels are
             // dropped. The requested value is 8 ms; Windows' timer resolution rounds a Sleep this
             // short up to whatever a scheduler tick actually is on the machine (about 16.7 ms
-            // by default) - that rounded-up gap is what the hardware is known to tolerate, so it
+            // by default): that rounded-up gap is what the hardware is known to tolerate, so it
             // is left alone rather than "corrected" down to the requested number.
             Thread.Sleep(ReportGapMs);
         }

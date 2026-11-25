@@ -16,7 +16,7 @@ internal sealed record AuraState(
 
     /// <summary>
     /// Brightness is a percentage the effect colour is scaled by before it is sent, not a
-    /// setting on the controller - it has none. Ten per cent is the floor, because zero would
+    /// setting on the controller: it has none. Ten per cent is the floor, because zero would
     /// be indistinguishable from switching the lighting off.
     /// </summary>
     public const byte MinBrightness = 10;

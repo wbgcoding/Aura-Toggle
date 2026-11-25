@@ -7,7 +7,7 @@ namespace AuraToggle;
 
 /// <summary>
 /// Best-effort text log at <c>%LOCALAPPDATA%\aura-toggle\log.txt</c>: start, version, and errors
-/// only. A failed write is silently dropped - a switch must never fail because logging did.
+/// only. A failed write is silently dropped: a switch must never fail because logging did.
 /// </summary>
 internal static class AuraLog
 {
@@ -57,7 +57,7 @@ internal static class AuraLog
 
             // Invariant: the separators in a custom format string are the culture's own, so
             // the same log would read "14:03:27" here and "14.03.27" on a machine set to
-            // another language - and this file is meant to be pasted into an issue and
+            // another language, and this file is meant to be pasted into an issue and
             // compared.
             string stamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
             string line = $"{stamp}  {level}  {AuraFiles.Redact(message)}{Environment.NewLine}";

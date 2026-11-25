@@ -8,7 +8,7 @@ namespace AuraToggle;
 
 /// <summary>
 /// Ticks an animation about 60 times a second, in step with the display. A WinForms timer only
-/// fires on the system's 15.6 ms clock, so its 33 ms asked for 30 fps and delivered 21 - the
+/// fires on the system's 15.6 ms clock, so its 33 ms asked for 30 fps and delivered 21: the
 /// stutter in the moving effects. A background thread waits on a high-resolution waitable timer
 /// and posts the tick to the UI thread; a tick still waiting there is never posted twice, so a
 /// busy UI thread drops frames instead of queuing them.
@@ -43,7 +43,7 @@ internal sealed class FrameClock : IDisposable
     private Thread? _thread;
 
     /// <summary>Whether the last tick was placed against the screen's blanks rather than running
-    /// free - for the timing report, the one place that can tell the two apart.</summary>
+    /// free: for the timing report, the one place that can tell the two apart.</summary>
     internal static bool Synced { get; private set; }
 
     private bool _running;
@@ -155,7 +155,7 @@ internal sealed class FrameClock : IDisposable
 
             last = next;
 
-            // A tick still waiting is not posted again - unless it has waited so long that its
+            // A tick still waiting is not posted again, unless it has waited so long that its
             // message must have gone with a window handle that was destroyed, which would
             // otherwise stop the animation for good.
             if (Interlocked.Exchange(ref _posted, 1) == 1 && next - postedAt < LostTickMs)

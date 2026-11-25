@@ -13,7 +13,7 @@ internal static class Strings
 {
     /// <summary>
     /// Every language the interface exists in, keyed by the two-letter code Windows reports for
-    /// the display language - which is also what <c>settings.json</c> stores, so one lookup serves
+    /// the display language, which is also what <c>settings.json</c> stores, so one lookup serves
     /// both. Two of the ten are regional variants of a wider language: Brazilian Portuguese answers
     /// for "pt" and Simplified Chinese for "zh", the two by far the most Windows installations are
     /// set to. The order here is the order the settings list shows.
@@ -48,13 +48,13 @@ internal static class Strings
     private static ResourceManager Current =>
         Bundle(Override.Length > 0 ? Override : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
 
-    /// <summary>Falls back to English for anything not translated - an unknown code, a hand-edited
+    /// <summary>Falls back to English for anything not translated: an unknown code, a hand-edited
     /// settings file, or a Windows display language the tool does not speak.</summary>
     private static ResourceManager Bundle(string language) =>
         All.TryGetValue(language, out ResourceManager? found) ? found : English;
 
     /// <summary>
-    /// One specific language regardless of <see cref="Override"/> - the CLI's forgiving
+    /// One specific language regardless of <see cref="Override"/>: the CLI's forgiving
     /// <c>-preset</c> and <c>-channel</c> matching accepts a name in any of the ten languages, not
     /// just whichever one is currently active.
     /// </summary>
@@ -136,10 +136,10 @@ internal static class Strings
 
     public static string ChannelOnboard => Get("ChannelOnboard");
 
-    /// <summary>"ARGB {0}" - the header number.</summary>
+    /// <summary>"ARGB {0}": the header number.</summary>
     public static string ChannelHeader => Get("ChannelHeader");
 
-    /// <summary>"{0} - {1}" - controller name and channel name, on multi-controller boards.</summary>
+    /// <summary>"{0} - {1}": controller name and channel name, on multi-controller boards.</summary>
     public static string ChannelQualified => Get("ChannelQualified");
 
     /// <summary>
@@ -163,7 +163,7 @@ internal static class Strings
 
     public static string ColourHexAccessibleName => Get("ColourHexAccessibleName");
 
-    /// <summary>"{0} %" - the brightness read-out.</summary>
+    /// <summary>"{0} %": the brightness read-out.</summary>
     public static string BrightnessValue => Get("BrightnessValue");
 
     public static string ButtonNewCustomPreset => Get("ButtonNewCustomPreset");

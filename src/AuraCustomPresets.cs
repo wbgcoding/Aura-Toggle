@@ -12,7 +12,7 @@ namespace AuraToggle;
 /// </summary>
 /// <param name="Brightness">
 /// The percentage this channel's colour is scaled to, or 0 to leave the channel at whatever
-/// brightness it already has - the same meaning as in <see cref="ChannelLighting"/>.
+/// brightness it already has: the same meaning as in <see cref="ChannelLighting"/>.
 /// </param>
 internal sealed record CustomPresetEntry(
     string DeviceKey, int Channel, string Label, byte Mode, byte Red, byte Green, byte Blue,
@@ -114,7 +114,7 @@ internal static class AuraCustomPresets
         }
 
         // Same rule AuraChannelStates applies before a mode reaches the hardware: only a mode this
-        // build actually knows - or "off" - is trusted from a hand-edited or imported file,
+        // build actually knows (or "off") is trusted from a hand-edited or imported file,
         // otherwise the window names an effect the board never runs while sending the board
         // something else entirely.
         byte mode = AuraPresets.ValidChannelMode(AuraFiles.StoredMode(entry, "mode"));

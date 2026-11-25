@@ -110,7 +110,7 @@ internal static class AuraFiles
 
     /// <summary>
     /// Replaces the user's profile path, its short 8.3 form and the user name as a path segment
-    /// with a placeholder wherever they appear - a stack trace or an I/O exception routinely
+    /// with a placeholder wherever they appear: a stack trace or an I/O exception routinely
     /// carries the full path this ran under (<c>C:\Users\&lt;name&gt;\...</c>), and that text
     /// ends up both in <c>log.txt</c> and in the error dialog's "Copy details" button, which is
     /// meant for pasting into a public GitHub issue.
@@ -137,14 +137,14 @@ internal static class AuraFiles
     public const int MaxChannelName = 30;
 
     /// <summary>
-    /// How long a stored channel label may be - the display fallback for a controller that is not
+    /// How long a stored channel label may be: the display fallback for a controller that is not
     /// connected right now. Longer than a channel name because it can carry the controller's own
     /// product string as well.
     /// </summary>
     public const int MaxChannelLabel = 64;
 
     /// <summary>Ceiling for any stored file read whole, and for a file the preset import accepts at
-    /// all - a real preset is a few hundred bytes, and presets are the largest of these files by
+    /// all: a real preset is a few hundred bytes, and presets are the largest of these files by
     /// far, so one number covers both.</summary>
     public const long MaxPresetFileBytes = 256 * 1024;
 
@@ -185,7 +185,7 @@ internal static class AuraFiles
 
     /// <summary>
     /// The key a channel is stored/looked up under in <c>channel-names.json</c> and
-    /// <c>channel-state.json</c> - both keyed the same way, by the device's HID path plus its
+    /// <c>channel-state.json</c>: both keyed the same way, by the device's HID path plus its
     /// channel index.
     /// </summary>
     public static string ChannelKey(string deviceKey, int channel) => $"{deviceKey}|{channel}";
@@ -206,7 +206,7 @@ internal static class AuraFiles
     /// <summary>
     /// Deletes every stored preference, remembered state and custom preset, so the app comes back
     /// to first-run defaults on its next read without a restart. Everything deleted here is
-    /// captured in <c>reset-backup.zip</c> first. The log is deliberately not one of the five -
+    /// captured in <c>reset-backup.zip</c> first. The log is deliberately not one of the five:
     /// resetting is itself worth a line in it.
     /// </summary>
     /// <returns>
@@ -214,7 +214,7 @@ internal static class AuraFiles
     /// deleted then, since a reset the user cannot take back is only acceptable with the net
     /// underneath it. <see cref="ResetResult.Busy"/> when a running switch kept the hardware lock
     /// for the whole wait: nothing is deleted. <see cref="ResetResult.Incomplete"/> when some file
-    /// would not go (another program holds it) - the rest is gone and the caller says so.
+    /// would not go (another program holds it): the rest is gone and the caller says so.
     /// </returns>
     public static ResetResult ResetAll()
     {
@@ -297,7 +297,7 @@ internal static class AuraFiles
 
             if (present.Length == 0)
             {
-                // Nothing to lose, so nothing to back up - and an empty archive must not replace
+                // Nothing to lose, so nothing to back up, and an empty archive must not replace
                 // the backup of an earlier reset.
                 return true;
             }
@@ -312,7 +312,7 @@ internal static class AuraFiles
                 }
             }
 
-            // A second reset replaces the backup from before it, not both at once - there is
+            // A second reset replaces the backup from before it, not both at once: there is
             // only ever one.
             File.Move(temp, zipPath, overwrite: true);
             return true;
@@ -526,7 +526,7 @@ internal static class AuraFiles
     internal static string BadStamp(DateTime when) =>
         when.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
 
-    // The element readers below are used by every kind-checked JSON file this tool has -
+    // The element readers below are used by every kind-checked JSON file this tool has:
     // one place to get "wrong type in a hand-edited file falls back instead of throwing" right,
     // rather than the same checks re-typed per file.
 
@@ -619,7 +619,7 @@ internal static class AuraFiles
     /// </summary>
     /// <returns>
     /// False when nothing was written (the failure is already in the log). Most callers may ignore
-    /// it - a preference that did not stick is not worth aborting a switch - but one that is about
+    /// it (a preference that did not stick is not worth aborting a switch), but one that is about
     /// to tell the user "saved" must not.
     /// </returns>
     public static bool Write(string name, Action<Utf8JsonWriter> body)
@@ -667,7 +667,7 @@ internal static class AuraFiles
         catch (Exception ex) when (IsExpected(ex))
         {
             // Failing to store a preference is not worth aborting a switch that already reached
-            // the hardware - but the half-written temp file must not linger forever either.
+            // the hardware, but the half-written temp file must not linger forever either.
             AuraLog.Error("Write " + name, ex);
             DeleteTemp(temp);
             return false;
@@ -759,7 +759,7 @@ internal static class AuraFiles
             // "Global\" rather than a plain name: %LOCALAPPDATA% is the same folder for every
             // session the same account is logged into (a physical logon plus a Remote Desktop
             // one, say), but a plain named mutex lives in the caller's own Terminal Services
-            // session - two sessions would each get their own lock and race the same files.
+            // session: two sessions would each get their own lock and race the same files.
             // Falls back to a session-local name if the Global one is denied
             // outright (rare, locked-down policy) rather than running with no lock at all.
             (Mutex, bool)? acquired = TryAcquire(globalName, timeoutMs)
@@ -782,7 +782,7 @@ internal static class AuraFiles
                 // The previous owner died holding it. The files are still consistent, because
                 // every write is atomic; carry on as the new owner. Taken from the handle opened
                 // above rather than from the exception, whose own Mutex property is documented as
-                // possibly null - dereferencing it would turn a recoverable case into a crash.
+                // possibly null: dereferencing it would turn a recoverable case into a crash.
                 return mutex == null ? null : (mutex, true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException

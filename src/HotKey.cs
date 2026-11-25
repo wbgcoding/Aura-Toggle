@@ -58,7 +58,7 @@ internal static class HotKey
 
     /// <summary>
     /// The key as it is actually printed on the user's keyboard. <see cref="Keys"/> has only
-    /// internal spellings to offer - "D1" for the 1 key, "Oemcomma" for the comma - and where the
+    /// internal spellings to offer ("D1" for the 1 key, "Oemcomma" for the comma) and where the
     /// punctuation keys sit differs per layout anyway, so Windows is asked instead of guessing.
     /// It answers in the layout's own language too, which a table here never would.
     /// </summary>
@@ -83,7 +83,7 @@ internal static class HotKey
             : ((Keys)virtualKey).ToString();
     }
 
-    /// <summary>A modifier pressed on its own - never the key half of a combination.</summary>
+    /// <summary>A modifier pressed on its own: never the key half of a combination.</summary>
     public static bool IsModifierKey(int virtualKey) => (Keys)virtualKey is
         Keys.ControlKey or Keys.LControlKey or Keys.RControlKey or
         Keys.Menu or Keys.LMenu or Keys.RMenu or
