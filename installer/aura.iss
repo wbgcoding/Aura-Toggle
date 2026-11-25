@@ -745,7 +745,16 @@ var
   Ran: Boolean;
 begin
   Result := ExpandConstant('{localappdata}');
-  TempFile := ExpandConstant('{tmp}\aura-toggle-orig-localappdata.txt');
+
+  { Not in the setup's temp folder: that lies in the profile of the account this process runs
+    as, which the original user cannot write to when a different administrator elevated it.
+    Every user may create a file in ProgramData, and the name borrows the random part of the
+    temp folder's name plus the time, so another account cannot have it waiting. Whatever it
+    holds still has to pass the shape check below, and the delete runs with the original
+    user's rights. }
+  TempFile := ExpandConstant('{commonappdata}\aura-toggle-') +
+    ExtractFileName(ExpandConstant('{tmp}')) + GetDateTimeString('hhnnsszzz', #0, #0) + '.txt';
+  DeleteFile(TempFile);
 
   { ExecAsOriginalUser raises instead of returning False when this uninstaller was never
     elevated to begin with - the common case for a per-user install - so caught the same way a
