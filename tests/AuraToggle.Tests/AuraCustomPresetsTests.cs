@@ -8,6 +8,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class AuraCustomPresetsTests : PersistenceTest
 {
     private static List<CustomPreset> Load(string json)

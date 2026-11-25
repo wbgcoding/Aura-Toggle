@@ -10,6 +10,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.UI)]
 public partial class StringsTests
 {
     private static readonly Regex Placeholder = PlaceholderPattern();

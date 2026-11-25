@@ -10,6 +10,7 @@ namespace AuraToggle.Tests;
 /// The pure half of switching: which modes and colours go to a controller, which records follow,
 /// and how the firmware effect engine is shared. No controller, no window.
 /// </summary>
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class ProgramEngineTests : DataFolderTest
 {
     private const byte Off = 0;

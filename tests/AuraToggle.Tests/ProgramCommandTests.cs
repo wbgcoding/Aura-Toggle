@@ -10,6 +10,7 @@ namespace AuraToggle.Tests;
 /// Whole command lines through <c>Program.Run</c> that end before any hardware is touched, and the
 /// ones that need a controller (there is none in the test folder, so they end in exit 3).
 /// </summary>
+[Trait(Layer.Name, Layer.Integration)]
 public sealed class ProgramCommandTests : DataFolderTest
 {
     private const int Usage = 2;

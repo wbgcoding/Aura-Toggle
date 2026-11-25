@@ -5,6 +5,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class ReviewCoreCasesTests : PersistenceTest
 {
     [Fact]

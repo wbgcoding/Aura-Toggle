@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public class HotKeyTests
 {
     public static IEnumerable<object[]> ModifierRows() => Enumerable.Range(0, 256).Select(m => new object[] { m });

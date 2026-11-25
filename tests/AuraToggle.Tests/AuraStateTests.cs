@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class AuraStateTests : PersistenceTest
 {
     private static AuraState Load(string json)

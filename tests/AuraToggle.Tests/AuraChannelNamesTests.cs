@@ -8,6 +8,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class AuraChannelNamesTests : PersistenceTest
 {
     private static Dictionary<string, string> Load(string json)

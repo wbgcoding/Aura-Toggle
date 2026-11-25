@@ -12,6 +12,7 @@ namespace AuraToggle.Tests;
 /// Switching, effects and brightness end to end below the command line: the real files, the real
 /// engine and the real protocol, with controllers that are files (<see cref="FakeController"/>).
 /// </summary>
+[Trait(Layer.Name, Layer.Integration)]
 public sealed class ProgramSwitchTests : DataFolderTest
 {
     private const byte Off = 0;

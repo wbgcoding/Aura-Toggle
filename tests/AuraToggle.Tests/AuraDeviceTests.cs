@@ -11,6 +11,7 @@ namespace AuraToggle.Tests;
 /// bytes a look turns into, and how the channel layout comes out of the config table. The
 /// controller is a file the test reads back (<see cref="FakeController"/>), never hardware.
 /// </summary>
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class AuraDeviceTests : DataFolderTest
 {
     private const byte Off = 0;

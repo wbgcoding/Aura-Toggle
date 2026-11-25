@@ -5,6 +5,7 @@ using Xunit;
 namespace AuraToggle.Tests;
 
 /// <summary>The guard every other test relies on: nothing here may reach the real profile.</summary>
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class IsolationTests
 {
     [Fact]

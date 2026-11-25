@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.UI)]
 public class ColourTests
 {
     private const float Tolerance = 0.75f;

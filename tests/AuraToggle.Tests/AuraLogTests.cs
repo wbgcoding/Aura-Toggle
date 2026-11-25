@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class AuraLogTests : PersistenceTest
 {
     private static string LogText() => TestData.ReadRaw("log.txt") ?? "";

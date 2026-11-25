@@ -5,6 +5,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public class AuraPresetsTests
 {
     private static readonly byte[] KnownModes = { 1, 2, 3, 4, 5, 6, 7, 9, 11 };

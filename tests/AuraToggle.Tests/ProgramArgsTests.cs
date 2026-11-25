@@ -9,6 +9,7 @@ using Xunit;
 namespace AuraToggle.Tests;
 
 /// <summary>Argument handling: spelling of commands, -device/-channel extraction, colours and target lookup.</summary>
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class ProgramArgsTests : DataFolderTest
 {
     // ---- Normalise -------------------------------------------------------------------------

@@ -8,6 +8,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class AuraSettingsTests : PersistenceTest
 {
     private const int CtrlA = (HotKey.ModControl << 8) | 0x41;

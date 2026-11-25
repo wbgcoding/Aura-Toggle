@@ -8,6 +8,7 @@ using Xunit;
 
 namespace AuraToggle.Tests;
 
+[Trait(Layer.Name, Layer.Logic)]
 public sealed class AuraChannelStatesTests : PersistenceTest
 {
     private static readonly string[] None = Array.Empty<string>();
