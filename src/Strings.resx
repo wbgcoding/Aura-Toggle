@@ -374,4 +374,34 @@
   <data name="TextSelectAll" xml:space="preserve">
     <value>Select all</value>
   </data>
+  <data name="ColourWhite" xml:space="preserve">
+    <value>White</value>
+  </data>
+  <data name="ColourRed" xml:space="preserve">
+    <value>Red</value>
+  </data>
+  <data name="ColourOrange" xml:space="preserve">
+    <value>Orange</value>
+  </data>
+  <data name="ColourYellow" xml:space="preserve">
+    <value>Yellow</value>
+  </data>
+  <data name="ColourGreen" xml:space="preserve">
+    <value>Green</value>
+  </data>
+  <data name="ColourCyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="ColourBlue" xml:space="preserve">
+    <value>Blue</value>
+  </data>
+  <data name="ColourPurple" xml:space="preserve">
+    <value>Purple</value>
+  </data>
+  <data name="ColourPink" xml:space="preserve">
+    <value>Pink</value>
+  </data>
+  <data name="ColourCustom" xml:space="preserve">
+    <value>Custom colour</value>
+  </data>
 </root>

@@ -374,4 +374,34 @@
   <data name="TextSelectAll" xml:space="preserve">
     <value>全选</value>
   </data>
+  <data name="ColourWhite" xml:space="preserve">
+    <value>白色</value>
+  </data>
+  <data name="ColourRed" xml:space="preserve">
+    <value>红色</value>
+  </data>
+  <data name="ColourOrange" xml:space="preserve">
+    <value>橙色</value>
+  </data>
+  <data name="ColourYellow" xml:space="preserve">
+    <value>黄色</value>
+  </data>
+  <data name="ColourGreen" xml:space="preserve">
+    <value>绿色</value>
+  </data>
+  <data name="ColourCyan" xml:space="preserve">
+    <value>青色</value>
+  </data>
+  <data name="ColourBlue" xml:space="preserve">
+    <value>蓝色</value>
+  </data>
+  <data name="ColourPurple" xml:space="preserve">
+    <value>紫色</value>
+  </data>
+  <data name="ColourPink" xml:space="preserve">
+    <value>粉色</value>
+  </data>
+  <data name="ColourCustom" xml:space="preserve">
+    <value>自定义颜色</value>
+  </data>
 </root>

@@ -250,6 +250,26 @@ internal static class Strings
 
     public static string TextSelectAll => Get("TextSelectAll");
 
+    public static string ColourWhite => Get("ColourWhite");
+
+    public static string ColourRed => Get("ColourRed");
+
+    public static string ColourOrange => Get("ColourOrange");
+
+    public static string ColourYellow => Get("ColourYellow");
+
+    public static string ColourGreen => Get("ColourGreen");
+
+    public static string ColourCyan => Get("ColourCyan");
+
+    public static string ColourBlue => Get("ColourBlue");
+
+    public static string ColourPurple => Get("ColourPurple");
+
+    public static string ColourPink => Get("ColourPink");
+
+    public static string ColourCustom => Get("ColourCustom");
+
     private static string Get(string key) =>
         Current.GetString(key) ?? English.GetString(key) ?? key;
 }

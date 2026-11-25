@@ -474,6 +474,9 @@ internal sealed class SelectPopup : PopupForm
     private readonly EffectSurface _icons = new();
 
     private int _highlighted;
+
+    /// <summary>The entry that was current when the list opened, reported as selected.</summary>
+    private readonly string? _selectedKey;
     private int _hovered = -1;
 
     /// <summary>
@@ -513,6 +516,8 @@ internal sealed class SelectPopup : PopupForm
         _items = new List<SelectItem>(items);
         _colour = colour;
         _highlighted = selected == null ? 0 : Math.Max(0, _items.IndexOf(selected));
+        _selectedKey = selected?.Key;
+        AccessibleRole = AccessibleRole.List;
 
         _dpi = dpi;
         ComputeMetrics();
@@ -980,6 +985,7 @@ internal sealed class SelectPopup : PopupForm
             HideRowTip();
             ScrollTo(_highlighted);
             Invalidate();
+            AccessibilityNotifyClients(AccessibleEvents.Focus, _highlighted);
         }
     }
 
@@ -1113,6 +1119,87 @@ internal sealed class SelectPopup : PopupForm
         }
 
         Choose(index);
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        if (_highlighted < _items.Count)
+        {
+            AccessibilityNotifyClients(AccessibleEvents.Focus, _highlighted);
+        }
+    }
+
+    protected override AccessibleObject CreateAccessibilityInstance() => new ListAccessibleObject(this);
+
+    /// <summary>The rows as list items, so the one the arrow keys reach is announced by name.</summary>
+    private sealed class ListAccessibleObject : ControlAccessibleObject
+    {
+        private readonly SelectPopup _popup;
+
+        public ListAccessibleObject(SelectPopup owner) : base(owner) => _popup = owner;
+
+        public override AccessibleRole Role => AccessibleRole.List;
+
+        public override int GetChildCount() => _popup._items.Count;
+
+        public override AccessibleObject? GetChild(int index) =>
+            index >= 0 && index < _popup._items.Count ? new RowAccessibleObject(_popup, index, this) : null;
+
+        public override AccessibleObject? GetFocused() => GetChild(_popup._highlighted);
+    }
+
+    private sealed class RowAccessibleObject : AccessibleObject
+    {
+        private readonly SelectPopup _popup;
+        private readonly int _index;
+        private readonly AccessibleObject _parent;
+
+        public RowAccessibleObject(SelectPopup popup, int index, AccessibleObject parent)
+        {
+            _popup = popup;
+            _index = index;
+            _parent = parent;
+        }
+
+        // The list can be refilled while a screen reader still holds this row.
+        private SelectItem? Item => _index < _popup._items.Count ? _popup._items[_index] : null;
+
+        public override string Name => Item?.Text ?? "";
+
+        public override string? Description => Item?.Hint;
+
+        public override AccessibleRole Role => AccessibleRole.ListItem;
+
+        public override AccessibleObject Parent => _parent;
+
+        public override Rectangle Bounds => _popup.RectangleToScreen(_popup.RowRect(_index));
+
+        public override AccessibleStates State
+        {
+            get
+            {
+                if (Item is not SelectItem item || item.IsHint)
+                {
+                    return AccessibleStates.Unavailable;
+                }
+
+                AccessibleStates state = AccessibleStates.Focusable | AccessibleStates.Selectable;
+                if (_index == _popup._highlighted)
+                {
+                    state |= AccessibleStates.Focused;
+                }
+
+                if (item.Key == _popup._selectedKey)
+                {
+                    state |= AccessibleStates.Selected;
+                }
+
+                return state;
+            }
+        }
+
+        public override void DoDefaultAction() => _popup.Choose(_index);
     }
 
     private void Choose(int index)

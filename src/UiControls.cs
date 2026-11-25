@@ -593,6 +593,7 @@ internal sealed class ColourStrip : FlatControl
         {
             _focusedChip = moved;
             Invalidate();
+            AccessibilityNotifyClients(AccessibleEvents.Focus, _focusedChip);
             e.Handled = true;
             return;
         }
@@ -613,6 +614,7 @@ internal sealed class ColourStrip : FlatControl
         int selected = Array.FindIndex(Palette, entry => Same(entry, Colour));
         _focusedChip = selected >= 0 ? selected : Palette.Length;
         base.OnGotFocus(e);
+        AccessibilityNotifyClients(AccessibleEvents.Focus, _focusedChip);
     }
 
     public event EventHandler? ColourPicked;
@@ -621,6 +623,82 @@ internal sealed class ColourStrip : FlatControl
     public Color Colour { get; set; } = Color.White;
 
     private Rectangle ChipAt(int index) => new(Inset + (index * (Chip + Gap)), Inset, Chip, Chip);
+
+    /// <summary>What a screen reader calls each chip, in <see cref="Palette"/> order, the free
+    /// choice last.</summary>
+    private static readonly Func<string>[] ChipNames =
+    {
+        () => Strings.ColourWhite, () => Strings.ColourRed, () => Strings.ColourOrange,
+        () => Strings.ColourYellow, () => Strings.ColourGreen, () => Strings.ColourCyan,
+        () => Strings.ColourBlue, () => Strings.ColourPurple, () => Strings.ColourPink,
+        () => Strings.ColourCustom,
+    };
+
+    internal static string ChipName(int index) => ChipNames[index]();
+
+    protected override AccessibleObject CreateAccessibilityInstance() => new StripAccessibleObject(this);
+
+    /// <summary>The strip as a list whose items are the chips, so moving along it with the arrow
+    /// keys is announced chip by chip.</summary>
+    private sealed class StripAccessibleObject : ControlAccessibleObject
+    {
+        private readonly ColourStrip _strip;
+
+        public StripAccessibleObject(ColourStrip owner) : base(owner) => _strip = owner;
+
+        public override AccessibleRole Role => AccessibleRole.List;
+
+        public override int GetChildCount() => Palette.Length + 1;
+
+        public override AccessibleObject? GetChild(int index) =>
+            index >= 0 && index <= Palette.Length ? new ChipAccessibleObject(_strip, index, this) : null;
+
+        public override AccessibleObject? GetFocused() =>
+            _strip.Focused ? GetChild(_strip._focusedChip) : null;
+    }
+
+    private sealed class ChipAccessibleObject : AccessibleObject
+    {
+        private readonly ColourStrip _strip;
+        private readonly int _index;
+        private readonly AccessibleObject _parent;
+
+        public ChipAccessibleObject(ColourStrip strip, int index, AccessibleObject parent)
+        {
+            _strip = strip;
+            _index = index;
+            _parent = parent;
+        }
+
+        public override string Name => ChipName(_index);
+
+        public override AccessibleRole Role => AccessibleRole.ListItem;
+
+        public override AccessibleObject Parent => _parent;
+
+        public override Rectangle Bounds => _strip.RectangleToScreen(_strip.ChipAt(_index));
+
+        public override AccessibleStates State
+        {
+            get
+            {
+                AccessibleStates state = AccessibleStates.Focusable | AccessibleStates.Selectable;
+                if (_strip.Focused && _index == _strip._focusedChip)
+                {
+                    state |= AccessibleStates.Focused;
+                }
+
+                if (_index < Palette.Length && Same(Palette[_index], _strip.Colour))
+                {
+                    state |= AccessibleStates.Selected;
+                }
+
+                return state;
+            }
+        }
+
+        public override void DoDefaultAction() => _strip.Choose(_index);
+    }
 
     private int IndexAt(Point point)
     {

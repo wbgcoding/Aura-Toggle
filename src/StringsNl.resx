@@ -374,4 +374,34 @@
   <data name="TextSelectAll" xml:space="preserve">
     <value>Alles selecteren</value>
   </data>
+  <data name="ColourWhite" xml:space="preserve">
+    <value>Wit</value>
+  </data>
+  <data name="ColourRed" xml:space="preserve">
+    <value>Rood</value>
+  </data>
+  <data name="ColourOrange" xml:space="preserve">
+    <value>Oranje</value>
+  </data>
+  <data name="ColourYellow" xml:space="preserve">
+    <value>Geel</value>
+  </data>
+  <data name="ColourGreen" xml:space="preserve">
+    <value>Groen</value>
+  </data>
+  <data name="ColourCyan" xml:space="preserve">
+    <value>Cyaan</value>
+  </data>
+  <data name="ColourBlue" xml:space="preserve">
+    <value>Blauw</value>
+  </data>
+  <data name="ColourPurple" xml:space="preserve">
+    <value>Paars</value>
+  </data>
+  <data name="ColourPink" xml:space="preserve">
+    <value>Roze</value>
+  </data>
+  <data name="ColourCustom" xml:space="preserve">
+    <value>Eigen kleur</value>
+  </data>
 </root>
