@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [1.8.0] - unreleased
 
+### Added
+
+- Text fields have a right-click menu in the app's own look, with undo, cut, copy, paste, delete and select all in every language
+- Screen readers name each row of the effect and channel lists and each colour chip as it gets the keyboard focus
+
 ### Fixed
 
 - When one of several controllers fails, the others still go back to their own lighting after identifying a channel or closing the preset editor, instead of staying dark or on the preview
@@ -23,6 +28,7 @@ All notable changes to this project are documented here. The format follows
 - Holding Space or Enter on a switch or button acts once instead of repeating
 - Exporting a preset over an existing file no longer leaves a cut-off file when the write fails
 - Screen readers announce when a switch in the settings is turned on or off
+- Uninstalling from a different administrator account now finds the data folder of the user who used the app
 
 ## [1.7.2] - 2026-11-14
 
