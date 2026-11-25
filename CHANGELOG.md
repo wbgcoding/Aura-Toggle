@@ -18,6 +18,11 @@ All notable changes to this project are documented here. The format follows
 - The effect list and the channel list fit their width again after the window moves to a display with another scale
 - The colour picker reacts to the left mouse button only
 - An error window that is not attached to the main window follows a switch between light and dark mode
+- A click on the tray icon with no controller found opens the window, which says why and offers a retry, instead of repeating the same notification
+- The brightness slider stops following the mouse when a switch disables it mid-drag
+- Holding Space or Enter on a switch or button acts once instead of repeating
+- Exporting a preset over an existing file no longer leaves a cut-off file when the write fails
+- Screen readers announce when a switch in the settings is turned on or off
 
 ## [1.7.2] - 2026-11-14
 
