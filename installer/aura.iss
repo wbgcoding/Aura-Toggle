@@ -9,7 +9,7 @@
 ; it checks for it and offers to fetch it from Microsoft, once, on the machines that lack it.
 
 #ifndef AppVersion
-  #define AppVersion "1.7.2"
+  #define AppVersion "1.7.3"
 #endif
 
 #define AppName "Aura Toggle"
@@ -750,8 +750,8 @@ begin
     as, which the original user cannot write to when a different administrator elevated it.
     Every user may create a file in ProgramData, and the name borrows the random part of the
     temp folder's name plus the time, so another account cannot have it waiting. Whatever it
-    holds still has to pass the shape check below, and the delete runs with the original
-    user's rights. }
+    holds still has to pass the shape check below, and the data folder delete runs with the
+    original user's rights. }
   TempFile := ExpandConstant('{commonappdata}\aura-toggle-') +
     ExtractFileName(ExpandConstant('{tmp}')) + GetDateTimeString('hhnnsszzz', #0, #0) + '.txt';
   DeleteFile(TempFile);

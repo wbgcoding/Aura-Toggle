@@ -2021,7 +2021,6 @@ internal static partial class Program
         }
     }
 
-    /// <summary>Re-sends every channel of one controller exactly as the records describe it.</summary>
     /// <summary>
     /// Replays every controller even when one of them drops a report, so a single failing device
     /// cannot leave the others dark or still showing a preview. The first failure is rethrown once
@@ -2051,6 +2050,7 @@ internal static partial class Program
         }
     }
 
+    /// <summary>Re-sends every channel of one controller exactly as the records describe it.</summary>
     private static void Replay(AuraDevice device, AuraState state,
         Dictionary<string, ChannelLighting> remembered)
     {
