@@ -28,6 +28,9 @@ All notable changes to this project are documented here. The format follows
 - Holding Space or Enter on a switch or button acts once instead of repeating
 - Exporting a preset over an existing file no longer leaves a cut-off file when the write fails
 - Screen readers announce when a switch in the settings is turned on or off
+- Running the toggle shortcut twice in quick succession switches the lighting twice instead of both runs switching the same way
+- A controller that another program holds during a switch keeps its remembered channel settings instead of losing those older than 30 days
+- The note under "close after start" hides again when a hotkey that could not be registered switches itself back off
 - Uninstalling from a different administrator account now finds the data folder of the user who used the app
 
 ## [1.7.2] - 2026-11-14
