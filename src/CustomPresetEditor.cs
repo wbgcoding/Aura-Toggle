@@ -810,40 +810,59 @@ internal sealed class CustomPresetEditor : PopupForm
             return;
         }
 
+        // Written beside the target and moved over it, so a failed write never leaves a cut-off
+        // copy in place of a file that was already there.
+        string temp = dialog.FileName + ".tmp";
         try
         {
-            using FileStream stream = File.Create(dialog.FileName);
-            using var writer = new Utf8JsonWriter(stream);
-            writer.WriteStartObject();
-            writer.WriteString("kind", "aura-preset");
-            writer.WriteNumber("version", 1);
-            writer.WriteString("name", name);
-            writer.WriteStartArray("entries");
-            foreach (CustomPresetEntry entry in entries)
+            using (FileStream stream = File.Create(temp))
             {
-                writer.WriteStartObject();
-                writer.WriteString("deviceKey", entry.DeviceKey);
-                writer.WriteNumber("channel", entry.Channel);
-                writer.WriteString("label", entry.Label);
-                writer.WriteNumber("mode", entry.Mode);
-                writer.WriteNumber("red", entry.Red);
-                writer.WriteNumber("green", entry.Green);
-                writer.WriteNumber("blue", entry.Blue);
-                writer.WriteNumber("brightness", entry.Brightness);
-                writer.WriteEndObject();
+                WriteExport(stream, name, entries);
             }
 
-            writer.WriteEndArray();
-            writer.WriteEndObject();
-            writer.Flush();
-
+            File.Move(temp, dialog.FileName, overwrite: true);
             _transferHint.Visible = false;
         }
         catch (Exception ex) when (AuraFiles.IsExpected(ex))
         {
             AuraLog.Error("PresetExport", ex);
+            try
+            {
+                File.Delete(temp);
+            }
+            catch (Exception cleanup) when (AuraFiles.IsExpected(cleanup))
+            {
+            }
+
             ShowTransferHint(() => Strings.CustomPresetExportError);
         }
+    }
+
+    private static void WriteExport(Stream stream, string name, IEnumerable<CustomPresetEntry> entries)
+    {
+        using var writer = new Utf8JsonWriter(stream);
+        writer.WriteStartObject();
+        writer.WriteString("kind", "aura-preset");
+        writer.WriteNumber("version", 1);
+        writer.WriteString("name", name);
+        writer.WriteStartArray("entries");
+        foreach (CustomPresetEntry entry in entries)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("deviceKey", entry.DeviceKey);
+            writer.WriteNumber("channel", entry.Channel);
+            writer.WriteString("label", entry.Label);
+            writer.WriteNumber("mode", entry.Mode);
+            writer.WriteNumber("red", entry.Red);
+            writer.WriteNumber("green", entry.Green);
+            writer.WriteNumber("blue", entry.Blue);
+            writer.WriteNumber("brightness", entry.Brightness);
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndArray();
+        writer.WriteEndObject();
+        writer.Flush();
     }
 
     private static string SanitiseFileName(string name) =>

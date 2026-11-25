@@ -66,6 +66,9 @@ internal sealed class EffectButton : FlatControl
     private readonly SolidBrush _washBrush = new(Color.Black);
     private readonly SolidBrush _dimBrush = new(Color.Black);
     private readonly SolidBrush _fillBrush = new(Color.Black);
+    private GraphicsPath? _path;
+    private Size _pathSize;
+    private int _pathRadius;
 
     public EffectButton()
     {
@@ -212,6 +215,7 @@ internal sealed class EffectButton : FlatControl
             _washBrush.Dispose();
             _dimBrush.Dispose();
             _fillBrush.Dispose();
+            _path?.Dispose();
         }
 
         base.Dispose(disposing);
@@ -253,7 +257,7 @@ internal sealed class EffectButton : FlatControl
         g.Clear(BackColor);
 
         var bounds = new Rectangle(0, 0, Width, Height);
-        using GraphicsPath path = Theme.RoundedRectangle(bounds, Radius);
+        GraphicsPath path = Outline(bounds);
 
         if (_on && Enabled)
         {
@@ -292,6 +296,22 @@ internal sealed class EffectButton : FlatControl
 
         DrawFocusRing(g, path);
         DrawTrackedLabel(g);
+    }
+
+    /// <summary>The rounded outline, kept while the size and corner stay the same: the button
+    /// paints it on every frame of an animation.</summary>
+    private GraphicsPath Outline(Rectangle bounds)
+    {
+        int radius = Radius;
+        if (_path == null || _pathSize != bounds.Size || _pathRadius != radius)
+        {
+            _path?.Dispose();
+            _path = Theme.RoundedRectangle(bounds, radius);
+            _pathSize = bounds.Size;
+            _pathRadius = radius;
+        }
+
+        return _path;
     }
 
     /// <summary>
@@ -1017,6 +1037,7 @@ internal sealed class ToggleSwitch : FlatControl
     {
         _checked = !_checked;
         Invalidate();
+        AccessibilityNotifyClients(AccessibleEvents.StateChange, -1);
         CheckedChanged?.Invoke(this, EventArgs.Empty);
         base.OnClick(e);
     }
@@ -1754,19 +1775,33 @@ internal sealed class Slider : FlatControl
 
     protected override void OnMouseUp(MouseEventArgs e)
     {
-        if (_dragging)
-        {
-            _dragging = false;
+        EndDrag();
+        base.OnMouseUp(e);
+    }
 
-            // A drag that ends where it started - or a plain click on the knob - has nothing to
-            // send, and every commit costs a full pass over the controller.
-            if (_value != _pressedAt)
-            {
-                ValueCommitted?.Invoke(this, EventArgs.Empty);
-            }
+    /// <summary>A drag also ends when the slider loses the mouse without a button release, as
+    /// when it is disabled mid-drag; otherwise a later hover would keep moving it.</summary>
+    protected override void OnMouseCaptureChanged(EventArgs e)
+    {
+        EndDrag();
+        base.OnMouseCaptureChanged(e);
+    }
+
+    private void EndDrag()
+    {
+        if (!_dragging)
+        {
+            return;
         }
 
-        base.OnMouseUp(e);
+        _dragging = false;
+
+        // A drag that ends where it started - or a plain click on the knob - has nothing to
+        // send, and every commit costs a full pass over the controller.
+        if (_value != _pressedAt)
+        {
+            ValueCommitted?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     protected override bool IsInputKey(Keys keyData) =>

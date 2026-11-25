@@ -106,6 +106,15 @@ internal sealed partial class ToggleForm
         _trayClickTimer.Tick += (_, _) =>
         {
             _trayClickTimer.Stop();
+
+            // With no controller a switch could only raise the same balloon again; the window
+            // shows why and has the retry button.
+            if (_noController)
+            {
+                RestoreFromTray();
+                return;
+            }
+
             _ = Run(() => Program.Switch(!BoardIsOn()));
         };
 

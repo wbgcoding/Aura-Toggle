@@ -903,6 +903,7 @@ internal sealed class EffectSurface : IDisposable
     private (int X, int Y, byte Cover)[]? _mask;
     private Size _maskSize;
     private PointF[] _maskPoints = Array.Empty<PointF>();
+    private GraphicsPath? _maskShape;
 
     /// <summary>Rounds <paramref name="bounds"/> itself, for callers that need no path of their own.</summary>
     /// <param name="outline">
@@ -975,10 +976,17 @@ internal sealed class EffectSurface : IDisposable
     /// </summary>
     private void ApplyMask(GraphicsPath shape, Rectangle bounds)
     {
-        PointF[] points = shape.PathPoints;
-        if (_mask == null || _maskSize != bounds.Size || !points.AsSpan().SequenceEqual(_maskPoints))
+        // A caller that keeps its path between frames hands the same object back, and then
+        // there is no outline to copy out and compare.
+        if (_mask == null || _maskSize != bounds.Size || !ReferenceEquals(shape, _maskShape))
         {
-            BuildMask(shape, bounds, points);
+            PointF[] points = shape.PathPoints;
+            if (_mask == null || _maskSize != bounds.Size || !points.AsSpan().SequenceEqual(_maskPoints))
+            {
+                BuildMask(shape, bounds, points);
+            }
+
+            _maskShape = shape;
         }
 
         BitmapData data = _buffer!.LockBits(new Rectangle(0, 0, bounds.Width, bounds.Height),
@@ -1461,12 +1469,31 @@ internal abstract class FlatControl : Control
     {
         if (e.KeyCode is Keys.Space or Keys.Enter)
         {
-            OnClick(EventArgs.Empty);
+            // One click per press: a held key repeats, and each repeat would flip a switch again
+            // and write the setting behind it.
+            if (!_keyHeld)
+            {
+                _keyHeld = true;
+                OnClick(EventArgs.Empty);
+            }
+
             e.Handled = true;
         }
 
         base.OnKeyDown(e);
     }
+
+    protected override void OnKeyUp(KeyEventArgs e)
+    {
+        if (e.KeyCode is Keys.Space or Keys.Enter)
+        {
+            _keyHeld = false;
+        }
+
+        base.OnKeyUp(e);
+    }
+
+    private bool _keyHeld;
 
     protected override void OnGotFocus(EventArgs e)
     {
@@ -1476,6 +1503,7 @@ internal abstract class FlatControl : Control
 
     protected override void OnLostFocus(EventArgs e)
     {
+        _keyHeld = false;
         Invalidate();
         base.OnLostFocus(e);
     }

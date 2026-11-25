@@ -61,6 +61,7 @@ internal sealed class ErrorDialog : PopupForm
 
         _detailsToggle.AutoSize = true;
         _detailsToggle.Text = "▸ " + Strings.ErrorDetails;
+        _detailsToggle.AccessibleName = Strings.ErrorDetails;
         _detailsToggle.LinkColor = Theme.Accent;
         _detailsToggle.ActiveLinkColor = Theme.Accent;
         _detailsToggle.VisitedLinkColor = Theme.Accent;
