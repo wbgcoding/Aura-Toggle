@@ -53,6 +53,24 @@ internal static class AuraFiles
             _hardwareWaitMs = HardwareLockTimeoutMs;
         }
     }
+
+    private static Action? _beforeRetry;
+
+    /// <summary>
+    /// Review build only: runs <paramref name="action"/> before each retry of a held file until
+    /// the result is disposed, so a test can let go of the file exactly when the first attempt
+    /// has failed instead of guessing how long that takes on a busy machine.
+    /// </summary>
+    public static IDisposable BeforeRetry(Action action)
+    {
+        _beforeRetry = action;
+        return new ClearRetry();
+    }
+
+    private sealed class ClearRetry : IDisposable
+    {
+        public void Dispose() => _beforeRetry = null;
+    }
 #endif
 
     public static string Folder { get; private set; } = Path.Combine(
@@ -429,7 +447,7 @@ internal static class AuraFiles
                 ex is not (FileNotFoundException or DirectoryNotFoundException) &&
                 ex is IOException or UnauthorizedAccessException)
             {
-                Thread.Sleep(MoveRetryStepMs * attempt);
+                PauseBeforeRetry(attempt);
             }
         }
     }
@@ -705,9 +723,17 @@ internal static class AuraFiles
             }
             catch (Exception ex) when (attempt < MoveAttempts && ex is IOException or UnauthorizedAccessException)
             {
-                Thread.Sleep(MoveRetryStepMs * attempt);
+                PauseBeforeRetry(attempt);
             }
         }
+    }
+
+    private static void PauseBeforeRetry(int attempt)
+    {
+#if REVIEW
+        _beforeRetry?.Invoke();
+#endif
+        Thread.Sleep(MoveRetryStepMs * attempt);
     }
 
     // Three locks, taken in this order and never the other way round: hardware (a whole discovery

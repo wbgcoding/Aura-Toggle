@@ -432,19 +432,38 @@ public sealed class AuraFilesTests : PersistenceTest
     {
         TestData.WriteRaw("f.json", "{\"kept\":true}");
         var held = new FileStream(AuraFiles.PathTo("f.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-        var release = new Thread(() =>
+        int retries = 0;
+
+        // Let go once the first attempt has failed, the way a scanner finishes its look.
+        using (AuraFiles.BeforeRetry(() =>
         {
-            Thread.Sleep(60);
+            retries++;
             held.Dispose();
-        }) { IsBackground = true };
-        release.Start();
+        }))
+        {
+            using JsonDocument? document = AuraFiles.Read("f.json", JsonValueKind.Object);
+            Assert.Equal(1, retries);
+            Assert.NotNull(document);
+            Assert.True(document!.RootElement.GetProperty("kept").GetBoolean());
+        }
 
-        using JsonDocument? document = AuraFiles.Read("f.json", JsonValueKind.Object);
-        release.Join();
-
-        Assert.NotNull(document);
-        Assert.True(document!.RootElement.GetProperty("kept").GetBoolean());
         Assert.False(AuraFiles.IsUnreadable("f.json"));
+    }
+
+    [Fact]
+    public void AReadOfAFileHeldThroughEveryRetryGivesUp()
+    {
+        TestData.WriteRaw("f.json", "{\"kept\":true}");
+        using var held = new FileStream(AuraFiles.PathTo("f.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        int retries = 0;
+
+        using (AuraFiles.BeforeRetry(() => retries++))
+        {
+            using JsonDocument? document = AuraFiles.Read("f.json", JsonValueKind.Object);
+            Assert.Null(document);
+        }
+
+        Assert.Equal(4, retries);
     }
 
     // ---- damaged copies ----
@@ -1117,35 +1136,32 @@ public sealed class AuraFilesTests : PersistenceTest
         AuraFiles.Write("held.json", w => { w.WriteStartObject(); w.WriteString("v", value); w.WriteEndObject(); });
 
     // A virus scanner or a second copy of the app reading the file holds it open for a moment, and
-    // Windows refuses to replace a file that is open without delete sharing. That used to lose the
-    // write at once; it now waits the moment out.
+    // Windows refuses to replace a file that is open without delete sharing; the write waits
+    // the moment out.
     [Fact]
     public void AWriteRidesOutATargetHeldOpenForAMoment()
     {
         Assert.True(WriteMarker("old"));
         string path = AuraFiles.PathTo("held.json");
         var held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        bool sawTemp = false;
+        int retries = 0;
+        bool tempExisted = false;
 
-        // Lets go of the file only once the write has created its temp file, so the first move
-        // always meets the held target and only a retry can succeed.
-        var releaser = new Thread(() =>
+        // Lets go of the file once the first move has met the held target, so only a retry can
+        // succeed, and checks that the new content was waiting in its temp file meanwhile.
+        bool written;
+        using (AuraFiles.BeforeRetry(() =>
         {
-            var clock = System.Diagnostics.Stopwatch.StartNew();
-            while (!sawTemp && clock.Elapsed < TimeSpan.FromSeconds(10))
-            {
-                sawTemp = TempFiles().Length > 0;
-            }
-
-            Thread.Sleep(40);
+            retries++;
+            tempExisted = TempFiles().Length > 0;
             held.Dispose();
-        }) { IsBackground = true };
-        releaser.Start();
+        }))
+        {
+            written = WriteMarker("new");
+        }
 
-        bool written = WriteMarker("new");
-
-        Assert.True(releaser.Join(TimeSpan.FromSeconds(15)));
-        Assert.True(sawTemp);
+        Assert.Equal(1, retries);
+        Assert.True(tempExisted);
         Assert.True(written);
         Assert.Contains("\"new\"", File.ReadAllText(path));
         Assert.Empty(TempFiles());
